@@ -1,0 +1,9 @@
+category,isApproved,adminNotes,isMultiAnswer,question,answers,correctAnswer,author
+Alliance of Galactic Travellers,true,,false,What does AGT stand for?,"Alliance of Galactic Travellers,Alliance of Galactic Traders,Association of Galactic Travellers,Alliance for Galactic Transit",Alliance of Galactic Travellers,AGT Archive
+Alliance of Galactic Travellers,true,,true,Which activities fit a community trivia mission?,"Sharing knowledge,Testing recall,Charting discoveries,Scrapping every starship","Sharing knowledge,Testing recall,Charting discoveries",AGT Archive
+Exploration,true,,false,Which visor system is used to scan and identify flora and fauna?,"Analysis Visor,Combat Scope,Survey Beacon,Trade Scanner",Analysis Visor,AGT Archive
+Exploration,true,,false,Which starship system enables travel between star systems?,"Hyperdrive,Pulse Engine,Launch Thruster,Deflector Shield",Hyperdrive,AGT Archive
+Galactic Lore,true,,false,Which entity is represented by a crimson geometric form?,"The Atlas,The Abyss,The Convergence,The Traveller",The Atlas,AGT Archive
+Galactic Lore,true,,true,Which are major sentient species encountered across the galaxy?,"Gek,Korvax,Vy'keen,Sentinel Drone","Gek,Korvax,Vy'keen",AGT Archive
+Technology,true,,false,Which exocraft is designed for underwater travel?,"Nautilon,Nomad,Colossus,Minotaur",Nautilon,AGT Archive
+Technology,true,,false,Which resource can recharge standard life support systems?,"Oxygen,Chromatic Metal,Tritium,Pugneum",Oxygen,AGT Archive

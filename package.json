@@ -1,0 +1,19 @@
+{
+  "name": "agt-trivia-webapp",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "papaparse": "5.5.4"
+  },
+  "devDependencies": {
+    "vite": "8.2.0",
+    "vitest": "4.1.10"
+  }
+}
