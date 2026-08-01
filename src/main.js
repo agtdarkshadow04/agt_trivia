@@ -121,11 +121,10 @@ function categoryView() {
     <section class="hero">
       <div>
         <p class="eyebrow">Alliance knowledge protocol</p>
-        <h1>Chart what you know<br /><em>among the stars.</em></h1>
+        <h1>Try your knowledge<br /><em>against the archive.</em></h1>
       </div>
       <p class="hero__intro">
-        Select a transmission channel. Every correct response strengthens the
-        Alliance archive.
+        Select a transmission channel to get started.
       </p>
     </section>
     <section aria-labelledby="category-heading">
