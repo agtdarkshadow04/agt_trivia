@@ -1,18 +1,18 @@
 :root {
-  color: #e9f8ff;
-  background: #04090f;
+  color: #fff7ed;
+  background: #0d0d0d;
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
     "Segoe UI", sans-serif;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
-  --ink: #e9f8ff;
-  --muted: #86a4b2;
-  --cyan: #71ebf7;
-  --cyan-bright: #c4fbff;
+  --ink: #fff7ed;
+  --muted: #b8afa6;
+  --orange: #ff931e;
+  --orange-bright: #ffc06a;
   --amber: #ffcc70;
   --red: #ff7185;
-  --surface: rgba(7, 21, 32, 0.86);
-  --line: rgba(113, 235, 247, 0.18);
+  --surface: rgba(24, 18, 12, 0.86);
+  --line: rgba(255, 147, 30, 0.18);
 }
 
 * {
@@ -25,9 +25,9 @@ body {
   margin: 0;
   overflow-x: hidden;
   background:
-    radial-gradient(circle at 75% 5%, rgba(12, 92, 108, 0.22), transparent 34rem),
-    radial-gradient(circle at 5% 80%, rgba(49, 30, 96, 0.2), transparent 30rem),
-    #04090f;
+    radial-gradient(circle at 75% 5%, rgba(241, 90, 36, 0.22), transparent 34rem),
+    radial-gradient(circle at 5% 80%, rgba(255, 147, 30, 0.12), transparent 30rem),
+    #0d0d0d;
 }
 
 button,
@@ -42,7 +42,7 @@ button {
 button:focus-visible,
 input:focus-visible + .answer__marker,
 a:focus-visible {
-  outline: 2px solid var(--cyan-bright);
+  outline: 2px solid var(--orange-bright);
   outline-offset: 4px;
 }
 
@@ -52,8 +52,8 @@ a:focus-visible {
   top: 1rem;
   left: 1rem;
   padding: 0.75rem 1rem;
-  color: #041018;
-  background: var(--cyan-bright);
+  color: #17100a;
+  background: var(--orange-bright);
   transform: translateY(-200%);
 }
 
@@ -69,8 +69,8 @@ a:focus-visible {
   pointer-events: none;
   content: "";
   background-image:
-    radial-gradient(circle, rgba(227, 250, 255, 0.72) 0 1px, transparent 1.5px),
-    radial-gradient(circle, rgba(113, 235, 247, 0.4) 0 1px, transparent 1.5px);
+    radial-gradient(circle, rgba(255, 247, 237, 0.72) 0 1px, transparent 1.5px),
+    radial-gradient(circle, rgba(255, 147, 30, 0.4) 0 1px, transparent 1.5px);
   background-position: 0 0, 37px 61px;
   background-size: 103px 137px, 157px 191px;
   mask-image: linear-gradient(to bottom, black, transparent 92%);
@@ -110,7 +110,7 @@ footer {
 .brand__logo {
   width: 48px;
   height: 48px;
-  filter: drop-shadow(0 0 14px rgba(113, 235, 247, 0.3));
+  filter: drop-shadow(0 0 14px rgba(255, 147, 30, 0.3));
 }
 
 .brand strong,
@@ -119,7 +119,7 @@ footer {
 }
 
 .brand strong {
-  color: var(--cyan-bright);
+  color: var(--orange-bright);
   font-family: "SFMono-Regular", Consolas, monospace;
   font-size: 1.15rem;
   letter-spacing: 0.28em;
@@ -167,7 +167,7 @@ footer {
 
 .eyebrow {
   margin: 0 0 1rem;
-  color: var(--cyan);
+  color: var(--orange);
   font-family: "SFMono-Regular", Consolas, monospace;
   font-size: 0.7rem;
   font-weight: 700;
@@ -188,7 +188,7 @@ footer {
 .hero h1 em {
   color: transparent;
   font-style: normal;
-  -webkit-text-stroke: 1px rgba(196, 251, 255, 0.65);
+  -webkit-text-stroke: 1px rgba(255, 192, 106, 0.65);
 }
 
 .hero__intro {
@@ -207,6 +207,7 @@ footer {
   margin-bottom: 1.5rem;
 }
 
+.section-heading h1,
 .section-heading h2 {
   margin: 0;
   font-size: clamp(1.55rem, 3vw, 2.3rem);
@@ -236,7 +237,7 @@ footer {
   min-height: 200px;
   padding: 1.7rem;
   text-align: left;
-  background: rgba(7, 21, 32, 0.45);
+  background: rgba(24, 18, 12, 0.45);
   border: 0;
   border-right: 1px solid var(--line);
   border-bottom: 1px solid var(--line);
@@ -250,8 +251,8 @@ footer {
 
 .category-card:not(:disabled):hover {
   z-index: 1;
-  background: rgba(12, 45, 57, 0.8);
-  box-shadow: inset 0 0 0 1px rgba(113, 235, 247, 0.5), 0 0 32px rgba(0, 0, 0, 0.4);
+  background: rgba(61, 34, 12, 0.8);
+  box-shadow: inset 0 0 0 1px rgba(255, 147, 30, 0.5), 0 0 32px rgba(0, 0, 0, 0.4);
   transform: translateY(-2px);
 }
 
@@ -262,7 +263,7 @@ footer {
 
 .category-card__index,
 .category-card__meta {
-  color: var(--cyan);
+  color: var(--orange);
   font-family: "SFMono-Regular", Consolas, monospace;
   font-size: 0.68rem;
   letter-spacing: 0.12em;
@@ -288,7 +289,7 @@ footer {
 }
 
 .category-card__arrow {
-  color: var(--cyan-bright);
+  color: var(--orange-bright);
   font-size: 1.4rem;
   transition: transform 180ms ease;
 }
@@ -299,7 +300,7 @@ footer {
 
 .panel {
   position: relative;
-  background: linear-gradient(145deg, rgba(11, 33, 48, 0.94), rgba(5, 15, 24, 0.94));
+  background: linear-gradient(145deg, rgba(36, 24, 13, 0.94), rgba(16, 13, 10, 0.94));
   border: 1px solid var(--line);
   box-shadow: 0 24px 90px rgba(0, 0, 0, 0.35);
 }
@@ -310,7 +311,7 @@ footer {
   width: 16px;
   height: 16px;
   content: "";
-  border-color: var(--cyan);
+  border-color: var(--orange);
 }
 
 .panel::before {
@@ -355,9 +356,9 @@ footer {
   width: 72px;
   height: 72px;
   margin-bottom: 2rem;
-  border: 1px solid var(--cyan);
+  border: 1px solid var(--orange);
   border-radius: 50%;
-  box-shadow: 0 0 25px rgba(113, 235, 247, 0.15);
+  box-shadow: 0 0 25px rgba(255, 147, 30, 0.15);
 }
 
 .loader {
@@ -392,7 +393,7 @@ footer {
 }
 
 .text-button:hover {
-  color: var(--cyan-bright);
+  color: var(--orange-bright);
 }
 
 .quiz-header__score {
@@ -405,7 +406,7 @@ footer {
 
 .quiz-header__score strong {
   margin-left: 0.5rem;
-  color: var(--cyan-bright);
+  color: var(--orange-bright);
   font-size: 1.1rem;
 }
 
@@ -418,7 +419,7 @@ footer {
 .quiz-meta {
   display: flex;
   justify-content: space-between;
-  color: var(--cyan);
+  color: var(--orange);
   font-family: "SFMono-Regular", Consolas, monospace;
   font-size: 0.68rem;
   letter-spacing: 0.14em;
@@ -429,14 +430,14 @@ footer {
   height: 2px;
   margin: 1rem 0 clamp(3rem, 7vw, 5rem);
   overflow: hidden;
-  background: rgba(113, 235, 247, 0.12);
+  background: rgba(255, 147, 30, 0.12);
 }
 
 .progress span {
   display: block;
   height: 100%;
-  background: var(--cyan);
-  box-shadow: 0 0 12px var(--cyan);
+  background: var(--orange);
+  box-shadow: 0 0 12px var(--orange);
   transition: width 240ms ease;
 }
 
@@ -478,16 +479,16 @@ fieldset {
   align-items: center;
   min-height: 76px;
   padding: 0.9rem 1.1rem;
-  background: rgba(4, 12, 19, 0.55);
-  border: 1px solid rgba(134, 164, 178, 0.2);
+  background: rgba(15, 13, 11, 0.55);
+  border: 1px solid rgba(184, 175, 166, 0.2);
   cursor: pointer;
   transition: border-color 160ms ease, background 160ms ease;
 }
 
 .answer:hover,
 .answer:has(input:checked) {
-  background: rgba(18, 55, 66, 0.72);
-  border-color: rgba(113, 235, 247, 0.75);
+  background: rgba(61, 34, 12, 0.72);
+  border-color: rgba(255, 147, 30, 0.75);
 }
 
 .answer input {
@@ -506,14 +507,14 @@ fieldset {
   color: var(--muted);
   font-family: "SFMono-Regular", Consolas, monospace;
   font-size: 0.72rem;
-  border: 1px solid rgba(134, 164, 178, 0.35);
+  border: 1px solid rgba(184, 175, 166, 0.35);
   border-radius: 50%;
 }
 
 .answer:has(input:checked) .answer__marker {
-  color: #051015;
-  background: var(--cyan);
-  border-color: var(--cyan);
+  color: #17100a;
+  background: var(--orange);
+  border-color: var(--orange);
 }
 
 .answer__text {
@@ -622,15 +623,15 @@ fieldset {
 }
 
 .button--primary {
-  color: #041018;
-  background: var(--cyan);
-  border-color: var(--cyan);
+  color: #17100a;
+  background: var(--orange);
+  border-color: var(--orange);
 }
 
 .button--secondary {
-  color: var(--cyan-bright);
+  color: var(--orange-bright);
   background: transparent;
-  border-color: rgba(113, 235, 247, 0.45);
+  border-color: rgba(255, 147, 30, 0.45);
 }
 
 .results-panel {
@@ -650,9 +651,9 @@ fieldset {
   place-items: center;
   aspect-ratio: 1;
   padding: 1rem;
-  background: conic-gradient(var(--cyan) calc(var(--score) * 1%), rgba(113, 235, 247, 0.08) 0);
+  background: conic-gradient(var(--orange) calc(var(--score) * 1%), rgba(255, 147, 30, 0.08) 0);
   border-radius: 50%;
-  box-shadow: 0 0 40px rgba(113, 235, 247, 0.12);
+  box-shadow: 0 0 40px rgba(255, 147, 30, 0.12);
 }
 
 .result-orbit::before {
@@ -660,7 +661,7 @@ fieldset {
   width: calc(100% - 14px);
   height: calc(100% - 14px);
   content: "";
-  background: #081824;
+  background: #18120c;
   border-radius: 50%;
 }
 
@@ -675,7 +676,7 @@ fieldset {
 }
 
 .result-orbit strong {
-  color: var(--cyan-bright);
+  color: var(--orange-bright);
   font-size: clamp(2.7rem, 6vw, 5rem);
   font-weight: 300;
   letter-spacing: -0.06em;
@@ -721,7 +722,7 @@ footer {
   gap: 0.8rem;
   align-items: center;
   min-height: 80px;
-  color: rgba(134, 164, 178, 0.65);
+  color: rgba(184, 175, 166, 0.65);
   font-family: "SFMono-Regular", Consolas, monospace;
   font-size: 0.65rem;
   letter-spacing: 0.1em;

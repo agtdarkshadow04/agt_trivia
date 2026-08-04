@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   isCorrectSelection,
   questionsForCategory,
+  questionsForQuiz,
   shuffle,
   sortCategories,
 } from "./quiz.js";
@@ -26,6 +27,19 @@ describe("quiz helpers", () => {
     expect(questionsForCategory(questions, "lore")).toEqual([questions[0]]);
   });
 
+  it("selects short, long, and full quizzes from the category questions", () => {
+    const questions = Array.from({ length: 35 }, (_, index) => index);
+
+    expect(questionsForQuiz(questions, 10, () => 0)).toHaveLength(10);
+    expect(questionsForQuiz(questions, 30, () => 0)).toHaveLength(30);
+    expect(questionsForQuiz(questions, undefined, () => 0)).toHaveLength(35);
+    expect(questions).toEqual(Array.from({ length: 35 }, (_, index) => index));
+  });
+
+  it("uses every available question when a requested length is longer", () => {
+    expect(questionsForQuiz([1, 2, 3], 10, () => 0)).toHaveLength(3);
+  });
+
   it("requires an exact answer set for multi-answer questions", () => {
     expect(isCorrectSelection(["Gek", "Korvax"], ["Korvax", "Gek"])).toBe(true);
     expect(isCorrectSelection(["Gek"], ["Korvax", "Gek"])).toBe(false);
@@ -40,3 +54,4 @@ describe("quiz helpers", () => {
     expect(original).toEqual([1, 2, 3]);
   });
 });
+

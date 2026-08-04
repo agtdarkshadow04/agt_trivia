@@ -4,7 +4,7 @@ import { loadQuizData } from "./lib/csv.js";
 import {
   isCorrectSelection,
   questionsForCategory,
-  shuffle,
+  questionsForQuiz,
   sortCategories,
 } from "./lib/quiz.js";
 
@@ -15,6 +15,7 @@ const state = {
   questions: [],
   activeCategory: null,
   activeQuestions: [],
+  quizLength: null,
   questionIndex: 0,
   selectedAnswers: new Set(),
   answered: false,
@@ -53,9 +54,7 @@ function shell(content) {
       ${content}
     </main>
     <footer>
-      <span>Alliance of Galactic Travellers</span>
-      <span aria-hidden="true">//</span>
-      <span>Knowledge uplink</span>
+      <span>© ${new Date().getFullYear()}, Alliance of Galactic Travellers</span>
     </footer>
   `;
 }
@@ -117,16 +116,6 @@ function categoryView() {
     .join("");
 
   return shell(`
-    <section class="hero">
-      <div>
-        <p class="eyebrow">Alliance knowledge protocol</p>
-        <h1>Chart what you know<br /><em>among the stars.</em></h1>
-      </div>
-      <p class="hero__intro">
-        Select a transmission channel. Every correct response strengthens the
-        Alliance archive.
-      </p>
-    </section>
     <section aria-labelledby="category-heading">
       <div class="section-heading">
         <div>
@@ -134,6 +123,71 @@ function categoryView() {
           <h2 id="category-heading">Choose a category</h2>
         </div>
         <span>${state.questions.length} questions indexed</span>
+      </div>
+      <div class="category-grid">${cards}</div>
+    </section>
+  `);
+}
+
+function quizLengthView() {
+  const questionCount = questionsForCategory(
+    state.questions,
+    state.activeCategory.name,
+  ).length;
+  const choices = [
+    {
+      value: "10",
+      label: "Short quiz",
+      meta: "10 questions",
+      description: "A quick run of up to 10 randomly selected questions.",
+    },
+    {
+      value: "30",
+      label: "Long quiz",
+      meta: "30 questions",
+      description: "An extended run of up to 30 randomly selected questions.",
+    },
+    {
+      value: "all",
+      label: "Full quiz",
+      meta: `All ${questionCount} ${questionCount === 1 ? "question" : "questions"}`,
+      description: "Complete every available question in this category.",
+    },
+  ];
+  const cards = choices
+    .map(
+      (choice, index) => `
+        <button
+          class="category-card"
+          type="button"
+          data-quiz-length="${choice.value}"
+        >
+          <span class="category-card__index">${String(index + 1).padStart(2, "0")}</span>
+          <span class="category-card__body">
+            <span class="category-card__meta">${choice.meta}</span>
+            <strong>${choice.label}</strong>
+            <span>${choice.description}</span>
+          </span>
+          <span class="category-card__arrow" aria-hidden="true">→</span>
+        </button>
+      `,
+    )
+    .join("");
+
+  return shell(`
+    <section class="quiz-header">
+      <button class="text-button" type="button" data-action="categories">← Categories</button>
+      <div class="quiz-header__score">
+        ${escapeHtml(state.activeCategory.shortName)}
+      </div>
+    </section>
+    <section aria-labelledby="quiz-length-heading">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">${escapeHtml(state.activeCategory.name)}</p>
+          <h1 id="quiz-length-heading">Choose quiz length</h1>
+        </div>
+        <span>${questionCount} ${questionCount === 1 ? "question" : "questions"} available</span>
       </div>
       <div class="category-grid">${cards}</div>
     </section>
@@ -259,6 +313,7 @@ function render() {
   if (state.loading) app.innerHTML = loadingView();
   else if (state.error) app.innerHTML = errorView();
   else if (!state.activeCategory) app.innerHTML = categoryView();
+  else if (!state.quizLength) app.innerHTML = quizLengthView();
   else if (state.questionIndex >= state.activeQuestions.length) {
     app.innerHTML = resultsView();
   } else app.innerHTML = quizView();
@@ -284,7 +339,8 @@ function startCategory(shortName, updateUrl = true) {
   if (!questions.length) return false;
 
   state.activeCategory = category;
-  state.activeQuestions = shuffle(questions);
+  state.activeQuestions = [];
+  state.quizLength = null;
   state.questionIndex = 0;
   state.selectedAnswers = new Set();
   state.answered = false;
@@ -295,9 +351,35 @@ function startCategory(shortName, updateUrl = true) {
   return true;
 }
 
+function startQuiz(length) {
+  if (!state.activeCategory || !["10", "30", "all"].includes(length)) {
+    return false;
+  }
+
+  const questions = questionsForCategory(
+    state.questions,
+    state.activeCategory.name,
+  );
+  const questionCount = length === "all" ? undefined : Number(length);
+  const activeQuestions = questionsForQuiz(questions, questionCount);
+  if (!activeQuestions.length) return false;
+
+  state.activeQuestions = activeQuestions;
+  state.quizLength = length;
+  state.questionIndex = 0;
+  state.selectedAnswers = new Set();
+  state.answered = false;
+  state.lastAnswerCorrect = false;
+  state.score = 0;
+  render();
+  document.querySelector("#main-content")?.focus();
+  return true;
+}
+
 function showCategories() {
   state.activeCategory = null;
   state.activeQuestions = [];
+  state.quizLength = null;
   state.questionIndex = 0;
   state.selectedAnswers = new Set();
   state.answered = false;
@@ -341,10 +423,13 @@ function bindEvents() {
   document.querySelectorAll("[data-category]").forEach((button) => {
     button.addEventListener("click", () => startCategory(button.dataset.category));
   });
+  document.querySelectorAll("[data-quiz-length]").forEach((button) => {
+    button.addEventListener("click", () => startQuiz(button.dataset.quizLength));
+  });
 
   document.querySelector("[data-action='reload']")?.addEventListener("click", init);
   document.querySelector("[data-action='replay']")?.addEventListener("click", () => {
-    startCategory(state.activeCategory.shortName, false);
+    startQuiz(state.quizLength);
   });
 
   const form = document.querySelector("#answer-form");
@@ -398,6 +483,8 @@ window.addEventListener("popstate", () => {
   if (requestedCategory) startCategory(requestedCategory, false);
   else {
     state.activeCategory = null;
+    state.activeQuestions = [];
+    state.quizLength = null;
     render();
   }
 });

@@ -27,6 +27,11 @@ export function shuffle(items, random = Math.random) {
   return shuffled;
 }
 
+export function questionsForQuiz(questions, count, random = Math.random) {
+  const shuffled = shuffle(questions, random);
+  return count == null ? shuffled : shuffled.slice(0, count);
+}
+
 export function isCorrectSelection(selectedAnswers, correctAnswers) {
   if (selectedAnswers.length !== correctAnswers.length) {
     return false;
@@ -39,3 +44,4 @@ export function isCorrectSelection(selectedAnswers, correctAnswers) {
     normalizedCorrectAnswers.has(answer.toLocaleLowerCase()),
   );
 }
+
