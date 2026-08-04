@@ -118,15 +118,6 @@ function categoryView() {
     .join("");
 
   return shell(`
-    <section class="hero">
-      <div>
-        <p class="eyebrow">Alliance knowledge protocol</p>
-        <h1>Try your knowledge<br /><em>against the archive.</em></h1>
-      </div>
-      <p class="hero__intro">
-        Select a transmission channel to get started.
-      </p>
-    </section>
     <section aria-labelledby="category-heading">
       <div class="section-heading">
         <div>
