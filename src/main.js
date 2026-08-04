@@ -54,9 +54,7 @@ function shell(content) {
       ${content}
     </main>
     <footer>
-      <span>Alliance of Galactic Travellers</span>
-      <span aria-hidden="true">//</span>
-      <span>Knowledge uplink</span>
+      <span>© ${new Date().getFullYear()}, Alliance of Galactic Travellers</span>
     </footer>
   `;
 }
