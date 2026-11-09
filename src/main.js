@@ -1,6 +1,7 @@
 import "./styles.css";
 import { APP_CONFIG } from "./config.js";
 import { loadQuizData } from "./lib/csv.js";
+import { escapeHtml, pluralize, rankForPercent } from "./lib/format.js";
 import {
   isCorrectSelection,
   questionsForCategory,
@@ -24,15 +25,6 @@ const state = {
   loading: true,
   error: "",
 };
-
-function escapeHtml(value) {
-  return String(value)
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
-}
 
 function shell(content) {
   return `
@@ -104,7 +96,7 @@ function categoryView() {
           <span class="category-card__index">${String(index + 1).padStart(2, "0")}</span>
           <span class="category-card__body">
             <span class="category-card__meta">
-              ${escapeHtml(category.shortName)} · ${questionCount} ${questionCount === 1 ? "question" : "questions"}
+              ${escapeHtml(category.shortName)} · ${pluralize(questionCount, "question")}
             </span>
             <strong>${escapeHtml(category.name)}</strong>
             <span>${escapeHtml(category.description)}</span>
@@ -150,7 +142,7 @@ function quizLengthView() {
     {
       value: "all",
       label: "Full quiz",
-      meta: `All ${questionCount} ${questionCount === 1 ? "question" : "questions"}`,
+      meta: `All ${pluralize(questionCount, "question")}`,
       description: "Complete every available question in this category.",
     },
   ];
@@ -187,7 +179,7 @@ function quizLengthView() {
           <p class="eyebrow">${escapeHtml(state.activeCategory.name)}</p>
           <h1 id="quiz-length-heading">Choose quiz length</h1>
         </div>
-        <span>${questionCount} ${questionCount === 1 ? "question" : "questions"} available</span>
+        <span>${pluralize(questionCount, "question")} available</span>
       </div>
       <div class="category-grid">${cards}</div>
     </section>
@@ -280,10 +272,7 @@ function quizView() {
 function resultsView() {
   const total = state.activeQuestions.length;
   const percent = Math.round((state.score / total) * 100);
-  let rank = "Pathfinder";
-  if (percent === 100) rank = "Atlas Archivist";
-  else if (percent >= 75) rank = "Galactic Cartographer";
-  else if (percent >= 50) rank = "Seasoned Traveller";
+  const rank = rankForPercent(percent);
 
   return shell(`
     <section class="panel results-panel">
@@ -317,8 +306,6 @@ function render() {
   else if (state.questionIndex >= state.activeQuestions.length) {
     app.innerHTML = resultsView();
   } else app.innerHTML = quizView();
-
-  bindEvents();
 }
 
 function updateCategoryUrl(shortName) {
@@ -416,39 +403,54 @@ function submitAnswer(event) {
   });
 }
 
-function bindEvents() {
-  document.querySelectorAll("[data-action='home'], [data-action='categories']")
-    .forEach((button) => button.addEventListener("click", showCategories));
+// Events are delegated from #app once, so re-rendering via innerHTML never
+// needs to re-bind listeners. Add new interactions here with a data-* hook.
+function handleClick(event) {
+  const target = event.target.closest(
+    "[data-action], [data-category], [data-quiz-length]",
+  );
+  if (!target || target.disabled) return;
 
-  document.querySelectorAll("[data-category]").forEach((button) => {
-    button.addEventListener("click", () => startCategory(button.dataset.category));
-  });
-  document.querySelectorAll("[data-quiz-length]").forEach((button) => {
-    button.addEventListener("click", () => startQuiz(button.dataset.quizLength));
-  });
-
-  document.querySelector("[data-action='reload']")?.addEventListener("click", init);
-  document.querySelector("[data-action='replay']")?.addEventListener("click", () => {
-    startQuiz(state.quizLength);
-  });
-
-  const form = document.querySelector("#answer-form");
-  form?.addEventListener("submit", submitAnswer);
-  form?.addEventListener("change", (event) => {
-    const question = state.activeQuestions[state.questionIndex];
-    const answer = question.answers[Number(event.target.value)];
-
-    if (question.isMultiAnswer) {
-      if (event.target.checked) state.selectedAnswers.add(answer);
-      else state.selectedAnswers.delete(answer);
-    } else {
-      state.selectedAnswers = new Set([answer]);
-    }
-
-    const submitButton = form.querySelector("button[type='submit']");
-    submitButton.disabled = state.selectedAnswers.size === 0;
-  });
+  if (target.dataset.category) {
+    startCategory(target.dataset.category);
+  } else if (target.dataset.quizLength) {
+    startQuiz(target.dataset.quizLength);
+  } else {
+    const actions = {
+      home: showCategories,
+      categories: showCategories,
+      reload: init,
+      replay: () => startQuiz(state.quizLength),
+    };
+    actions[target.dataset.action]?.();
+  }
 }
+
+function handleAnswerChange(event) {
+  const form = event.target.closest("#answer-form");
+  if (!form) return;
+
+  const question = state.activeQuestions[state.questionIndex];
+  const answer = question.answers[Number(event.target.value)];
+
+  if (question.isMultiAnswer) {
+    if (event.target.checked) state.selectedAnswers.add(answer);
+    else state.selectedAnswers.delete(answer);
+  } else {
+    state.selectedAnswers = new Set([answer]);
+  }
+
+  const submitButton = form.querySelector("button[type='submit']");
+  submitButton.disabled = state.selectedAnswers.size === 0;
+}
+
+function handleSubmit(event) {
+  if (event.target.id === "answer-form") submitAnswer(event);
+}
+
+app.addEventListener("click", handleClick);
+app.addEventListener("change", handleAnswerChange);
+app.addEventListener("submit", handleSubmit);
 
 async function init() {
   state.loading = true;

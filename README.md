@@ -66,6 +66,7 @@ No backend resources are required.
 ## Verification
 
 ```bash
-npm test
-npm run build
+npm run check
 ```
+
+This runs the unit tests and a production build; CI runs the same command on every pull request. Contributor and AI-agent guidance lives in `AGENTS.md`.
