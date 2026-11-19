@@ -259,11 +259,28 @@ Questions belong to **categories**, each with a short name (used in links), a na
 all of them. Questions are drafted, reviewed and approved by members; only **approved** questions are ever shown to
 players, and review notes never are.
 
-A quiz draws questions at random from one category: a short quiz has `quiz.shortLength` questions, a long one
-`quiz.longLength`, and a full quiz all of them (fewer when the category has fewer). Anonymous play happens entirely in
-the browser and saves nothing.
+Visitors play at `/`:
 
-The player pages, member accounts, writing and reviewing questions, and score history arrive in #16 to #21.
+1. **Choose a category.** Categories are listed by priority, then by name, with their short name, number of
+   questions and description. A category without approved questions is shown but cannot be chosen.
+2. **Choose a length**: a short quiz (`quiz.shortLength` questions), a long one (`quiz.longLength`) or the full
+   quiz (all of them). Fewer when the category has fewer. Questions are drawn at random each time.
+3. **Answer.** A single-answer question has radio buttons ("Select one answer"); a multi-answer one has checkboxes
+   ("Select every correct answer") and counts only when exactly the correct answers are chosen. **Lock answer**
+   shows whether it was right, the correct answers, and who submitted the question; then **Next question**.
+4. **Results**: the score, the percentage and a rank: Atlas Archivist (100 %), Galactic Cartographer (75 % or
+   more), Seasoned Traveller (50 % or more) or Pathfinder. **Replay category** draws a new quiz from the same
+   category; **Choose another** returns to the list.
+
+A link to a category opens it directly: `/?category=<short name>`, ignoring case (for example `/?category=space`).
+An unknown or empty category falls back to the list with a notice. Back and Forward move between the list and the
+categories.
+
+Anonymous play happens entirely in the browser and saves nothing. The **Settings** button in the header sets the
+language and the text size (1× to 2×); they are stored in this browser and shared with the admin dashboard. The
+questions and categories themselves stay in English, in every language.
+
+Member accounts, writing and reviewing questions, and score history arrive in #17 to #21.
 
 ## Backup & restore
 

@@ -4,8 +4,12 @@ import { fontScales, type FontScale, type Preferences } from '../lib/preferences
 import { formatTranslation, LOCALES, type Locale } from '../translations';
 import { changePreference, useI18n } from './I18n';
 
-/** The language, time zone and text-size controls (I18N-4, A11Y-6), shared by the public settings dialog and the admin preferences. */
-export function DisplaySettings() {
+/**
+ * The language, time zone and text-size controls (I18N-4, A11Y-6), shared by
+ * the public settings dialog and the admin preferences. The player UI shows no
+ * times yet, so it leaves the time zone out (`timeZone={false}`).
+ */
+export function DisplaySettings({ timeZone = true }: { timeZone?: boolean }) {
   const { t, preferences } = useI18n();
   const id = useId();
   const change = <K extends keyof Preferences>(name: K, value: Preferences[K]) => changePreference(name, value);
@@ -17,13 +21,13 @@ export function DisplaySettings() {
           {LOCALES.map((locale) => <option key={locale.value} value={locale.value} lang={locale.tag}>{locale.flag} {locale.label}</option>)}
         </select>
       </label>
-      <label className="field">
+      {timeZone && <label className="field">
         <span>{t.settings.timeZone}</span>
         <select value={preferences.timeZone} onChange={(event) => change('timeZone', event.target.value as TimeZoneSetting)}>
           <option value="auto">{t.settings.timeZoneAuto}</option>
           {TIME_ZONE_OFFSETS.map((offset) => <option key={offset} value={offset}>{offsetLabel(offset)}</option>)}
         </select>
-      </label>
+      </label>}
       <label className="field">
         <span>{t.settings.textSize}</span>
         <select value={preferences.fontScale} onChange={(event) => change('fontScale', event.target.value as FontScale)} aria-describedby={`${id}-scale-help`}>

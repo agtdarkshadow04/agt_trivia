@@ -69,3 +69,8 @@ export function formatBytes(value: number, { tag }: Pick<FormatOptions, 'tag'>) 
 export function offsetLabel(offset: typeof TIME_ZONE_OFFSETS[number]) {
   return `UTC${offset.replace('-', '−')}`;
 }
+
+/** A whole percentage (`percent` is 0 to 100) in the reader's language, e.g. "75 %" or "75%" (I18N-5). */
+export function formatPercent(percent: number, { tag }: Pick<FormatOptions, 'tag'>) {
+  return new Intl.NumberFormat(tag, { style: 'percent', maximumFractionDigits: 0 }).format(percent / 100);
+}
