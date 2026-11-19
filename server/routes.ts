@@ -4,6 +4,7 @@ import type { PublicSettings } from '../src/lib/api.js';
 import { settingValues, type AppContext } from './context.js';
 import { backupRoutes } from './backupRoutes.js';
 import { logRoutes } from './logRoutes.js';
+import { quizRoutes } from './quizRoutes.js';
 import { readSettings } from './repository/settings.js';
 import * as S from './schemas.js';
 import { AdminAuthService, clearedCookie, secureCookie, sessionCookie, type AdminSession } from './session.js';
@@ -242,4 +243,4 @@ const coreRoutes: readonly RouteDefinition[] = [
   },
 ];
 
-export const apiRoutes: readonly RouteDefinition[] = [...coreRoutes, ...logRoutes, ...backupRoutes];
+export const apiRoutes: readonly RouteDefinition[] = [...coreRoutes, ...quizRoutes, ...logRoutes, ...backupRoutes];

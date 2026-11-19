@@ -12,6 +12,37 @@ export interface Health {
   status: 'ok' | 'maintenance';
 }
 
+/** `GET /api/categories` (#15): a category as visitors see it. */
+export interface PublicCategory {
+  id: string;
+  shortName: string;
+  name: string;
+  description: string;
+  priority: number;
+  /** Approved questions. */
+  questionCount: number;
+}
+
+export type QuizLength = 'short' | 'long' | 'all';
+
+/** An approved question as visitors see it (#15). */
+export interface PublicQuestion {
+  id: string;
+  prompt: string;
+  /** 2 to 4 answers, in the author's order. */
+  choices: { id: string; text: string }[];
+  /** More than one for a multi-answer question. */
+  correctChoiceIds: string[];
+  authorCredit: string | null;
+}
+
+/** `GET /api/categories/{id}/quiz?length=` (#15). */
+export interface PublicQuiz {
+  category: PublicCategory;
+  length: QuizLength;
+  questions: PublicQuestion[];
+}
+
 /** `GET /api/settings/public` (CFG-10): what the player UI needs, nothing sensitive. */
 export interface PublicSettings {
   siteTitle: string;

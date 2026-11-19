@@ -84,6 +84,9 @@ const en = {
     duplicate: "{{field}} is already in use.",
     mismatch: "{{field}} does not match.",
     same_as_setup_password: "{{field}} must differ from the setup password.",
+    too_few: "{{field}} needs at least {{min}} items.",
+    correct_choice_required: "Mark at least one answer as correct.",
+    too_many_words: "{{field}} reads best with at most {{max}} words; this one has {{count}}.",
   },
   fields: {
     username: "Username",
@@ -156,6 +159,9 @@ const fr: Translations = {
     duplicate: "{{field}} est déjà utilisé.",
     mismatch: "{{field}} ne correspond pas.",
     same_as_setup_password: "{{field}} doit être différent du mot de passe d'installation.",
+    too_few: "{{field}} doit contenir au moins {{min}} éléments.",
+    correct_choice_required: "Marquez au moins une réponse comme correcte.",
+    too_many_words: "{{field}} se lit mieux avec {{max}} mots au plus ; celle-ci en compte {{count}}.",
   },
   fields: {
     username: "Nom d'utilisateur",
@@ -226,6 +232,9 @@ const de: Translations = {
     duplicate: "{{field}} wird bereits verwendet.",
     mismatch: "{{field}} stimmt nicht überein.",
     same_as_setup_password: "{{field}} muss sich vom Einrichtungspasswort unterscheiden.",
+    too_few: "{{field}} braucht mindestens {{min}} Einträge.",
+    correct_choice_required: "Markieren Sie mindestens eine Antwort als richtig.",
+    too_many_words: "{{field}} liest sich am besten mit höchstens {{max}} Wörtern; hier sind es {{count}}.",
   },
   fields: {
     username: "Benutzername",
@@ -296,6 +305,9 @@ const es: Translations = {
     duplicate: "{{field}} ya está en uso.",
     mismatch: "{{field}} no coincide.",
     same_as_setup_password: "{{field}} debe ser distinto de la contraseña de configuración.",
+    too_few: "{{field}} necesita al menos {{min}} elementos.",
+    correct_choice_required: "Marca al menos una respuesta como correcta.",
+    too_many_words: "{{field}} se lee mejor con {{max}} palabras como máximo; esta tiene {{count}}.",
   },
   fields: {
     username: "Nombre de usuario",
@@ -366,6 +378,9 @@ const pt: Translations = {
     duplicate: "{{field}} já está em uso.",
     mismatch: "{{field}} não confere.",
     same_as_setup_password: "{{field}} deve ser diferente da senha de configuração.",
+    too_few: "{{field}} precisa de pelo menos {{min}} itens.",
+    correct_choice_required: "Marque pelo menos uma resposta como correta.",
+    too_many_words: "{{field}} fica melhor com no máximo {{max}} palavras; esta tem {{count}}.",
   },
   fields: {
     username: "Nome de usuário",
@@ -436,6 +451,9 @@ const it: Translations = {
     duplicate: "{{field}} è già in uso.",
     mismatch: "{{field}} non corrisponde.",
     same_as_setup_password: "{{field}} deve essere diverso dalla password di configurazione.",
+    too_few: "{{field}} richiede almeno {{min}} elementi.",
+    correct_choice_required: "Segna almeno una risposta come corretta.",
+    too_many_words: "{{field}} si legge meglio con al massimo {{max}} parole; questa ne ha {{count}}.",
   },
   fields: {
     username: "Nome utente",
@@ -506,6 +524,9 @@ const th: Translations = {
     duplicate: "{{field}} นี้ถูกใช้แล้ว",
     mismatch: "{{field}} ไม่ตรงกัน",
     same_as_setup_password: "{{field}} ต้องไม่เหมือนกับรหัสผ่านสำหรับการตั้งค่า",
+    too_few: "{{field}} ต้องมีอย่างน้อย {{min}} รายการ",
+    correct_choice_required: "ทำเครื่องหมายคำตอบที่ถูกต้องอย่างน้อยหนึ่งข้อ",
+    too_many_words: "{{field}} อ่านง่ายที่สุดเมื่อมีไม่เกิน {{max}} คำ ข้อนี้มี {{count}} คำ",
   },
   fields: {
     username: "ชื่อผู้ใช้",
@@ -576,6 +597,9 @@ const zh: Translations = {
     duplicate: "{{field}}已被使用。",
     mismatch: "{{field}}不一致。",
     same_as_setup_password: "{{field}}不能与设置密码相同。",
+    too_few: "{{field}}至少需要 {{min}} 项。",
+    correct_choice_required: "请至少将一个答案标记为正确。",
+    too_many_words: "{{field}}最好不超过 {{max}} 个词；当前有 {{count}} 个。",
   },
   fields: {
     username: "用户名",
@@ -646,6 +670,9 @@ const hi: Translations = {
     duplicate: "{{field}} पहले से इस्तेमाल में है।",
     mismatch: "{{field}} मेल नहीं खाता।",
     same_as_setup_password: "{{field}} सेटअप पासवर्ड से अलग होना चाहिए।",
+    too_few: "{{field}} में कम से कम {{min}} आइटम होने चाहिए।",
+    correct_choice_required: "कम से कम एक उत्तर को सही चिह्नित करें।",
+    too_many_words: "{{field}} अधिकतम {{max}} शब्दों में सबसे अच्छा पढ़ा जाता है; इसमें {{count}} हैं।",
   },
   fields: {
     username: "उपयोगकर्ता नाम",
@@ -716,6 +743,9 @@ const ja: Translations = {
     duplicate: "この{{field}}はすでに使われています。",
     mismatch: "{{field}}が一致しません。",
     same_as_setup_password: "{{field}}はセットアップ用パスワードと異なる必要があります。",
+    too_few: "{{field}}は {{min}} 件以上必要です。",
+    correct_choice_required: "少なくとも 1 つの答えを正解として選んでください。",
+    too_many_words: "{{field}}は {{max}} 語以内が読みやすくなります。現在 {{count}} 語です。",
   },
   fields: {
     username: "ユーザー名",

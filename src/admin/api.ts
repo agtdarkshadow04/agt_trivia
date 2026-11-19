@@ -90,7 +90,7 @@ export interface RestoreReport {
   createdAt: string;
   appVersion: string;
   schemaVersion: { backup: number; current: number };
-  counts: { admin: number; settings: number };
+  counts: { categories: number; questions: number; admin: number; settings: number };
   adminUsername: string | null;
   ignoredSettings: string[];
   warningCodes: RestoreWarningCode[];

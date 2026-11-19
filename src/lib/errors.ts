@@ -28,6 +28,9 @@ export const FIELD_CODES = [
   'duplicate',
   'mismatch',
   'same_as_setup_password',
+  'too_few',
+  'correct_choice_required',
+  'too_many_words',
 ] as const;
 
 export type FieldCode = typeof FIELD_CODES[number];

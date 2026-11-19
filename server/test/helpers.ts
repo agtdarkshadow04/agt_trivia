@@ -6,6 +6,8 @@ import type { AppContext } from '../context.js';
 import { withDataWrite } from '../dataWrite.js';
 import { Database, openDatabase, openSqlite, runMigrations } from '../db.js';
 import { openLogStore } from '../logs.js';
+import { insertCategory, type Category } from '../repository/categories.js';
+import { insertQuestion, type NewQuestion, type Question } from '../repository/questions.js';
 import { OperationLock, type OperationTimings } from '../operation.js';
 import { adminSessionCookie, AdminAuthService } from '../session.js';
 
@@ -78,4 +80,36 @@ export async function adminWriteHeaders(context: AppContext) {
 /** The SQLite change counter: how many rows inserts, updates and deletes touched so far. */
 export function totalChanges(context: AppContext) {
   return (context.db.connection.prepare('SELECT total_changes() AS changes').get() as { changes: number }).changes;
+}
+
+/** A question for `seedQuiz()`: two choices, the first correct, approved unless `status` says otherwise. */
+export function sampleQuestion(categoryId: string, prompt: string, overrides: Partial<NewQuestion> = {}): NewQuestion {
+  return {
+    categoryId,
+    prompt,
+    status: 'approved',
+    authorCredit: null,
+    createdBy: null,
+    reviewNote: '',
+    choices: [{ text: `${prompt} (right)`, isCorrect: true }, { text: `${prompt} (wrong)`, isCorrect: false }],
+    ...overrides,
+  };
+}
+
+/**
+ * A category with `approved` approved questions, plus one of every other
+ * status and one with a review note and a member ID, written as a data write.
+ */
+export async function seedQuiz(context: AppContext, approved = 3, category: Partial<Parameters<typeof insertCategory>[1]> = {}) {
+  return withDataWrite(context.operations, () => {
+    const created: Category = insertCategory(context.db, {
+      shortName: 'space', name: 'Space', description: 'Questions about space.', priority: 10, ...category,
+    });
+    const questions: Question[] = [];
+    for (let index = 0; index < approved; index += 1) questions.push(insertQuestion(context.db, sampleQuestion(created.id, `Approved ${index + 1}`)));
+    const hidden = (['draft', 'pending', 'rejected'] as const).map((status) => insertQuestion(context.db, sampleQuestion(created.id, `Hidden ${status}`, {
+      status, reviewNote: `secret note ${status}`, createdBy: '11111111-1111-4111-8111-111111111111',
+    })));
+    return { category: created, questions, hidden };
+  });
 }

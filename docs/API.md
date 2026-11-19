@@ -2,7 +2,7 @@
 
 The server's REST API lives under `/api/`. The complete, generated description is the OpenAPI 3.1 document at
 `GET /api/openapi.json` (API-11); this guide explains the conventions it follows. The API grows with the rebuild
-(#6): categories, questions, member accounts and score history arrive in their sub-issues.
+(#6): authoring, member accounts and score history arrive in their sub-issues.
 
 ## Requests and responses
 
@@ -30,6 +30,8 @@ The server's REST API lives under `/api/`. The complete, generated description i
 | --- | --- |
 | `GET /api/health` | `{ "status": "ok" }` when the server and its database answer (SRV-11) |
 | `GET /api/settings/public` | The settings the player UI needs: `siteTitle`, `supportUrl`, `quizShortLength`, `quizLongLength` (CFG-10) |
+| `GET /api/categories` | Every category, `[{ id, shortName, name, description, priority, questionCount }]`, lower `priority` first, then by name; `questionCount` counts approved questions. A plain array (API-8) |
+| `GET /api/categories/{id}/quiz?length=short\|long\|all` | A random quiz: `{ category, length, questions }`, with `quiz.shortLength`, `quiz.longLength` or all approved questions (fewer when the category has fewer). Each question is `{ id, prompt, choices: [{ id, text }], correctChoiceIds, authorCredit }`, choices in the author's order; more than one correct choice makes it a multi-answer question. An unknown or malformed `id` answers `404 not_found` |
 | `GET /api/setup/status` | `{ adminExists, setupPasswordConfigured }` (AUTH-5) |
 | `POST /api/setup` | `{ setupPassword, username, password }`: creates the Admin with `AGT_TRIVIA_SETUP_PASSWORD` and signs it in; `201 { username }` |
 | `POST /api/admin/login` | `{ username, password }`: signs the Admin in; `200 { username }` |
@@ -88,5 +90,17 @@ and `fields` lists field-level problems, each with a `field` (the request proper
 | `maintenance` | 503 | A restore is running or has failed, or a write waited 30 seconds for a backup; `Retry-After: 10` | `{ retryAfterSeconds }` |
 
 Field codes: `required`, `too_long` (`{ max }`), `too_short` (`{ min }`), `out_of_range` (`{ min?, max? }`),
-`too_many` (`{ max }`), `invalid_format`, `invalid_url`, `not_allowed`, `duplicate`, `mismatch` (`{ other }`) and
-`same_as_setup_password`.
+`too_many` (`{ max }`), `too_few` (`{ min }`, a list with too few items), `invalid_format`, `invalid_url`,
+`not_allowed`, `duplicate`, `mismatch` (`{ other }`), `same_as_setup_password` and `correct_choice_required` (a
+question without a correct answer).
+
+## Notices
+
+A successful write may return `notices` (API-2): non-blocking warnings with the same shape as field errors. A question
+whose prompt has more than 15 words gets `too_many_words` (`{ max, count }`) on `prompt`.
+
+## Public data
+
+Public routes return only the fields their schemas list (API-3). The quiz includes the correct answers, as the 1.x
+published sheet did: anonymous play is graded in the browser and writes nothing. Questions that are not approved,
+review notes and the members who wrote or approved a question are never public.

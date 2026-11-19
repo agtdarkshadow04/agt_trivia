@@ -51,6 +51,13 @@ All notable changes to AGT Galactic Trivia are documented in this file. The form
   `127.0.0.1:8082` only) or as a systemd service on Ubuntu/Debian, with an example Caddy configuration for HTTPS.
   The README covers installing a release, TLS and reverse proxies, upgrading and rolling back (#14).
 
+- Quiz categories and questions in the database, replacing the Google Sheet's two tables. A question has 2 to 4
+  answers, at least one correct; more than one correct answer makes it a multi-answer question, and answers may now
+  contain commas. Only approved questions are public. Categories no longer have a theme (#15).
+- `GET /api/categories` lists the categories with their number of approved questions, and
+  `GET /api/categories/{id}/quiz?length=short|long|all` draws a random quiz from them (#15).
+- Backup previews and restore reports count categories and questions (#15).
+
 ### Changed
 
 - The app is rebuilt on the AGT Web Application Specification v6.0.1 stack: a Fastify 5 server with a React 19 +
