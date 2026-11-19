@@ -73,6 +73,7 @@ Settings come from three places:
 | `server.logLevel` | `info` | `fatal`, `error`, `warn`, `info`, `debug`, `trace` or `silent` (stdout) |
 | `storage.dataDir` | `data` | Where the app keeps its data, relative to the working directory |
 | `storage.databaseFile` | `agt-trivia.sqlite` | The SQLite database, relative to `storage.dataDir` |
+| `storage.logDatabaseFile` | `logs.sqlite` | The log store (server log and audit log), relative to `storage.dataDir`; never in backups |
 | `session.ttlHours` | `12` | How long an Admin sign-in lasts, in hours (1–168) |
 | `session.secureCookie` | `auto` | Whether the session cookie is `Secure`: `auto` (when the request came over HTTPS; behind a proxy that needs `server.trustProxy`), `true` or `false` |
 | `rateLimits.login` | 10 per 15 minutes | Admin sign-in and the Admin password change, each counted separately, per client address |
@@ -86,6 +87,10 @@ Settings come from three places:
 | `site.supportUrl` | `https://www.nms-agt.com/support` | Support link: an absolute `http:` or `https:` URL |
 | `quiz.shortLength` | `10` | Questions in a short quiz (1–100, fewer than `quiz.longLength`) |
 | `quiz.longLength` | `30` | Questions in a long quiz (2–500, more than `quiz.shortLength`) |
+| `logs.serverRetentionDays` | `30` | Days the server log keeps an entry (1–3650) |
+| `logs.serverMaxEntries` | `100000` | Most server log entries (1000–10000000); the oldest go first |
+| `logs.auditRetentionDays` | `365` | Days the audit log keeps an entry (30–3650) |
+| `logs.auditMaxEntries` | `1000000` | Most audit log entries (10000–10000000); the oldest failures go first, then the oldest successes |
 
 ### Environment variables
 
@@ -101,14 +106,17 @@ app stops the server instead of being changed.
 
 ## Admin dashboard
 
-The Admin signs in at `/admin`. The header shows the app version, a **Settings** button for the language and text
-size (stored in this browser and shared with the game), **View site** and **Sign out**. The tabs:
+The Admin signs in at `/admin`. The header shows the app version, a **Settings** button for the language, time zone
+and text size (stored in this browser and shared with the game), **View site** and **Sign out**. The tabs:
 
 - **Settings** edits the [dashboard-editable keys](#dashboard-editable-keys). Settings defined in `config.yaml` are
   shown read-only, marked "Set in the configuration file".
+- **Server log** shows, filters, searches, exports and clears the server log (see [Logs](#logs)). While there are
+  unseen warnings or errors, the tab shows a badge with their count and the dashboard a link to it.
+- **Audit log** shows, filters, searches and exports the audit log. It cannot be edited or cleared.
 - **Account** changes the Admin password. This signs out every other Admin session.
 
-Members, Server log, Audit log, Import and Backup & restore arrive in #12 to #22.
+Members, Import and Backup & restore arrive in #13 to #22.
 
 ## Playing
 
@@ -120,7 +128,28 @@ Added in #13.
 
 ## Logs
 
-Added in #12.
+The server keeps two logs in their own SQLite file, `storage.logDatabaseFile` (`logs.sqlite` in the data directory).
+**Logs are not part of backups**, and a restore never changes them.
+
+- The **server log** holds what the server did by itself: startup (version, schema versions, address, which
+  configuration file), configuration warnings such as the setup-password reminder, every migration applied,
+  retention runs, unexpected errors with their stack, and shutdown. Entries at `info` level and above are stored,
+  whatever `server.logLevel` says; that key only controls what is also printed to stdout.
+- The **audit log** holds what people did: every request that changes something (setup, sign-in and sign-out,
+  password changes, settings changes, clearing the server log), downloads of log exports, denied attempts on the
+  Admin pages and every rate-limited request, each with its outcome. Settings changes record the old and new values;
+  nothing else records submitted values, and passwords, tokens and cookies are never logged. Repeated failures from
+  one address within a minute are counted in one entry.
+
+**Privacy:** the audit log stores the Admin's username and, for every entry, a pseudonymous network identifier: the
+first 16 hex characters of an HMAC of the client address (the /64 prefix for IPv6), with a random key kept in the log
+store. Raw IP addresses are never stored, in either log. Entries are kept for `logs.auditRetentionDays` (365 days by
+default, at least 30) and the server log's for `logs.serverRetentionDays` (30 days); each log also has a maximum
+number of entries. A retention job removes older entries at startup and every hour, and notes each run that deleted
+something in the server log.
+
+Both tabs export the entries matching the current filters as JSON Lines or CSV. CSV cells that start like a
+spreadsheet formula (`=`, `+`, `-`, `@`) get a leading `'`, so opening an export never runs one.
 
 ## Content safety
 
@@ -188,7 +217,9 @@ Contributor and AI-agent guidance is in [`AGENTS.md`](AGENTS.md); the rules the 
 - **Signed out right after signing in, behind HTTPS:** the session cookie is `Secure` only when the server knows the
   request came over HTTPS. Set `server.trustProxy` so it believes the proxy's `X-Forwarded-Proto`, or set
   `session.secureCookie: true`.
-- More topics (proxies, maintenance, failed restores) arrive with their features (#12 to #14).
+- **Something went wrong:** open the **Server log** tab first. Unexpected errors are there with their details, and
+  the matching audit entry has the same request ID.
+- More topics (maintenance, failed restores) arrive with their features (#13, #14).
 
 ## Credits
 

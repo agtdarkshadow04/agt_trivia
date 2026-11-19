@@ -125,3 +125,95 @@ export const SettingsResult = object({
   settings: Type.Array(SettingState),
   notices: Type.Array(Type.Ref('FieldError'), { description: 'Non-blocking warnings (API-2); always empty for settings.' }),
 });
+
+// --- Logs (LOG-18) -----------------------------------------------------------
+
+const Text = (maxLength: number, description?: string) => Type.String({ maxLength, ...(description ? { description } : {}) });
+const Time = Type.String({ format: 'date-time', description: 'ISO 8601.' });
+const page = {
+  limit: Type.Optional(Type.String({ pattern: '^[1-9][0-9]{0,2}$', description: '1 to 200; 50 by default (API-8).' })),
+  cursor: Type.Optional(Text(64, 'The `nextCursor` of the previous page (API-8).')),
+};
+
+export const ServerLogQuery = object({
+  level: Type.Optional(Type.Union(['info', 'warn', 'error', 'fatal'].map((level) => Type.Literal(level)), { description: 'The minimum level.' })),
+  source: Type.Optional(Text(100)),
+  from: Type.Optional(Time),
+  to: Type.Optional(Time),
+  q: Type.Optional(Text(200, 'Text in the message.')),
+  ...page,
+});
+
+export const AuditLogQuery = object({
+  actorType: Type.Optional(Type.Union([Type.Literal('admin'), Type.Literal('anonymous')])),
+  action: Type.Optional(Text(100)),
+  outcome: Type.Optional(Type.Union(['success', 'denied', 'rate_limited', 'failure'].map((outcome) => Type.Literal(outcome)))),
+  targetType: Type.Optional(Text(100)),
+  targetId: Type.Optional(Text(200)),
+  from: Type.Optional(Time),
+  to: Type.Optional(Time),
+  q: Type.Optional(Text(200, 'Text in the actor, action, target and details.')),
+  ...page,
+});
+
+const exportFormat = { format: Type.Union([Type.Literal('jsonl'), Type.Literal('csv')], { description: 'JSON Lines or CSV (LOG-22).' }) };
+const withoutPage = <T extends Record<string, unknown>>(properties: T) => {
+  const { limit: _limit, cursor: _cursor, ...rest } = properties as T & { limit?: unknown; cursor?: unknown };
+  return rest;
+};
+export const ServerLogExportQuery = object({ ...withoutPage(ServerLogQuery.properties), ...exportFormat });
+export const AuditLogExportQuery = object({ ...withoutPage(AuditLogQuery.properties), ...exportFormat });
+
+const Details = Type.Record(Type.String(), Type.Unknown(), { description: 'A JSON summary; never secrets or request bodies (LOG-9, LOG-14).' });
+const nullableText = Type.Union([Type.String(), Type.Null()]);
+
+export const ServerLogEntry = object({
+  id: Type.String(),
+  at: Type.String({ format: 'date-time' }),
+  level: Type.Union(['info', 'warn', 'error', 'fatal'].map((level) => Type.Literal(level))),
+  source: Type.String(),
+  message: Type.String(),
+  requestId: nullableText,
+  details: Details,
+});
+
+export const AuditLogEntry = object({
+  id: Type.String(),
+  at: Type.String({ format: 'date-time', description: 'The first time.' }),
+  lastAt: Type.String({ format: 'date-time', description: 'The last time; later than `at` for coalesced entries.' }),
+  count: Type.Integer({ description: 'Identical events coalesced into this entry (LOG-11).' }),
+  actorType: Type.Union([Type.Literal('admin'), Type.Literal('anonymous')]),
+  actor: nullableText,
+  ipHash: Type.Union([Type.String({ description: 'A pseudonymous address hash, never the address (LOG-12).' }), Type.Null()]),
+  client: Type.Union([Type.Literal('web'), Type.Literal('api')]),
+  action: Type.String({ description: 'The route\'s operationId.' }),
+  method: Type.String(),
+  route: Type.String(),
+  targetType: nullableText,
+  targetId: nullableText,
+  outcome: Type.Union(['success', 'denied', 'rate_limited', 'failure'].map((outcome) => Type.Literal(outcome))),
+  statusCode: Type.Integer(),
+  requestId: nullableText,
+  details: Details,
+});
+
+const LogPage = (item: ReturnType<typeof object>) => object({
+  items: Type.Array(item),
+  nextCursor: Type.Union([Type.String(), Type.Null()], { description: 'null on the last page.' }),
+});
+export const ServerLogPage = LogPage(ServerLogEntry);
+export const AuditLogPage = LogPage(AuditLogEntry);
+
+export const ServerLogSummary = object({
+  unseenWarnings: Type.Integer(),
+  unseenErrors: Type.Integer({ description: 'Unseen `error` and `fatal` entries.' }),
+});
+
+/** A streamed download (LOG-22): JSON Lines or CSV. */
+export const LogExport = {
+  description: 'The matching entries, newest first, as an attachment.',
+  content: {
+    'application/x-ndjson': { schema: Type.String({ description: 'One JSON object per line.' }) },
+    'text/csv': { schema: Type.String({ description: 'A header row, then one row per entry.' }) },
+  },
+};

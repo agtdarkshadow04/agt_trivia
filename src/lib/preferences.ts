@@ -1,4 +1,5 @@
 import { isLocale, type Locale } from '../translations.js';
+import { isTimeZoneSetting, type TimeZoneSetting } from './format.js';
 
 /**
  * User preferences (FE-3, I18N-4): one JSON object in
@@ -18,9 +19,11 @@ export interface Preferences {
   /** I18N-1; English unless the reader chooses another (no auto-detection, I18N-4). */
   language: Locale;
   fontScale: FontScale;
+  /** `auto` (the browser's zone) or a fixed UTC offset such as `+05:30` (I18N-4, I18N-5). */
+  timeZone: TimeZoneSetting;
 }
 
-export const defaultPreferences: Preferences = { language: 'en', fontScale: '1' };
+export const defaultPreferences: Preferences = { language: 'en', fontScale: '1', timeZone: 'auto' };
 
 /** Sent on `window` when a preference changes, so open pages can follow it. */
 export const preferencesChangedEvent = 'agt_trivia_preferences_changed';
@@ -50,6 +53,7 @@ export function readPreferences(storage = browserStorage()): Preferences {
   return {
     language: isLocale(stored.language) ? stored.language : defaultPreferences.language,
     fontScale: fontScales.includes(stored.fontScale as FontScale) ? stored.fontScale as FontScale : defaultPreferences.fontScale,
+    timeZone: isTimeZoneSetting(stored.timeZone) ? stored.timeZone : defaultPreferences.timeZone,
   };
 }
 

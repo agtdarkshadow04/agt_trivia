@@ -2,6 +2,7 @@ import type { TSchema } from '@sinclair/typebox';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import type { PublicSettings } from '../src/lib/api.js';
 import { settingValues, type AppContext } from './context.js';
+import { logRoutes } from './logRoutes.js';
 import { readSettings } from './repository/settings.js';
 import * as S from './schemas.js';
 import { AdminAuthService, clearedCookie, secureCookie, sessionCookie, type AdminSession } from './session.js';
@@ -32,7 +33,7 @@ export interface RouteSchemas {
   querystring?: TSchema;
   body?: TSchema;
   /** Success responses by status code; `buildApp()` adds `default: ErrorBody`. */
-  response: Record<number, TSchema>;
+  response: Record<number, TSchema | { description: string; content: Record<string, { schema: TSchema }> }>;
 }
 
 export interface RouteDefinition {
@@ -85,6 +86,8 @@ function authLog(request: FastifyRequest) {
 
 function startSession(context: AppContext, request: FastifyRequest, reply: FastifyReply, session: AdminSession) {
   reply.header('set-cookie', sessionCookie(session.token, session.expiresAt, secureCookie(context, request)));
+  // LOG-10: the Admin who just signed in is the actor; setup and the password change record only that they happened (LOG-14).
+  request.audit = { ...request.audit, actorType: 'admin', actor: session.username };
   return { username: session.username };
 }
 
@@ -92,7 +95,7 @@ function adminSession(context: AppContext, username: string) {
   return { username, version: context.version, setupPasswordStillSet: context.setupPassword !== null };
 }
 
-export const apiRoutes: readonly RouteDefinition[] = [
+const coreRoutes: readonly RouteDefinition[] = [
   {
     method: 'GET',
     url: '/api/health',
@@ -226,8 +229,12 @@ export const apiRoutes: readonly RouteDefinition[] = [
     description: 'Rejects the whole request when a key is unknown (400 unknown_setting), set in config.yaml (409 defined_in_config) or invalid (400 invalid_setting) (CFG-8).',
     schema: { body: S.SettingsUpdate, response: { 200: S.SettingsResult } },
     handler: (context, request) => {
-      const { settings } = updateSettings(context, (request.body as { values: Record<string, unknown> }).values);
+      const { settings, changes } = updateSettings(context, (request.body as { values: Record<string, unknown> }).values);
+      // LOG-14: each changed key with its old and new value; no setting holds a secret (SEC-8).
+      request.audit = { details: { changes } };
       return { settings, notices: [] };
     },
   },
 ];
+
+export const apiRoutes: readonly RouteDefinition[] = [...coreRoutes, ...logRoutes];

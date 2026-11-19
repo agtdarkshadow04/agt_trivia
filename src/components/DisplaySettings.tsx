@@ -1,9 +1,10 @@
 import { useId } from 'react';
+import { offsetLabel, TIME_ZONE_OFFSETS, type TimeZoneSetting } from '../lib/format';
 import { fontScales, type FontScale, type Preferences } from '../lib/preferences';
 import { formatTranslation, LOCALES, type Locale } from '../translations';
 import { changePreference, useI18n } from './I18n';
 
-/** The language and text-size controls (I18N-4, A11Y-6), shared by the public settings dialog and the admin preferences. */
+/** The language, time zone and text-size controls (I18N-4, A11Y-6), shared by the public settings dialog and the admin preferences. */
 export function DisplaySettings() {
   const { t, preferences } = useI18n();
   const id = useId();
@@ -14,6 +15,13 @@ export function DisplaySettings() {
         <span>{t.settings.language}</span>
         <select value={preferences.language} onChange={(event) => change('language', event.target.value as Locale)}>
           {LOCALES.map((locale) => <option key={locale.value} value={locale.value} lang={locale.tag}>{locale.flag} {locale.label}</option>)}
+        </select>
+      </label>
+      <label className="field">
+        <span>{t.settings.timeZone}</span>
+        <select value={preferences.timeZone} onChange={(event) => change('timeZone', event.target.value as TimeZoneSetting)}>
+          <option value="auto">{t.settings.timeZoneAuto}</option>
+          {TIME_ZONE_OFFSETS.map((offset) => <option key={offset} value={offset}>{offsetLabel(offset)}</option>)}
         </select>
       </label>
       <label className="field">

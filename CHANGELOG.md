@@ -34,6 +34,11 @@ All notable changes to AGT Galactic Trivia are documented in this file. The form
 - All ten AGT languages (English, French, German, Spanish, Brazilian Portuguese, Italian, Thai, Mandarin Chinese,
   Hindi and Japanese) and a text size from 1× to 2×, chosen in the dashboard's Settings dialog and remembered in this
   browser for both pages. Error messages are shown in the chosen language (#11).
+- The server log and the audit log, kept in their own file (`storage.logDatabaseFile`) and never in backups, with
+  **Server log** and **Audit log** tabs to filter, search and export them (JSON Lines or CSV) and to clear the server
+  log. Addresses are stored only as pseudonymous hashes; retention is set with the `logs.*` settings (#12).
+- A time-zone choice (the device's, or a fixed UTC offset) in the Settings dialog, for the times the dashboard shows
+  (#12).
 
 ### Changed
 

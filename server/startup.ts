@@ -18,6 +18,8 @@ export interface Startup {
   configFile: LoadedConfig;
   /** The SQLite database file: `storage.databaseFile` inside `storage.dataDir` (DATA-5, DATA-10). */
   databaseFile: string;
+  /** The log store: `storage.logDatabaseFile` inside `storage.dataDir` (LOG-1). */
+  logDatabaseFile: string;
   /** The built client, `dist/` unless AGT_TRIVIA_STATIC_DIR says otherwise (development only). */
   staticDir: string;
   /** AGT_TRIVIA_SETUP_PASSWORD, or null when unset or empty (AUTH-5). */
@@ -36,6 +38,7 @@ export function loadStartup(env: Env): Startup {
   return {
     configFile,
     databaseFile: resolve(storage.dataDir, storage.databaseFile),
+    logDatabaseFile: resolve(storage.dataDir, storage.logDatabaseFile),
     staticDir: resolve(envValue(env, 'STATIC_DIR') ?? 'dist'),
     setupPassword: envValue(env, 'SETUP_PASSWORD') ?? null,
   };

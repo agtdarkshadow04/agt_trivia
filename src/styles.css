@@ -49,6 +49,7 @@ img { max-width: 100%; }
 .account-details div { display: grid; grid-template-columns: minmax(8rem, 0.8fr) minmax(0, 1.2fr); gap: 1rem; }
 .account-details dt { color: var(--muted); font-size: 0.68rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; }
 .account-details dd { overflow-wrap: anywhere; margin: 0; color: var(--text); }
+.link-button { padding: 0; border: 0; color: var(--agt-orange); background: none; font: inherit; text-decoration: underline; text-underline-offset: 0.2em; cursor: pointer; }
 .main-content { flex: 1; }
 .main-content:focus { outline: none; }
 .site-footer { display: flex; align-items: center; justify-content: space-between; gap: 2rem; padding: 2.5rem clamp(1rem, 4vw, 3rem); color: #090909; background: var(--agt-orange); }

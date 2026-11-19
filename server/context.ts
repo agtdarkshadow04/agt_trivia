@@ -8,6 +8,7 @@ import {
   type SettingValues,
 } from './config.js';
 import type { Database } from './db.js';
+import type { LogStore } from './logs.js';
 
 /**
  * Everything the routes and services need, built once by `server/index.ts`
@@ -20,6 +21,8 @@ export interface AppContext {
   readonly configFile: { readonly path: string; readonly text: string | null };
   /** The main database; a restore swaps it (#13). */
   readonly db: Database;
+  /** The log store: the server log and the audit log (§13). */
+  readonly logs: LogStore;
   /** `AGT_TRIVIA_SETUP_PASSWORD`, or null when it is unset or empty (AUTH-5). Never stored. */
   readonly setupPassword: string | null;
   /** The app version from `package.json` (VER-2). */

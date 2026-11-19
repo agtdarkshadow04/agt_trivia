@@ -7,6 +7,7 @@ import fastifyStatic from '@fastify/static';
 import type { TypeBoxTypeProvider } from '@fastify/type-provider-typebox';
 import { Type } from '@sinclair/typebox';
 import Fastify, { LogController, type FastifyInstance, type FastifyReply, type FastifyRequest, type FastifyServerOptions } from 'fastify';
+import { auditHook } from './audit.js';
 import type { AppContext } from './context.js';
 import { withDataWrite } from './dataWrite.js';
 import { noStoreHeaders, securityHeaders } from './headers.js';
@@ -68,6 +69,10 @@ export function buildApp(context: AppContext, options: BuildAppOptions = {}): Fa
 
   app.register(fastifyCookie);
   app.decorateRequest('admin', null);
+  app.decorateRequest('audit', null);
+  app.decorateRequest('auditError', null);
+  // LOG-11: one hook audits every request that needs it.
+  app.addHook('onResponse', auditHook(context.logs));
 
   // SEC-4: one warning per process, the first time credentials arrive over plain HTTP from another machine.
   let plainHttpWarned = false;
@@ -108,10 +113,16 @@ export function buildApp(context: AppContext, options: BuildAppOptions = {}): Fa
   registerOpenApi(app, context.version);
 
   // SRV-5: the one error handler; errorReply() decides every error body.
-  app.setErrorHandler((error, request, reply) => sendError(reply, errorReply(error, {
-    maxBodyBytes,
-    onUnexpected: (unexpected) => request.log.error({ err: unexpected, source: 'http', route: request.routeOptions.url }, 'Unhandled API error'),
-  })));
+  app.setErrorHandler((error, request, reply) => {
+    const result = errorReply(error, {
+      maxBodyBytes,
+      // LOG-7, LOG-8: an unexpected error is a server log entry sharing the audit entry's request ID.
+      onUnexpected: (unexpected) => request.log.error({ err: unexpected, source: 'http', route: request.routeOptions.url }, 'Unhandled API error'),
+    });
+    // LOG-14: a failure's audit entry names the error code and the failed fields, never their values.
+    request.auditError = { error: result.body.error, ...(result.body.fields ? { fields: result.body.fields.map((field) => field.field) } : {}) };
+    return sendError(reply, result);
+  });
   // SRV-10: unknown routes get the error body, not an HTML page.
   app.setNotFoundHandler((_request, reply) => sendError(reply, errorReply(new HttpError(404, 'not_found', 'Route not found.'), { maxBodyBytes })));
 

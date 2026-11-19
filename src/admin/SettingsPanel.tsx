@@ -7,12 +7,21 @@ import { listSettings, updateSettings, type SettingState, type SettingValue } fr
 import { useAdminI18n } from './context';
 import type { AdminTranslations } from './i18n';
 
-type Key = 'site.title' | 'site.supportUrl' | 'quiz.shortLength' | 'quiz.longLength';
+type Key = 'site.title' | 'site.supportUrl' | 'quiz.shortLength' | 'quiz.longLength'
+  | 'logs.serverRetentionDays' | 'logs.serverMaxEntries' | 'logs.auditRetentionDays' | 'logs.auditMaxEntries';
 
 /** The form's fields, grouped as in config.yaml (CFG-6). */
 const groups: { title: (a: AdminTranslations) => string; help?: (a: AdminTranslations) => string; keys: { key: Key; type: 'text' | 'url' | 'number' }[] }[] = [
   { title: (a) => a.settings.site, keys: [{ key: 'site.title', type: 'text' }, { key: 'site.supportUrl', type: 'url' }] },
   { title: (a) => a.settings.quiz, help: (a) => a.settings.quizHelp, keys: [{ key: 'quiz.shortLength', type: 'number' }, { key: 'quiz.longLength', type: 'number' }] },
+  {
+    title: (a) => a.settings.logRetention,
+    help: (a) => a.settings.logRetentionHelp,
+    keys: [
+      { key: 'logs.serverRetentionDays', type: 'number' }, { key: 'logs.serverMaxEntries', type: 'number' },
+      { key: 'logs.auditRetentionDays', type: 'number' }, { key: 'logs.auditMaxEntries', type: 'number' },
+    ],
+  },
 ];
 
 const labels = (a: AdminTranslations): Record<Key, string> => ({
@@ -20,6 +29,10 @@ const labels = (a: AdminTranslations): Record<Key, string> => ({
   'site.supportUrl': a.settings.supportUrl,
   'quiz.shortLength': a.settings.quizShortLength,
   'quiz.longLength': a.settings.quizLongLength,
+  'logs.serverRetentionDays': a.settings.serverRetentionDays,
+  'logs.serverMaxEntries': a.settings.serverMaxEntries,
+  'logs.auditRetentionDays': a.settings.auditRetentionDays,
+  'logs.auditMaxEntries': a.settings.auditMaxEntries,
 });
 
 /** Where a value comes from, read-only for keys config.yaml sets (CFG-9). */
@@ -71,8 +84,9 @@ export function SettingsPanel() {
       if (next !== state.value) changed[state.key] = next;
     }
     // FE-6: the shared rule between the two lengths, and whole numbers, before the server checks them again.
+    const numberKeys = groups.flatMap((group) => group.keys).filter((entry) => entry.type === 'number').map((entry) => entry.key);
     const problems = errorsOf(
-      ...(['quiz.shortLength', 'quiz.longLength'] as const).map((key) => (
+      ...numberKeys.map((key) => (
         Number.isInteger(value(key)) ? null : fieldError(key, 'invalid_format', `${key} must be a whole number.`)
       )),
       Number.isInteger(value('quiz.shortLength')) && Number.isInteger(value('quiz.longLength'))
