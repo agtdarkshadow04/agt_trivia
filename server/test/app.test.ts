@@ -6,6 +6,7 @@ import { after, before, describe, it } from 'node:test';
 import type { FastifyInstance } from 'fastify';
 import { buildApp } from '../app.js';
 import { contentSecurityPolicy } from '../headers.js';
+import { testContext } from './helpers.js';
 
 /** A built client with both entries, one hashed asset and one public file. */
 function staticFixture() {
@@ -37,15 +38,17 @@ function assertNoStore(headers: Record<string, unknown>) {
 describe('the server shell', () => {
   let root: string;
   let app: FastifyInstance;
+  const context = testContext();
 
   before(async () => {
     root = staticFixture();
-    app = buildApp({ version: '0.0.0-test' }, { staticDir: root });
+    app = buildApp(context, { staticDir: root });
     await app.ready();
   });
 
   after(async () => {
     await app.close();
+    context.close();
     rmSync(root, { recursive: true, force: true });
   });
 
@@ -104,6 +107,14 @@ describe('the server shell', () => {
     const response = await app.inject({ method: 'OPTIONS', url: '/api/health', headers: { origin: 'https://example.com', 'access-control-request-method': 'GET' } });
     assert.equal(response.headers['access-control-allow-origin'], undefined);
     assert.equal(response.headers['access-control-allow-methods'], undefined);
+  });
+});
+
+describe('the Content-Security-Policy (SEC-1)', () => {
+  it('is the spec\'s policy with only img-src narrowed to self', () => {
+    const spec = "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' https: http: blob:; font-src 'self'; connect-src 'self'; media-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'";
+    assert.equal(contentSecurityPolicy, spec.replace("img-src 'self' https: http: blob:", "img-src 'self'"));
+    assert.doesNotMatch(contentSecurityPolicy, /unsafe-inline|unsafe-eval/);
   });
 });
 

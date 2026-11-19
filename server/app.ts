@@ -1,9 +1,18 @@
+import { randomUUID } from 'node:crypto';
 import { existsSync, readdirSync } from 'node:fs';
 import { join, relative, resolve, sep } from 'node:path';
+import fastifyRateLimit from '@fastify/rate-limit';
 import fastifyStatic from '@fastify/static';
+import type { TypeBoxTypeProvider } from '@fastify/type-provider-typebox';
+import { Type } from '@sinclair/typebox';
 import Fastify, { LogController, type FastifyInstance, type FastifyReply, type FastifyRequest, type FastifyServerOptions } from 'fastify';
 import type { AppContext } from './context.js';
+import { withDataWrite } from './dataWrite.js';
 import { noStoreHeaders, securityHeaders } from './headers.js';
+import { errorReply, HttpError, RateLimitedError, type ErrorReply } from './http.js';
+import { registerOpenApi, routeSecurity } from './openapi.js';
+import { apiRoutes, type RouteDefinition } from './routes.js';
+import { Empty } from './schemas.js';
 
 export interface BuildAppOptions {
   /** A pino logger, or `false` for none (tests). */
@@ -12,57 +21,98 @@ export interface BuildAppOptions {
   staticDir?: string;
 }
 
-/** The API-6 error body. */
-interface ErrorBody {
-  error: string;
-  message: string;
+/** AUTH-5: JSON request bodies are at most 2 MiB. */
+export const maxBodyBytes = 2 * 1024 * 1024;
+
+declare module 'fastify' {
+  interface FastifyContextConfig {
+    /** The route table entry, for the hooks and the tests (`server/routes.ts`). */
+    apiRoute?: RouteDefinition;
+  }
 }
 
 /**
  * The Fastify app, fully configured but not listening (SRV-2), so tests can
- * use `inject()`.
+ * use `inject()`. Every `/api/` route comes from the table in
+ * `server/routes.ts`.
  */
-export function buildApp(_context: AppContext, options: BuildAppOptions = {}): FastifyInstance {
+export function buildApp(context: AppContext, options: BuildAppOptions = {}): FastifyInstance {
   const app = Fastify({
     ...(options.logger ? { loggerInstance: options.logger } : { logger: false }),
     // LOG-6: access logs are user activity, which the audit log covers.
     logController: new LogController({ disableRequestLogging: true }),
-    // AUTH-5: JSON bodies are at most 2 MiB.
-    bodyLimit: 2 * 1024 * 1024,
-  });
+    // LOG-10: request IDs link an audit entry to its server log entry, across restarts too.
+    genReqId: () => randomUUID(),
+    // SEC-4: X-Forwarded-* only from the proxies config.yaml names.
+    trustProxy: context.config.server.trustProxy,
+    bodyLimit: maxBodyBytes,
+    // Keeps the last value of a repeated query parameter, as a plain object of strings.
+    routerOptions: { querystringParser: (query: string) => Object.fromEntries(new URLSearchParams(query)) },
+    // Undeclared properties are rejected, not dropped, and values are never coerced (API-10).
+    ajv: { customOptions: { removeAdditional: false, coerceTypes: false } },
+  }).withTypeProvider<TypeBoxTypeProvider>();
 
   // SEC-1..SEC-3 on every response, errors and static files included. Hashed assets override the cache headers.
   app.addHook('onRequest', async (_request, reply) => {
     reply.headers({ ...securityHeaders, ...noStoreHeaders });
   });
 
-  // SRV-5: unexpected errors are logged and never sent with their message or stack.
-  app.setErrorHandler((error, request, reply) => {
-    const statusCode = typeof (error as { statusCode?: unknown }).statusCode === 'number' ? (error as { statusCode: number }).statusCode : 500;
-    if (statusCode >= 500) {
-      request.log.error({ err: error, source: 'http', route: request.routeOptions.url }, 'Unhandled API error');
-      return sendError(reply, 500, { error: 'internal', message: 'An unexpected server error occurred.' });
-    }
-    return sendError(reply, statusCode, { error: 'invalid_request', message: 'The request is invalid.' });
+  // SEC-7: per-route limits only, keyed by request.ip (which honours server.trustProxy). Routes add theirs in #11.
+  app.register(fastifyRateLimit, {
+    global: false,
+    addHeadersOnExceeding: { 'x-ratelimit-limit': false, 'x-ratelimit-remaining': false, 'x-ratelimit-reset': false },
+    addHeaders: { 'x-ratelimit-limit': false, 'x-ratelimit-remaining': false, 'x-ratelimit-reset': false, 'retry-after': true },
+    errorResponseBuilder: (_request, rate) => new RateLimitedError(Math.max(1, Math.ceil(rate.ttl / 1000))),
   });
+  registerOpenApi(app, context.version);
+
+  // SRV-5: the one error handler; errorReply() decides every error body.
+  app.setErrorHandler((error, request, reply) => sendError(reply, errorReply(error, {
+    maxBodyBytes,
+    onUnexpected: (unexpected) => request.log.error({ err: unexpected, source: 'http', route: request.routeOptions.url }, 'Unhandled API error'),
+  })));
   // SRV-10: unknown routes get the error body, not an HTML page.
-  app.setNotFoundHandler((_request, reply) => sendError(reply, 404, { error: 'not_found', message: 'Route not found.' }));
+  app.setNotFoundHandler((_request, reply) => sendError(reply, errorReply(new HttpError(404, 'not_found', 'Route not found.'), { maxBodyBytes })));
 
-  // SRV-11. The trivial database query arrives with the database (#10).
-  app.get('/api/health', async () => ({ status: 'ok' }));
-
-  if (options.staticDir && existsSync(join(options.staticDir, 'index.html'))) registerStatic(app, options.staticDir);
+  // Routes are added after @fastify/swagger, so every one of them is in the document (API-11).
+  app.register(async (routes) => {
+    routes.get('/api/openapi.json', { schema: { hide: true } }, async () => app.swagger());
+    for (const route of apiRoutes) registerRoute(routes, context, route);
+    if (options.staticDir && existsSync(join(options.staticDir, 'index.html'))) registerStatic(routes, options.staticDir);
+  });
   return app;
 }
 
-function sendError(reply: FastifyReply, statusCode: number, body: ErrorBody) {
-  return reply.code(statusCode).type('application/json; charset=utf-8').send(body);
+/** Registers one route table entry with its OpenAPI metadata, schemas and data-write barrier. */
+function registerRoute(app: FastifyInstance, context: AppContext, route: RouteDefinition) {
+  app.route({
+    method: route.method,
+    url: route.url,
+    config: { apiRoute: route },
+    schema: {
+      operationId: route.operationId,
+      tags: [route.tag],
+      summary: route.summary,
+      ...(route.description ? { description: route.description } : {}),
+      security: [...routeSecurity(route)],
+      ...(route.schema.params ? { params: route.schema.params } : {}),
+      // API-10: a route without query parameters rejects any, like an undeclared body property.
+      querystring: route.schema.querystring ?? Empty,
+      ...(route.schema.body ? { body: route.schema.body } : {}),
+      response: { ...route.schema.response, default: Type.Ref('ErrorBody', { description: 'Error (API-6).' }) },
+    },
+    // BAK-8: a writing route's handler runs as a data write; its response is computed before it is sent.
+    handler: async (request: FastifyRequest, reply: FastifyReply) => (
+      route.writesData ? withDataWrite(() => route.handler(context, request, reply)) : route.handler(context, request, reply)
+    ),
+  });
 }
 
-/**
- * Serves `dist/` (SRV-9): the two entries, hashed assets with long caching, everything else `no-store`.
- * These routes get `schema: { hide: true }` when `@fastify/swagger` arrives (#10).
- */
+function sendError(reply: FastifyReply, result: ErrorReply) {
+  return reply.code(result.statusCode).headers(result.headers).type('application/json; charset=utf-8').send(result.body);
+}
+
+/** Serves `dist/` (SRV-9): the two entries, hashed assets with long caching, everything else `no-store`. */
 function registerStatic(app: FastifyInstance, staticDir: string) {
   const root = resolve(staticDir);
   const assets = join(root, 'assets');
@@ -84,11 +134,12 @@ function registerStatic(app: FastifyInstance, staticDir: string) {
   const page = (file: string, extra: Record<string, string> = {}) => async (_request: FastifyRequest, reply: FastifyReply) => (
     reply.headers(extra).sendFile(file, root)
   );
-  app.get('/', page('index.html'));
-  app.get('/admin', page('admin.html', { 'x-robots-tag': 'noindex, nofollow' }));
-  app.get('/admin/', async (_request, reply) => reply.redirect('/admin', 301));
+  const hidden = { schema: { hide: true } };
+  app.get('/', hidden, page('index.html'));
+  app.get('/admin', hidden, page('admin.html', { 'x-robots-tag': 'noindex, nofollow' }));
+  app.get('/admin/', hidden, async (_request, reply) => reply.redirect('/admin', 301));
   // The files Vite copies from public/ (the logo, fonts and their licences, UI-15) at their own paths, never the entry pages.
-  for (const file of publicFiles(root, assets)) app.get(`/${file}`, page(file));
+  for (const file of publicFiles(root, assets)) app.get(`/${file}`, hidden, page(file));
 }
 
 /** Every file under `root` except the entry pages and the hashed build output, as URL paths. */

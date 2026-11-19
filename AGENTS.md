@@ -9,8 +9,10 @@ Moderator) keep a score history, write questions and review them; and the single
 members, settings, logs, the Google Sheet import and backups. No cloud services: no code, package or name may depend
 on AWS or Amplify.
 
-**Database: SQLite** (DATA-2, via `better-sqlite3`, added in #10): a few question writers and members' score saves
-are far from sustained concurrent writes, one process serves the app, and nothing needs PostgreSQL features.
+**Database: SQLite** (DATA-2, via `better-sqlite3`): a few question writers and members' score saves
+are far from sustained concurrent writes, one process serves the app, and nothing needs PostgreSQL features. The
+server opens `storage.dataDir/storage.databaseFile` (default `data/agt-trivia.sqlite`) and applies the migrations
+itself at startup.
 Deployment: Docker Compose (service `trivia`, port 8082 on loopback, volume `trivia-data`) or a systemd service on
 Ubuntu/Debian (`deploy/agt-trivia.service`), both added in #14.
 
@@ -40,7 +42,7 @@ npm run lint        # tsc -b over the app, node and server projects (strict, no 
 npm test            # test:client (src/lib/*.test.ts) + test:server (server/test/*.test.ts)
 npm run test:e2e    # build, then the Playwright browser tests in tests/e2e/ against the real server (not part of check; needs Chromium)
 npm run build       # Vite build → dist/, server bundle → dist-server/index.mjs
-npm run dev:server  # build and run the server on 127.0.0.1:8082
+npm run dev:server  # build and run the server on 127.0.0.1:8082 (reads ./config.yaml if present; data in ./data/)
 npm run dev         # Vite dev server on :5173, proxies /api/ to :8082
 ```
 
@@ -51,7 +53,8 @@ npx esbuild server/test/app.test.ts --bundle --platform=node --target=node26 --f
 npx playwright test tests/e2e/shell.spec.ts -g "name"   # one browser test file, or one test (after npm run build)
 ```
 
-`npm run test:e2e` starts `node dist-server/index.mjs` itself (`playwright.config.ts`); it needs Chromium
+`npm run test:e2e` starts `node dist-server/index.mjs` itself, on a fresh data directory and test `config.yaml`
+(`tests/e2e/environment.ts`); it needs Chromium
 (`npx playwright install --with-deps chromium`, or `PLAYWRIGHT_CHROMIUM_EXECUTABLE` pointing at an installed one).
 CI (`.github/workflows/ci.yml`) runs `npm ci`, the install-script check (STACK-7) and `npm run check`, then
 `npm run test:e2e`, on pull requests and pushes to `main`.
@@ -62,16 +65,28 @@ CI (`.github/workflows/ci.yml`) runs `npm ci`, the install-script check (STACK-7
 | --- | --- |
 | `docs/agt-webapp-spec.md` | Pinned copy of the AGT Web Application Specification v6.0.1 (tag `v6.0.1`). Never edit; `.gitattributes` keeps it byte-identical |
 | `CHANGELOG.md` | Release notes (Keep a Changelog 1.1.0), newest first (VER-9) |
-| `server/index.ts` | Entry point and the only server file that reads `process.env` or calls `listen()` (SRV-1); shuts down on SIGTERM/SIGINT (SRV-7) |
-| `server/app.ts` | `buildApp(context, options)`: the Fastify app without `listen()` (SRV-2), the SEC-1..SEC-3 headers hook, the error and 404 handlers, `/api/health`, and the static files of `dist/` (SRV-9) |
+| `docs/API.md` | API guide: conventions, routes, error codes (every code in `errorCodes` must be listed) |
+| `config.example.yaml` | Every `config.yaml` key, commented out, with its default (CFG-4; `server/test/config.test.ts` checks it) |
+| `server/index.ts` | Entry point and the only server file that reads `process.env` or calls `listen()` (SRV-1): loads the startup settings, opens and migrates the database, logs the startup entry, refuses to start with one line (SRV-8), shuts down on SIGTERM/SIGINT (SRV-7) |
+| `server/startup.ts` | `loadStartup(env)`: the CFG-2 `AGT_TRIVIA_*` variables, where `config.yaml` and the database file are |
+| `server/config.ts` | `config.yaml`: its TypeBox schema with the CFG-5 keys (unknown keys are errors), `parseConfig()`/`loadConfigFile()`, and `EDITABLE_SETTINGS` (CFG-6) |
+| `server/context.ts` | `AppContext` (SRV-3) and the settings precedence: `setting()`, `settingStates()`, `settingValues()`, `lockedSettingKeys()` (CFG-7) |
+| `server/app.ts` | `buildApp(context, options)`: the Fastify app without `listen()` (SRV-2), the SEC-1..SEC-3 headers hook, `@fastify/rate-limit` (SEC-7), the single error handler, the registration of every route table entry, and the static files of `dist/` (SRV-9) |
 | `server/headers.ts` | The exact CSP and the other SEC-1..SEC-3 header values |
-| `server/context.ts` | `AppContext` (SRV-3) |
-| `server/test/` | `node:test` server tests: `app.test.ts` (headers, static files, 404s, versioning), `assets.test.ts` (UI-15, UI-16), `spec.test.ts` (SPEC-2) |
+| `server/http.ts` | `HttpError(statusCode, error, message, { fields, params })` and `errorReply()`, the one mapping from errors to the API-6 body |
+| `server/routes.ts` | The route table: every `/api/` route with `auth`, `writesData` (BAK-8), `operationId`, tag, summary, schemas and handler |
+| `server/schemas.ts` | TypeBox request and response schemas, `ErrorBody`/`FieldError`, and `errorCodes` (every code the server sends) |
+| `server/openapi.ts` | `@fastify/swagger` registration and the `SECURITY` values each route declares (API-11) |
+| `server/db.ts` | `openDatabase()`/`openSqlite()` (DATA-5 pragmas), `MIGRATIONS`, `SCHEMA_VERSION`, `EXPECTED_TABLES`, `runMigrations()` (refuses a newer schema), and `Database`, the swappable handle the context holds |
+| `server/dataWrite.ts` | `withDataWrite()` (every `writesData` route runs in it) and `assertDataWrite()` (every repository write calls it, BAK-8) |
+| `server/repository/*.ts` | All SQL (SRV-4), parameterized: `settings.ts` |
+| `server/migrations/NNNN_<name>.sql` | Every schema change, imported as text into `MIGRATIONS` (DATA-3) |
+| `server/test/` | `node:test` server tests; `helpers.ts` has `testContext()` (a migrated in-memory database) and `totalChanges()`. `app.test.ts` (headers, static files, versioning), `config.test.ts` (CFG-2..CFG-5), `settings.test.ts` (CFG-7, CFG-10), `db.test.ts` (migrations), `routes.test.ts` (route table, BAK-8 declarations, error bodies), `openapi.test.ts` (API-13), `assets.test.ts` (UI-15, UI-16), `spec.test.ts` (SPEC-2) |
 | `src/` | Player UI: `main.tsx`, `App.tsx` (the UI-7 chrome), `translations.ts` (`COMMON_TRANSLATIONS`; the locales arrive in #11/#16), `agt-base.css` (the AGT base stylesheet, copied unmodified, UI-16), `styles.css` (imports it first); `components/` |
-| `src/lib/` | Framework-free code shared with the server where it needs it (REPO-3, FE-8), with `node:test` tests in `*.test.ts`: `quiz.ts` (sorting, shuffling, answer checking, ranks; ported from 1.x) |
+| `src/lib/` | Framework-free code shared with the server where it needs it (REPO-3, FE-8), with `node:test` tests in `*.test.ts`: `api.ts` (API types, `isUuidV4()`), `errors.ts` (`FieldError`, field codes), `validation.ts` (the shared semantic validators; change rules here only), `client.ts` (`apiRequest()`/`ApiError`, the only way the browser calls the API, FE-2), `quiz.ts` (sorting, shuffling, answer checking, ranks; ported from 1.x) |
 | `src/admin/` | Admin dashboard: `main.tsx`, `AdminApp.tsx` (UI-8 shell), `admin.css` (imported after `src/styles.css`). The public bundle must never import from `src/admin/` |
 | `public/` | The AGT logo, NMS Futura, the flag font and the font licences, copied unmodified from the spec's v6.0.1 `assets/` and checked by SHA-256 in `server/test/assets.test.ts` (UI-15); the server serves them at their own paths |
-| `tests/e2e/`, `playwright.config.ts` | Playwright browser tests (TEST-6) against `node dist-server/index.mjs`: `fixtures.ts` (console/CSP watch, axe, layout checks), `shell.spec.ts` |
+| `tests/e2e/`, `playwright.config.ts` | Playwright browser tests (TEST-6) against `node dist-server/index.mjs`: `environment.ts` (the run's data directory and `config.yaml`), `fixtures.ts` (console/CSP watch, axe, layout checks), `shell.spec.ts` |
 | `.github/workflows/ci.yml` | CI |
 
 ## Conventions and gotchas
@@ -91,6 +106,39 @@ CI (`.github/workflows/ci.yml`) runs `npm ci`, the install-script check (STACK-7
 - **Server structure (SRV-1..SRV-3):** only `server/index.ts` reads `process.env`. A new environment variable must be
   in the CFG-2 set (`AGT_TRIVIA_*`) or an `AGT_TRIVIA_<NAME>` secret. Everything else gets what it needs from the
   `AppContext` passed to `buildApp()`; never add a module-level database, config cache or `process.env` read.
+- Request input is checked twice: the route's TypeBox schema (types, required properties, no undeclared properties,
+  in the body and the query string alike; `removeAdditional` and `coerceTypes` are off, so nothing is silently
+  dropped or converted), then the semantic validators in `src/lib/validation.ts` (shared with the browser; never
+  duplicate a rule). Signal failures by throwing `HttpError` (`server/http.ts`) with a snake_case `error` code that is
+  listed in `errorCodes` and `docs/API.md`, and `fields` for field errors. Handlers never build error responses
+  themselves; `errorReply()` is the only place that maps errors to bodies.
+- **Response schemas list every field** a route returns: Fastify's serializer drops undeclared ones, which is also
+  how public responses stay public (API-3).
+- **SQL** lives in `server/repository/*.ts` only (SRV-4; the migration runner in `db.ts` has its own), always
+  parameterized; map user-supplied sort fields through an allowlist. New rows get `crypto.randomUUID()` IDs from the
+  server (DATA-6); validate incoming IDs with `isUuidV4()` from `src/lib/api.ts`. Times are stored as ISO 8601 UTC
+  text ending in `Z` (DATA-7). Wrap multi-statement writes in `db.transaction()`.
+- **Data writes (BAK-8):** every route declares `writesData` in `server/routes.ts` (true when it can change the main
+  database; session rows alone do not count), and `app.ts` runs those handlers in `withDataWrite()`. Every repository
+  function that writes the main database calls `assertDataWrite()` first, so a write anywhere else throws;
+  `server/test/routes.test.ts` checks the declarations and that GET routes write nothing.
+- **Adding an API route:** add an entry to `apiRoutes` in `server/routes.ts` with `auth`, `writesData`, a unique
+  camelCase `operationId`, a tag, a one-sentence summary and TypeBox schemas (`server/schemas.ts`) for its params,
+  query string, body and every success response; `buildApp()` registers it with its `security` (API-11) and the
+  `default` error response. `server/test/openapi.test.ts` (API-13) fails if a route is missing or incomplete, its
+  security is wrong, or an error code is missing from `errorCodes` or `docs/API.md`. Client calls go through
+  `apiRequest()` in `src/lib/client.ts`.
+- **Adding a database migration:** add `server/migrations/NNNN_<snake_case>.sql` (the next number; no
+  `BEGIN`/`COMMIT`, the runner wraps each migration in a transaction and sets `PRAGMA user_version`), import it and
+  append it to `MIGRATIONS` in `server/db.ts`, and add new tables to `EXPECTED_TABLES`; `server/test/db.test.ts` fails if
+  the list and the files disagree. Never edit or reorder a shipped migration. Use `STRICT` tables, `TEXT` IDs and
+  timestamps; every new table gets `created_at` and `updated_at` unless it is a pure join or log table (DATA-8).
+- **Configuration:** non-secret settings live in `config.yaml` (document every key, commented out, in
+  `config.example.yaml`; `server/test/config.test.ts` checks it); secrets stay in environment variables. A
+  dashboard-editable setting is an `EDITABLE_SETTINGS` entry (schema, default, description) plus its `config.yaml`
+  key; it resolves config file → `settings` table → default only in `settingStates()` (CFG-7), and a key the file
+  defines must never be changeable through any API, migration or restore. A rule between two settings goes in
+  `src/lib/validation.ts` (like `quizLengthsError()`).
 - **Logging:** log through the pino logger (`app.log`, `request.log`, or the logger `server/index.ts` builds) with a
   `source`; never `console.*` in the server. Never log passwords, tokens, cookies, keys, request bodies or raw IPs
   (SRV-6).
@@ -109,8 +157,8 @@ CI (`.github/workflows/ci.yml`) runs `npm ci`, the install-script check (STACK-7
   is tested in the browser (`tests/e2e/`, one worker); UI logic that needs no DOM goes in `src/lib/` with a
   `node:test` test. A UI change runs `npm run test:e2e`. Never skip or weaken a test to make a change pass (TEST-5).
 - Keep changes minimal; a new runtime dependency needs a reason in the PR (STACK-1). Every dependency with an install
-  script needs an `allowScripts` decision (`npm install-scripts approve|deny <pkg>`, STACK-7); approve
-  `better-sqlite3` when #10 adds it.
+  script needs an `allowScripts` decision (`npm install-scripts approve|deny <pkg>`, STACK-7); `esbuild` and
+  `better-sqlite3` are approved.
 - Update `README.md` when a change affects setup, configuration, roles or user-visible behaviour.
 - Commit subjects are short and imperative, with `Refs #<issue>` in the body when working from an issue.
 
@@ -123,10 +171,9 @@ Principle 1 and SEC-14 (AGT sign-in, #18) and SEC-9 (CSV files in the Admin's sh
 
 | Rule | What differs | Why |
 | --- | --- | --- |
-| SRV-8, SRV-11, CFG-1..CFG-10, API-6, API-10..API-13, DATA-3..DATA-10, BAK-8, SEC-4, SEC-7, REPO-3, FE-2 | **To fix (#10):** no `config.yaml`, settings, database or migrations yet; the server listens on 127.0.0.1:8082 (or `AGT_TRIVIA_SERVER_HOST`); `/api/health` answers without a database query; no OpenAPI document, rate limits, `HttpError` or shared API client; the only error codes are `not_found`, `invalid_request` and `internal` | Scaffold (#9) |
-| AUTH-1..AUTH-9, SEC-5, UI-8, I18N-1..I18N-6, A11Y-2, A11Y-4..A11Y-6, CFG-6 (Settings tab) | **To fix (#11):** no Admin account, first-run setup, sessions, CSRF check, admin tabs, string tables, user settings dialog or font scale | Scaffold (#9) |
+| AUTH-1..AUTH-9, SEC-4, SEC-5, SEC-7, UI-8, I18N-1..I18N-6, A11Y-2, A11Y-4..A11Y-6, CFG-6, CFG-8, CFG-9 | **To fix (#11):** no Admin account, first-run setup, sessions, CSRF check, admin tabs, string tables (and so no translated errors), user settings dialog or font scale; no `PUT /api/admin/settings` or Settings tab, so dashboard settings can only be read; no route has a rate limit yet (the plugin is registered); no plain-HTTP warning | Scaffold (#9); the settings routes need the Admin session |
 | LOG-1..LOG-23 | **To fix (#12):** no log store; the server logs to stdout only | Scaffold (#9) |
-| BAK-1..BAK-11 | **To fix (#13):** no backup and restore | Scaffold (#9) |
-| DEP-1..DEP-10, SEC-15, REPO-1 (`Dockerfile`, `docker-compose.yml`, `.env.example`, `config.example.yaml`, `deploy/`), TEST-8 | **To fix (#14):** no Docker image, Compose file, systemd unit or Caddy example | Scaffold (#9) |
-| DOC-1 | **To fix (#10–#22):** README sections for features that do not exist yet say so and name their sub-issue | Scaffold (#9) |
+| BAK-1..BAK-11 | **To fix (#13):** no backup and restore; `withDataWrite()` marks the writes but there is no operation lock for them to wait on, and no `503 maintenance` | Scaffold (#9) |
+| DEP-1..DEP-10, SEC-15, REPO-1 (`Dockerfile`, `docker-compose.yml`, `.env.example`, `deploy/`), TEST-8 | **To fix (#14):** no Docker image, Compose file, systemd unit or Caddy example | Scaffold (#9) |
+| DOC-1 | **To fix (#11–#22):** README sections for features that do not exist yet say so and name their sub-issue | Scaffold (#9) |
 | UI-7 | **To fix (#16):** the public header has no icon buttons (settings, sign-in) and the footer no support link | Scaffold (#9) |

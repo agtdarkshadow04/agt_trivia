@@ -1,12 +1,15 @@
 /**
  * The response headers of every response (SEC-1..SEC-3), in a module without
- * imports so the browser tests' static server (tests/e2e/serve.ts) sends
- * exactly the production headers.
+ * imports.
  */
 
-/** SEC-1: the exact Content-Security-Policy. Never widen it (WF-4). */
+/**
+ * SEC-1: the spec's Content-Security-Policy, narrowed only in `img-src`: the
+ * app shows no external or blob: images, so images come from the app itself.
+ * Never widen it (WF-4).
+ */
 export const contentSecurityPolicy = [
-  "default-src 'self'", "script-src 'self'", "style-src 'self'", "img-src 'self' https: http: blob:",
+  "default-src 'self'", "script-src 'self'", "style-src 'self'", "img-src 'self'",
   "font-src 'self'", "connect-src 'self'", "media-src 'self'", "worker-src 'self'", "object-src 'none'",
   "base-uri 'self'", "form-action 'self'", "frame-ancestors 'none'",
 ].join('; ');
