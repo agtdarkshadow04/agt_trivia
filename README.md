@@ -254,7 +254,16 @@ Members and Import arrive in #17 to #22.
 
 ## Playing
 
-Categories, quizzes, member accounts and score history: added in #15 to #21.
+Questions belong to **categories**, each with a short name (used in links), a name, a description and a priority
+(lower comes first, then by name). A question has 2 to 4 answers; when more than one is correct, players must pick
+all of them. Questions are drafted, reviewed and approved by members; only **approved** questions are ever shown to
+players, and review notes never are.
+
+A quiz draws questions at random from one category: a short quiz has `quiz.shortLength` questions, a long one
+`quiz.longLength`, and a full quiz all of them (fewer when the category has fewer). Anonymous play happens entirely in
+the browser and saves nothing.
+
+The player pages, member accounts, writing and reviewing questions, and score history arrive in #16 to #21.
 
 ## Backup & restore
 

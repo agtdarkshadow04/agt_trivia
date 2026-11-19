@@ -3,6 +3,7 @@ import { dirname } from 'node:path';
 import BetterSqlite3 from 'better-sqlite3';
 import settingsMigration from './migrations/0001_settings.sql';
 import adminSessionsMigration from './migrations/0002_admin_sessions.sql';
+import categoriesQuestionsMigration from './migrations/0003_categories_questions.sql';
 
 /**
  * The SQLite database (DATA-1, DATA-5): one file in `storage.dataDir`, opened
@@ -26,13 +27,14 @@ export interface Migration {
 export const MIGRATIONS: readonly Migration[] = [
   { version: 1, name: '0001_settings', sql: settingsMigration },
   { version: 2, name: '0002_admin_sessions', sql: adminSessionsMigration },
+  { version: 3, name: '0003_categories_questions', sql: categoriesQuestionsMigration },
 ];
 
 /** The schema version this build creates and supports. */
 export const SCHEMA_VERSION = MIGRATIONS[MIGRATIONS.length - 1].version;
 
 /** Every table of the main database; a restored database must have them all (DATA-5, BAK-3). */
-export const EXPECTED_TABLES: readonly string[] = ['settings', 'admin', 'sessions'];
+export const EXPECTED_TABLES: readonly string[] = ['settings', 'admin', 'sessions', 'categories', 'questions', 'question_choices'];
 
 export class SchemaTooNewError extends Error {
   constructor(readonly found: number, readonly supported: number) {

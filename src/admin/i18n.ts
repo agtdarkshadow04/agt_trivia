@@ -169,6 +169,8 @@ const en = {
     tables: {
       admin: "Admin account",
       settings: "Dashboard settings",
+      categories: "Categories",
+      questions: "Questions",
     },
     warnings: {
       no_admin: "The backup has no Admin account: first-run setup is needed after the restore.",
@@ -388,6 +390,8 @@ const fr: AdminTranslations = {
     tables: {
       admin: "Compte Admin",
       settings: "Paramètres du tableau de bord",
+      categories: "Catégories",
+      questions: "Questions",
     },
     warnings: {
       no_admin: "La sauvegarde ne contient pas de compte Admin : la première installation sera nécessaire après la restauration.",
@@ -605,6 +609,8 @@ const de: AdminTranslations = {
     tables: {
       admin: "Admin-Konto",
       settings: "Dashboard-Einstellungen",
+      categories: "Kategorien",
+      questions: "Fragen",
     },
     warnings: {
       no_admin: "Die Sicherung hat kein Admin-Konto: Nach der Wiederherstellung ist die Ersteinrichtung nötig.",
@@ -822,6 +828,8 @@ const es: AdminTranslations = {
     tables: {
       admin: "Cuenta Admin",
       settings: "Ajustes del panel",
+      categories: "Categorías",
+      questions: "Preguntas",
     },
     warnings: {
       no_admin: "La copia no tiene cuenta Admin: tras restaurarla hará falta la configuración inicial.",
@@ -1039,6 +1047,8 @@ const pt: AdminTranslations = {
     tables: {
       admin: "Conta Admin",
       settings: "Configurações do painel",
+      categories: "Categorias",
+      questions: "Perguntas",
     },
     warnings: {
       no_admin: "O backup não tem conta Admin: será preciso fazer a configuração inicial após a restauração.",
@@ -1256,6 +1266,8 @@ const it: AdminTranslations = {
     tables: {
       admin: "Account Admin",
       settings: "Impostazioni del pannello",
+      categories: "Categorie",
+      questions: "Domande",
     },
     warnings: {
       no_admin: "Il backup non ha un account Admin: dopo il ripristino sarà necessaria la configurazione iniziale.",
@@ -1473,6 +1485,8 @@ const th: AdminTranslations = {
     tables: {
       admin: "บัญชี Admin",
       settings: "การตั้งค่าแดชบอร์ด",
+      categories: "หมวดหมู่",
+      questions: "คำถาม",
     },
     warnings: {
       no_admin: "ข้อมูลสำรองไม่มีบัญชี Admin: ต้องตั้งค่าครั้งแรกหลังการกู้คืน",
@@ -1690,6 +1704,8 @@ const zh: AdminTranslations = {
     tables: {
       admin: "Admin 账户",
       settings: "面板设置",
+      categories: "类别",
+      questions: "题目",
     },
     warnings: {
       no_admin: "备份中没有 Admin 账户：恢复后需要进行首次设置。",
@@ -1907,6 +1923,8 @@ const hi: AdminTranslations = {
     tables: {
       admin: "Admin खाता",
       settings: "डैशबोर्ड सेटिंग्स",
+      categories: "श्रेणियाँ",
+      questions: "प्रश्न",
     },
     warnings: {
       no_admin: "बैकअप में कोई Admin खाता नहीं है: पुनर्स्थापना के बाद पहली बार सेटअप करना होगा।",
@@ -2124,6 +2142,8 @@ const ja: AdminTranslations = {
     tables: {
       admin: "Admin アカウント",
       settings: "ダッシュボードの設定",
+      categories: "カテゴリー",
+      questions: "問題",
     },
     warnings: {
       no_admin: "バックアップに Admin アカウントがありません。復元後に初回セットアップが必要です。",

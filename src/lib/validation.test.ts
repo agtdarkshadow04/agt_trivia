@@ -1,7 +1,10 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import { isUuidV4 } from './api.js';
-import { adminUsernameError, confirmationError, errorsOf, newPasswordError, quizLengthsError, requiredError } from './validation.js';
+import {
+  adminUsernameError, categoryErrors, confirmationError, errorsOf, newPasswordError, normalizeCategory, normalizeQuestion,
+  questionErrors, questionNotices, quizLengthsError, requiredError, type CategoryInput, type QuestionInput,
+} from './validation.js';
 
 describe('shared validators', () => {
   it('requires a long quiz longer than a short one', () => {
@@ -43,5 +46,77 @@ describe('shared validators', () => {
     assert.deepEqual(confirmationError('one', 'two'), { field: 'passwordConfirmation', code: 'mismatch', message: 'The passwords do not match.', params: { other: 'password' } });
     assert.equal(requiredError('username', '')?.code, 'required');
     assert.deepEqual(errorsOf(null, requiredError('a', ''), null).map((error) => error.field), ['a']);
+  });
+});
+
+describe('category and question validators (#15, FE-6)', () => {
+  const category: CategoryInput = { shortName: 'space-1', name: 'Space', description: 'About space.', priority: 10 };
+  const codes = (errors: { field: string; code: string }[]) => errors.map((error) => `${error.field}:${error.code}`);
+
+  it('accepts a valid category and trims it', () => {
+    assert.deepEqual(categoryErrors(category), []);
+    assert.deepEqual(normalizeCategory({ ...category, name: '  Space  ', shortName: ' space-1 ' }), category);
+    assert.deepEqual(categoryErrors({ ...category, priority: 0 }), []);
+    assert.deepEqual(categoryErrors({ ...category, priority: 100, shortName: 'a'.repeat(16) }), []);
+  });
+
+  it('checks every category field', () => {
+    assert.deepEqual(codes(categoryErrors({ shortName: ' ', name: '', description: '  ', priority: -1 })), [
+      'shortName:required', 'name:required', 'description:required', 'priority:out_of_range',
+    ]);
+    assert.deepEqual(codes(categoryErrors({ ...category, shortName: 'space one' })), ['shortName:invalid_format']);
+    assert.deepEqual(codes(categoryErrors({ ...category, shortName: 'ünïcode' })), ['shortName:invalid_format']);
+    assert.deepEqual(codes(categoryErrors({ ...category, shortName: 'a'.repeat(17) })), ['shortName:too_long']);
+    assert.deepEqual(codes(categoryErrors({ ...category, name: 'n'.repeat(101), description: 'd'.repeat(301) })), ['name:too_long', 'description:too_long']);
+    assert.deepEqual(codes(categoryErrors({ ...category, priority: 101 })), ['priority:out_of_range']);
+    assert.deepEqual(codes(categoryErrors({ ...category, priority: 1.5 })), ['priority:out_of_range']);
+    // Limits count code points, not UTF-16 units.
+    assert.deepEqual(categoryErrors({ ...category, name: '🚀'.repeat(100) }), []);
+  });
+
+  const question: QuestionInput = {
+    prompt: 'Which planet is largest?',
+    choices: [{ text: 'Jupiter', isCorrect: true }, { text: 'Mars', isCorrect: false }],
+    authorCredit: null,
+  };
+
+  it('accepts a valid question, multi-answer and commas included', () => {
+    assert.deepEqual(questionErrors(question), []);
+    assert.deepEqual(questionErrors({
+      ...question,
+      choices: [{ text: 'Red, hot', isCorrect: true }, { text: 'Blue', isCorrect: true }, { text: 'Green', isCorrect: false }, { text: 'Grey', isCorrect: false }],
+      authorCredit: 'Traveller',
+      reviewNote: 'Checked.',
+    }), []);
+  });
+
+  it('normalizes a question: trims texts, an empty credit is null, no review note is empty', () => {
+    assert.deepEqual(normalizeQuestion({ prompt: ' Why? ', choices: [{ text: ' A ', isCorrect: true }], authorCredit: '  ' }), {
+      prompt: 'Why?', choices: [{ text: 'A', isCorrect: true }], authorCredit: null, reviewNote: '',
+    });
+  });
+
+  it('needs 2 to 4 distinct answers, at least one correct', () => {
+    assert.deepEqual(codes(questionErrors({ ...question, choices: [{ text: 'Only', isCorrect: true }] })), ['choices:too_few']);
+    const five = ['A', 'B', 'C', 'D', 'E'].map((text) => ({ text, isCorrect: text === 'A' }));
+    assert.deepEqual(codes(questionErrors({ ...question, choices: five })), ['choices:too_many']);
+    assert.deepEqual(codes(questionErrors({ ...question, choices: question.choices.map((choice) => ({ ...choice, isCorrect: false })) })), ['choices:correct_choice_required']);
+    assert.deepEqual(codes(questionErrors({ ...question, choices: [{ text: 'Mars', isCorrect: true }, { text: ' MARS ', isCorrect: false }] })), ['choices.1:duplicate']);
+    assert.deepEqual(codes(questionErrors({ ...question, choices: [{ text: 'Mars', isCorrect: true }, { text: ' ', isCorrect: false }] })), ['choices.1:required']);
+    assert.deepEqual(codes(questionErrors({ ...question, choices: [{ text: 'x'.repeat(201), isCorrect: true }, { text: 'B', isCorrect: false }] })), ['choices.0:too_long']);
+  });
+
+  it('checks the prompt, the credit and the review note', () => {
+    assert.deepEqual(codes(questionErrors({ ...question, prompt: ' ' })), ['prompt:required']);
+    assert.deepEqual(codes(questionErrors({ ...question, prompt: 'p'.repeat(301) })), ['prompt:too_long']);
+    assert.deepEqual(codes(questionErrors({ ...question, authorCredit: 'c'.repeat(65), reviewNote: 'n'.repeat(1001) })), ['authorCredit:too_long', 'reviewNote:too_long']);
+    assert.deepEqual(questionErrors({ ...question, authorCredit: '', reviewNote: '' }), []);
+  });
+
+  it('notices a prompt longer than 15 words without refusing it (API-2)', () => {
+    assert.deepEqual(questionNotices({ prompt: Array(15).fill('word').join(' ') }), []);
+    const long = Array(16).fill('word').join('  ');
+    assert.deepEqual(questionNotices({ prompt: long }).map((notice) => [notice.field, notice.code, notice.params]), [['prompt', 'too_many_words', { max: 15, count: 16 }]]);
+    assert.deepEqual(questionErrors({ ...question, prompt: long }), []);
   });
 });

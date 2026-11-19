@@ -73,6 +73,41 @@ export const PublicSettings = object({
   quizLongLength: Type.Integer({ description: '`quiz.longLength`: questions in a long quiz.' }),
 }, 'The settings the player UI needs (CFG-10); nothing sensitive.');
 
+// --- Categories and the public quiz (#15) -----------------------------------
+
+export const PublicCategory = object({
+  id: Type.String({ format: 'uuid' }),
+  shortName: Type.String({ description: 'Letters, digits and `-`; the `?category=` link of the player UI.' }),
+  name: Type.String(),
+  description: Type.String(),
+  priority: Type.Integer({ description: '0 to 100; lower first, then by name.' }),
+  questionCount: Type.Integer({ description: 'Approved questions: what a quiz can draw from.' }),
+}, 'A category as visitors see it (API-3).');
+
+export const PublicCategoryList = Type.Array(PublicCategory, { description: 'Every category, lower priority first, then by name (API-8: a plain array, bounded by moderator effort).' });
+
+export const CategoryIdParams = object({ id: Type.String({ description: 'The category ID (a UUIDv4); anything else answers 404.' }) });
+
+export const QuizLength = Type.Union([Type.Literal('short'), Type.Literal('long'), Type.Literal('all')], {
+  description: '`short` (`quiz.shortLength` questions), `long` (`quiz.longLength`) or `all` approved questions.',
+});
+
+export const QuizQuery = object({ length: QuizLength });
+
+export const PublicQuestion = object({
+  id: Type.String({ format: 'uuid' }),
+  prompt: Type.String(),
+  choices: Type.Array(object({ id: Type.String({ format: 'uuid' }), text: Type.String() }), { description: "2 to 4 answers, in the author's order." }),
+  correctChoiceIds: Type.Array(Type.String({ format: 'uuid' }), { description: 'One ID, or several for a multi-answer question. Anonymous play is graded in the browser, as in 1.x.' }),
+  authorCredit: Type.Union([Type.String(), Type.Null()], { description: 'The "Submitted by" credit, or null.' }),
+}, 'An approved question as visitors see it (API-3): never its review note or the members who wrote or approved it.');
+
+export const PublicQuiz = object({
+  category: PublicCategory,
+  length: QuizLength,
+  questions: Type.Array(PublicQuestion, { description: 'A random selection of approved questions, as many as `length` asks for or all there are.' }),
+});
+
 // --- Setup and the Admin session (AUTH-3..AUTH-6) --------------------------
 
 const Password = Type.String({ maxLength: 1024, description: '12 to 1024 characters.' });
@@ -251,7 +286,7 @@ export const RestoreReport = object({
   createdAt: Type.String({ format: 'date-time' }),
   appVersion: Type.String(),
   schemaVersion: object({ backup: Type.Integer(), current: Type.Integer() }),
-  counts: object({ admin: Type.Integer(), settings: Type.Integer() }),
+  counts: object({ categories: Type.Integer(), questions: Type.Integer({ description: 'Of every status.' }), admin: Type.Integer(), settings: Type.Integer() }),
   adminUsername: Type.Union([Type.String(), Type.Null()]),
   ignoredSettings: Type.Array(Type.String(), { description: 'Settings the backup has that this config.yaml locks: dropped (CFG-8).' }),
   warningCodes: Type.Array(Type.String(), { description: '`no_admin`, `set_aside_not_deleted`.' }),

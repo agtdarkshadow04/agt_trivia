@@ -52,7 +52,7 @@ export interface RestoreReport {
   createdAt: string;
   appVersion: string;
   schemaVersion: { backup: number; current: number };
-  counts: { admin: number; settings: number };
+  counts: { categories: number; questions: number; admin: number; settings: number };
   adminUsername: string | null;
   /** Dashboard settings the backup has that this installation's config.yaml locks: dropped (CFG-8). */
   ignoredSettings: string[];
@@ -396,7 +396,12 @@ export class BackupService {
         createdAt: manifest.createdAt,
         appVersion: manifest.appVersion,
         schemaVersion: { backup: version, current: SCHEMA_VERSION },
-        counts: { admin: admin ? 1 : 0, settings: settings.filter((key) => (settingKeys as readonly string[]).includes(key)).length },
+        counts: {
+          categories: (sqlite.prepare('SELECT count(*) AS n FROM categories').get() as { n: number }).n,
+          questions: (sqlite.prepare('SELECT count(*) AS n FROM questions').get() as { n: number }).n,
+          admin: admin ? 1 : 0,
+          settings: settings.filter((key) => (settingKeys as readonly string[]).includes(key)).length,
+        },
         adminUsername: admin?.username ?? null,
         ignoredSettings: settings.filter((key) => locked.has(key)).sort(),
         warningCodes: admin ? [] : ['no_admin'],
