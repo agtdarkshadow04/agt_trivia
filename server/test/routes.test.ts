@@ -4,7 +4,7 @@ import type { FastifyInstance } from 'fastify';
 import { buildApp, maxBodyBytes } from '../app.js';
 import { errorReply, HttpError, RateLimitedError } from '../http.js';
 import { apiRoutes } from '../routes.js';
-import { testContext, totalChanges } from './helpers.js';
+import { adminCookie, testContext, totalChanges } from './helpers.js';
 
 describe('the route table', () => {
   const context = testContext();
@@ -27,10 +27,11 @@ describe('the route table', () => {
 
   it('has unique operation IDs and only GET routes without writesData that write nothing', async () => {
     assert.equal(new Set(apiRoutes.map((route) => route.operationId)).size, apiRoutes.length);
+    const cookie = await adminCookie(context);
     for (const route of apiRoutes.filter((entry) => entry.method === 'GET')) {
       assert.equal(route.writesData, false, route.url);
       const before = totalChanges(context);
-      const response = await app.inject(route.url);
+      const response = await app.inject({ url: route.url, headers: route.auth === 'admin' ? { cookie } : {} });
       assert.equal(response.statusCode, 200, route.url);
       assert.equal(totalChanges(context), before, `${route.url} writes nothing (BAK-8)`);
     }

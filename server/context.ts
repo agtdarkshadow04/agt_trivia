@@ -12,7 +12,6 @@ import type { Database } from './db.js';
 /**
  * Everything the routes and services need, built once by `server/index.ts`
  * (SRV-1, SRV-3). Nothing else reads the environment or the config file.
- * The setup password joins it in #11.
  */
 export interface AppContext {
   /** The validated `config.yaml`, with defaults applied. Never changes at runtime. */
@@ -21,6 +20,8 @@ export interface AppContext {
   readonly configFile: { readonly path: string; readonly text: string | null };
   /** The main database; a restore swaps it (#13). */
   readonly db: Database;
+  /** `AGT_TRIVIA_SETUP_PASSWORD`, or null when it is unset or empty (AUTH-5). Never stored. */
+  readonly setupPassword: string | null;
   /** The app version from `package.json` (VER-2). */
   readonly version: string;
 }

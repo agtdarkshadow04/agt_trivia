@@ -4,9 +4,9 @@ import { defaultConfigPath, loadConfigFile, type LoadedConfig } from './config.j
 /**
  * Turns the process environment into what the entry point needs (CFG-1,
  * CFG-2). `server/index.ts` passes `process.env`; nothing else reads it
- * (SRV-1). Every variable is in the CFG-2 set: `AGT_TRIVIA_CONFIG_FILE`,
- * `AGT_TRIVIA_SERVER_HOST`, `AGT_TRIVIA_STATIC_DIR` (later also the setup
- * password, #11, and the AGT IAM key, #18).
+ * (SRV-1). Every variable is in the CFG-2 set: `AGT_TRIVIA_SETUP_PASSWORD`,
+ * `AGT_TRIVIA_CONFIG_FILE`, `AGT_TRIVIA_SERVER_HOST`, `AGT_TRIVIA_STATIC_DIR`
+ * (later also the AGT IAM key, #18).
  */
 
 export type Env = Readonly<Record<string, string | undefined>>;
@@ -20,6 +20,8 @@ export interface Startup {
   databaseFile: string;
   /** The built client, `dist/` unless AGT_TRIVIA_STATIC_DIR says otherwise (development only). */
   staticDir: string;
+  /** AGT_TRIVIA_SETUP_PASSWORD, or null when unset or empty (AUTH-5). */
+  setupPassword: string | null;
 }
 
 /** Reads `AGT_TRIVIA_<name>`; empty values count as unset. */
@@ -35,5 +37,6 @@ export function loadStartup(env: Env): Startup {
     configFile,
     databaseFile: resolve(storage.dataDir, storage.databaseFile),
     staticDir: resolve(envValue(env, 'STATIC_DIR') ?? 'dist'),
+    setupPassword: envValue(env, 'SETUP_PASSWORD') ?? null,
   };
 }

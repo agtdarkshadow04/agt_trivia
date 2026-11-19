@@ -8,7 +8,7 @@ import { quizLengthLimits, quizLengthsError } from '../src/lib/validation.js';
  * `config.yaml`: its TypeBox schema (CFG-3), the standard keys (CFG-5) and the
  * dashboard-editable settings (CFG-6). Only `server/startup.ts` decides where
  * the file lives; nothing here reads the environment (SRV-1). Later sub-issues
- * of #6 add their groups (`session`, `rateLimits`, `backup`, `logs`, `iam`).
+ * of #6 add their groups (`backup`, `logs`, `iam`).
  */
 
 /** Where the server looks for its configuration file unless AGT_TRIVIA_CONFIG_FILE says otherwise. */
@@ -73,6 +73,12 @@ const optional = <T extends TSchema>(schema: T) => Type.Optional(schema);
 const group = <T extends Record<string, TSchema>>(properties: T) => Type.Object(properties, { additionalProperties: false, default: {} });
 const fileSetting = <Key extends SettingKey>(key: Key) => optional(EDITABLE_SETTINGS[key].schema as typeof EDITABLE_SETTINGS[Key]['schema']);
 
+/** A per-route limit (SEC-7): at most `max` requests per client address in `windowMinutes`. */
+const rateLimit = (max: number, windowMinutes: number) => Type.Object({
+  max: Type.Integer({ minimum: 1, maximum: 100_000, default: max }),
+  windowMinutes: Type.Integer({ minimum: 1, maximum: 1440, default: windowMinutes }),
+}, { additionalProperties: false, default: {} });
+
 /** `true`, or the proxy's address or CIDR range (one or a list), as Fastify's `trustProxy` takes them (SEC-4). */
 const TrustProxy = Type.Union([
   Type.Boolean(),
@@ -95,6 +101,15 @@ export const ConfigSchema = Type.Object({
   storage: group({
     dataDir: Type.String({ minLength: 1, default: 'data' }),
     databaseFile: Type.String({ minLength: 1, default: 'agt-trivia.sqlite' }),
+  }),
+  session: group({
+    ttlHours: Type.Number({ minimum: 1, maximum: 168, default: 12 }),
+    /** `auto`: Secure when the request came over HTTPS (behind a proxy, that needs `server.trustProxy`). */
+    secureCookie: Type.Union([Type.Literal('auto'), Type.Boolean()], { default: 'auto' }),
+  }),
+  rateLimits: group({
+    login: rateLimit(10, 15),
+    setup: rateLimit(10, 15),
   }),
   site: group({
     title: fileSetting('site.title'),

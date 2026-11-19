@@ -68,10 +68,13 @@ CI (`.github/workflows/ci.yml`) runs `npm ci`, the install-script check (STACK-7
 | `docs/API.md` | API guide: conventions, routes, error codes (every code in `errorCodes` must be listed) |
 | `config.example.yaml` | Every `config.yaml` key, commented out, with its default (CFG-4; `server/test/config.test.ts` checks it) |
 | `server/index.ts` | Entry point and the only server file that reads `process.env` or calls `listen()` (SRV-1): loads the startup settings, opens and migrates the database, logs the startup entry, refuses to start with one line (SRV-8), shuts down on SIGTERM/SIGINT (SRV-7) |
-| `server/startup.ts` | `loadStartup(env)`: the CFG-2 `AGT_TRIVIA_*` variables, where `config.yaml` and the database file are |
+| `server/startup.ts` | `loadStartup(env)`: the CFG-2 `AGT_TRIVIA_*` variables (the setup password included), where `config.yaml` and the database file are |
 | `server/config.ts` | `config.yaml`: its TypeBox schema with the CFG-5 keys (unknown keys are errors), `parseConfig()`/`loadConfigFile()`, and `EDITABLE_SETTINGS` (CFG-6) |
 | `server/context.ts` | `AppContext` (SRV-3) and the settings precedence: `setting()`, `settingStates()`, `settingValues()`, `lockedSettingKeys()` (CFG-7) |
-| `server/app.ts` | `buildApp(context, options)`: the Fastify app without `listen()` (SRV-2), the SEC-1..SEC-3 headers hook, `@fastify/rate-limit` (SEC-7), the single error handler, the registration of every route table entry, and the static files of `dist/` (SRV-9) |
+| `server/app.ts` | `buildApp(context, options)`: the Fastify app without `listen()` (SRV-2), the SEC-1..SEC-3 headers hook, the one authentication hook (CSRF header and Admin session, AUTH-9, SEC-5, and the SEC-4 plain-HTTP warning), `@fastify/rate-limit` with the `rateLimits.*` buckets (SEC-7), the single error handler, the registration of every route table entry, and the static files of `dist/` (SRV-9) |
+| `server/session.ts` | `AdminAuthService`: first-run setup (AUTH-5, AUTH-6), sign-in (AUTH-3), sessions (AUTH-8), the password change (AUTH-4); `setupPasswordCheck()` for startup; the cookie helpers |
+| `server/passwords.ts` | scrypt hashing with `SCRYPT_PROFILES`, the stored-hash format check before scrypt (AUTH-2), `secretsEqual()` and the dummy hash (AUTH-3) |
+| `server/settings.ts` | The Settings tab's reads and `updateSettings()` (CFG-8: unknown, locked and invalid keys, the quiz-length rule) |
 | `server/headers.ts` | The exact CSP and the other SEC-1..SEC-3 header values |
 | `server/http.ts` | `HttpError(statusCode, error, message, { fields, params })` and `errorReply()`, the one mapping from errors to the API-6 body |
 | `server/routes.ts` | The route table: every `/api/` route with `auth`, `writesData` (BAK-8), `operationId`, tag, summary, schemas and handler |
@@ -79,14 +82,14 @@ CI (`.github/workflows/ci.yml`) runs `npm ci`, the install-script check (STACK-7
 | `server/openapi.ts` | `@fastify/swagger` registration and the `SECURITY` values each route declares (API-11) |
 | `server/db.ts` | `openDatabase()`/`openSqlite()` (DATA-5 pragmas), `MIGRATIONS`, `SCHEMA_VERSION`, `EXPECTED_TABLES`, `runMigrations()` (refuses a newer schema), and `Database`, the swappable handle the context holds |
 | `server/dataWrite.ts` | `withDataWrite()` (every `writesData` route runs in it) and `assertDataWrite()` (every repository write calls it, BAK-8) |
-| `server/repository/*.ts` | All SQL (SRV-4), parameterized: `settings.ts` |
+| `server/repository/*.ts` | All SQL (SRV-4), parameterized: `settings.ts`, `admin.ts` (the Admin row and its sessions) |
 | `server/migrations/NNNN_<name>.sql` | Every schema change, imported as text into `MIGRATIONS` (DATA-3) |
-| `server/test/` | `node:test` server tests; `helpers.ts` has `testContext()` (a migrated in-memory database) and `totalChanges()`. `app.test.ts` (headers, static files, versioning), `config.test.ts` (CFG-2..CFG-5), `settings.test.ts` (CFG-7, CFG-10), `db.test.ts` (migrations), `routes.test.ts` (route table, BAK-8 declarations, error bodies), `openapi.test.ts` (API-13), `assets.test.ts` (UI-15, UI-16), `spec.test.ts` (SPEC-2) |
-| `src/` | Player UI: `main.tsx`, `App.tsx` (the UI-7 chrome), `translations.ts` (`COMMON_TRANSLATIONS`; the locales arrive in #11/#16), `agt-base.css` (the AGT base stylesheet, copied unmodified, UI-16), `styles.css` (imports it first); `components/` |
-| `src/lib/` | Framework-free code shared with the server where it needs it (REPO-3, FE-8), with `node:test` tests in `*.test.ts`: `api.ts` (API types, `isUuidV4()`), `errors.ts` (`FieldError`, field codes), `validation.ts` (the shared semantic validators; change rules here only), `client.ts` (`apiRequest()`/`ApiError`, the only way the browser calls the API, FE-2), `quiz.ts` (sorting, shuffling, answer checking, ranks; ported from 1.x) |
-| `src/admin/` | Admin dashboard: `main.tsx`, `AdminApp.tsx` (UI-8 shell), `admin.css` (imported after `src/styles.css`). The public bundle must never import from `src/admin/` |
+| `server/test/` | `node:test` server tests; `helpers.ts` has `testContext()` (a migrated in-memory database) and `totalChanges()`. `auth.test.ts` (setup, hashing, sign-in, sessions, the password change, CSRF and 401 on every admin route, cookies behind a proxy, rate limits, the settings update), `app.test.ts` (headers, static files, versioning), `config.test.ts` (CFG-2..CFG-5), `settings.test.ts` (CFG-7, CFG-10), `db.test.ts` (migrations), `routes.test.ts` (route table, BAK-8 declarations, error bodies), `openapi.test.ts` (API-13), `assets.test.ts` (UI-15, UI-16), `spec.test.ts` (SPEC-2) |
+| `src/` | Player UI: `main.tsx`, `App.tsx` (the UI-7 chrome), `translations.ts` (`LOCALES`, `COMMON_TRANSLATIONS` and the string tables for all 10 locales, I18N-1..I18N-3), `agt-base.css` (the AGT base stylesheet, copied unmodified, UI-16), `styles.css` (imports it first); `components/`: `I18n.tsx` (`I18nProvider`/`useI18n`: language, strings, `changePreference()`; sets `<html lang>` and `data-font-scale`), `Dialog.tsx` and `useDialog.ts` (every dialog, A11Y-2), `Field.tsx` (labelled fields with errors, A11Y-5, and `formErrors()`), `DisplaySettings.tsx` (language and text size), `Icons.tsx` (FE-7), `BrandLockup.tsx` |
+| `src/lib/` | Framework-free code shared with the server where it needs it (REPO-3, FE-8), with `node:test` tests in `*.test.ts`: `api.ts` (API types, `isUuidV4()`), `errors.ts` (`FieldError`, field codes), `validation.ts` (the shared semantic validators; change rules here only), `client.ts` (`apiRequest()`/`ApiError`, the only way the browser calls the API, FE-2), `preferences.ts` (the one `agt_trivia_settings` `localStorage` object, FE-3, I18N-4), `translationChecks.ts` (the completeness checks the translation tests share), `quiz.ts` (sorting, shuffling, answer checking, ranks; ported from 1.x) |
+| `src/admin/` | Admin dashboard: `main.tsx`, `AdminApp.tsx` (UI-8 shell: setup, sign-in, header, the tablist, the preferences dialog), `SettingsPanel.tsx`, `AccountPanel.tsx`, `api.ts` (its API calls and types), `i18n.ts` (the admin string tables for all 10 locales), `context.ts` (`useAdminI18n()`), `admin.css` (imported after `src/styles.css`). The public bundle must never import from `src/admin/` |
 | `public/` | The AGT logo, NMS Futura, the flag font and the font licences, copied unmodified from the spec's v6.0.1 `assets/` and checked by SHA-256 in `server/test/assets.test.ts` (UI-15); the server serves them at their own paths |
-| `tests/e2e/`, `playwright.config.ts` | Playwright browser tests (TEST-6) against `node dist-server/index.mjs`: `environment.ts` (the run's data directory and `config.yaml`), `fixtures.ts` (console/CSP watch, axe, layout checks), `shell.spec.ts` |
+| `tests/e2e/`, `playwright.config.ts` | Playwright browser tests (TEST-6) against `node dist-server/index.mjs`: `environment.ts` (the run's data directory and `config.yaml`), `fixtures.ts` (console/CSP watch, axe, dialog and layout checks), `setup.spec.ts` (the setup project: first-run setup through the UI, saving the signed-in Admin in `tests/e2e/.auth/`), `admin.spec.ts`, `shell.spec.ts` |
 | `.github/workflows/ci.yml` | CI |
 
 ## Conventions and gotchas
@@ -148,9 +151,22 @@ CI (`.github/workflows/ci.yml`) runs `npm ci`, the install-script check (STACK-7
 - **Frontend (§14–§16):** no router and no global state library (STACK-2); no CSS framework or component library
   (STACK-3). CSS adds to `src/agt-base.css` and never edits it, redefines its tokens or restyles a UI-9 class
   (`server/test/assets.test.ts`); sizes text in `rem`. Admin-only rules go in `src/admin/admin.css`.
-- **Translations (§17):** components show no hard-coded text (I18N-3). Until the string tables arrive (#11, #16) the
-  pages show only the untranslated names in `COMMON_TRANSLATIONS`; add a string only together with its tables in all
-  10 locales.
+- **Authentication:** the single Admin only (members arrive in #17). Handlers read `request.admin` and never inspect
+  cookies; the authentication hook in `server/app.ts` checks the `agt_trivia_session` cookie on `auth: 'admin'`
+  routes and the `x-agt-request: 1` header on every non-GET `csrf` and `admin` route. No bearer token is accepted.
+  Store passwords only through `server/passwords.ts`; a new scrypt profile needs the rehash-on-sign-in code with it
+  (AUTH-2). Credential-checking routes get a `rateLimit` bucket. Never log, store or return the setup password.
+- **Translations (§17):** every string the UI shows comes from `src/translations.ts` (`useI18n().t`) or
+  `src/admin/i18n.ts` (`useAdminI18n().a`), never from a literal in a component; `src/lib/translations.test.ts` scans
+  the components for hard-coded text. A new string goes into the English table and all nine other locales in the
+  same PR, with the same `{{placeholders}}`; the completeness tests fail on a missing key, a changed placeholder or an
+  untranslated English sentence. Strings the AGT Knowledge Base already has should reuse its translations. A new
+  error code needs a string in `errors` of every locale, and a new field name a label in `fields`. Show errors with
+  `useI18n().error()` or `formErrors()`, never with the API's English `message`. Question and category text stays
+  English.
+- **Frontend:** call the API only through `apiRequest()`; every dialog through `Dialog`/`ConfirmDialog` (`useDialog`),
+  never `window.confirm`; form fields through `components/Field.tsx`, checked first with the validators the server
+  uses (FE-6); status changes in a `role="status"` live region; `localStorage` only through `src/lib/preferences.ts`.
 - **Tests:** server tests live in `server/test/*.test.ts` and `src/lib` tests next to their file; both use
   `node:test` and `node:assert/strict`, are bundled by esbuild into `.test-build/`, and read repository files by paths
   relative to the repository root (never `import.meta.url`). Use `buildApp()` with `inject()` for HTTP. UI behaviour
@@ -171,9 +187,8 @@ Principle 1 and SEC-14 (AGT sign-in, #18) and SEC-9 (CSV files in the Admin's sh
 
 | Rule | What differs | Why |
 | --- | --- | --- |
-| AUTH-1..AUTH-9, SEC-4, SEC-5, SEC-7, UI-8, I18N-1..I18N-6, A11Y-2, A11Y-4..A11Y-6, CFG-6, CFG-8, CFG-9 | **To fix (#11):** no Admin account, first-run setup, sessions, CSRF check, admin tabs, string tables (and so no translated errors), user settings dialog or font scale; no `PUT /api/admin/settings` or Settings tab, so dashboard settings can only be read; no route has a rate limit yet (the plugin is registered); no plain-HTTP warning | Scaffold (#9); the settings routes need the Admin session |
 | LOG-1..LOG-23 | **To fix (#12):** no log store; the server logs to stdout only | Scaffold (#9) |
 | BAK-1..BAK-11 | **To fix (#13):** no backup and restore; `withDataWrite()` marks the writes but there is no operation lock for them to wait on, and no `503 maintenance` | Scaffold (#9) |
-| DEP-1..DEP-10, SEC-15, REPO-1 (`Dockerfile`, `docker-compose.yml`, `.env.example`, `deploy/`), TEST-8 | **To fix (#14):** no Docker image, Compose file, systemd unit or Caddy example | Scaffold (#9) |
-| DOC-1 | **To fix (#11–#22):** README sections for features that do not exist yet say so and name their sub-issue | Scaffold (#9) |
-| UI-7 | **To fix (#16):** the public header has no icon buttons (settings, sign-in) and the footer no support link | Scaffold (#9) |
+| DEP-1..DEP-10, SEC-15, REPO-1 (`Dockerfile`, `docker-compose.yml`, `deploy/`), TEST-8 | **To fix (#14):** no Docker image, Compose file, systemd unit or Caddy example | Scaffold (#9) |
+| DOC-1 | **To fix (#12–#22):** README sections for features that do not exist yet say so and name their sub-issue | Scaffold (#9) |
+| UI-7, I18N-4 | **To fix (#16):** the public header has no icon buttons, so the player UI has no settings dialog of its own (the Admin's sets the same preferences) and no sign-in; the footer has no support link | Scaffold (#9) |

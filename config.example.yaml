@@ -30,6 +30,20 @@
 #   # The SQLite database file, relative to dataDir.
 #   databaseFile: agt-trivia.sqlite
 
+# session:
+#   # How long an Admin sign-in lasts, in hours (1-168).
+#   ttlHours: 12
+#   # Whether session cookies are marked Secure: auto (when the request came
+#   # over HTTPS; behind a proxy that needs server.trustProxy), true or false.
+#   secureCookie: auto
+
+# rateLimits:
+#   # At most max requests per client address in windowMinutes (SEC-7).
+#   # Admin sign-in and the Admin password change, each counted separately.
+#   login: { max: 10, windowMinutes: 15 }
+#   # First-run setup.
+#   setup: { max: 10, windowMinutes: 15 }
+
 # --- Keys that can also be set in the dashboard ----------------------------
 
 # site:

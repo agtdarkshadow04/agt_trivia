@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { existsSync, readdirSync } from 'node:fs';
 import { join, relative, resolve, sep } from 'node:path';
+import fastifyCookie from '@fastify/cookie';
 import fastifyRateLimit from '@fastify/rate-limit';
 import fastifyStatic from '@fastify/static';
 import type { TypeBoxTypeProvider } from '@fastify/type-provider-typebox';
@@ -11,8 +12,16 @@ import { withDataWrite } from './dataWrite.js';
 import { noStoreHeaders, securityHeaders } from './headers.js';
 import { errorReply, HttpError, RateLimitedError, type ErrorReply } from './http.js';
 import { registerOpenApi, routeSecurity } from './openapi.js';
-import { apiRoutes, type RouteDefinition } from './routes.js';
+import { apiRoutes, type RateLimitName, type RouteDefinition } from './routes.js';
 import { Empty } from './schemas.js';
+import { AdminAuthService, adminSessionCookie, clearedCookie, secureCookie } from './session.js';
+
+/** The header every state-changing request to `/api/setup` and `/api/admin/*` must carry (SEC-5, NAME-3). */
+export const csrfHeader = 'x-agt-request';
+
+function isLoopback(address: string) {
+  return address === '127.0.0.1' || address === '::1' || address.startsWith('127.') || address === '::ffff:127.0.0.1';
+}
 
 export interface BuildAppOptions {
   /** A pino logger, or `false` for none (tests). */
@@ -57,7 +66,39 @@ export function buildApp(context: AppContext, options: BuildAppOptions = {}): Fa
     reply.headers({ ...securityHeaders, ...noStoreHeaders });
   });
 
-  // SEC-7: per-route limits only, keyed by request.ip (which honours server.trustProxy). Routes add theirs in #11.
+  app.register(fastifyCookie);
+  app.decorateRequest('admin', null);
+
+  // SEC-4: one warning per process, the first time credentials arrive over plain HTTP from another machine.
+  let plainHttpWarned = false;
+  const auth = new AdminAuthService(context);
+
+  /**
+   * AUTH-9, SEC-5: the one hook that checks the CSRF header and the Admin
+   * session, before the body is read. A state-changing `csrf` or `admin` route
+   * without `x-agt-request: 1` gets `403 csrf`; an `admin` route without a valid
+   * session gets `401 unauthorized`, and an unknown or expired cookie is cleared.
+   * Rate limits run right after it, as `@fastify/rate-limit` route hooks.
+   */
+  app.addHook('onRequest', async (request, reply) => {
+    const route = request.routeOptions.config.apiRoute;
+    if (!route || route.auth === 'none') return;
+    if (route.rateLimit && !plainHttpWarned && request.protocol === 'http' && !isLoopback(request.ip)) {
+      plainHttpWarned = true;
+      request.log.warn({ source: 'security' }, 'A sign-in or setup request arrived over plain HTTP from another machine: credentials were sent unencrypted. Put a TLS-terminating reverse proxy in front of the server (README, TLS and reverse proxies).');
+    }
+    if (route.method !== 'GET' && request.headers[csrfHeader] !== '1') {
+      throw new HttpError(403, 'csrf', `Requests that change data must include the ${csrfHeader}: 1 header.`);
+    }
+    if (route.auth !== 'admin') return;
+    const token = request.cookies[adminSessionCookie];
+    request.admin = auth.session(token);
+    if (request.admin) return;
+    if (token) reply.header('set-cookie', clearedCookie(secureCookie(context, request)));
+    throw new HttpError(401, 'unauthorized', 'Admin sign-in is required.');
+  });
+
+  // SEC-7: per-route limits only, keyed by request.ip (which honours server.trustProxy).
   app.register(fastifyRateLimit, {
     global: false,
     addHeadersOnExceeding: { 'x-ratelimit-limit': false, 'x-ratelimit-remaining': false, 'x-ratelimit-reset': false },
@@ -85,10 +126,12 @@ export function buildApp(context: AppContext, options: BuildAppOptions = {}): Fa
 
 /** Registers one route table entry with its OpenAPI metadata, schemas and data-write barrier. */
 function registerRoute(app: FastifyInstance, context: AppContext, route: RouteDefinition) {
+  if (route.auth === 'admin' && !route.url.startsWith('/api/admin/')) throw new Error(`${route.url}: admin routes live under /api/admin/`);
+  const limit = route.rateLimit ? rateLimitRule(context, route.rateLimit) : undefined;
   app.route({
     method: route.method,
     url: route.url,
-    config: { apiRoute: route },
+    config: { apiRoute: route, ...(limit ? { rateLimit: limit } : {}) },
     schema: {
       operationId: route.operationId,
       tags: [route.tag],
@@ -106,6 +149,12 @@ function registerRoute(app: FastifyInstance, context: AppContext, route: RouteDe
       route.writesData ? withDataWrite(() => route.handler(context, request, reply)) : route.handler(context, request, reply)
     ),
   });
+}
+
+/** The `rateLimits.*` entry of a bucket, as `@fastify/rate-limit` takes it (SEC-7). */
+function rateLimitRule(context: AppContext, name: RateLimitName) {
+  const { max, windowMinutes } = context.config.rateLimits[name];
+  return { max, timeWindow: windowMinutes * 60_000 };
 }
 
 function sendError(reply: FastifyReply, result: ErrorReply) {

@@ -22,6 +22,7 @@
     "check": "npm run lint && npm test && npm run build"
   },
   "dependencies": {
+    "@fastify/cookie": "^11.1.5",
     "@fastify/rate-limit": "^10.3.0",
     "@fastify/static": "^10.1.11",
     "@fastify/swagger": "^9.9.5",

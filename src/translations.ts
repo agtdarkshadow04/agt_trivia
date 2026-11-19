@@ -1,9 +1,643 @@
 /**
- * The member UI's strings (I18N-2). The locales and the string tables arrive
- * with the first translated text (#11, #16); until then the pages show only the
- * names below, which are never translated.
+ * The member UI's strings in every AGT locale (I18N-1, I18N-2). Components never
+ * contain user-visible text (I18N-3): they read it from `useI18n().t`. Every key
+ * of `en` exists, non-empty and translated, in every locale
+ * (`src/lib/translations.test.ts`). Admin strings live in `src/admin/i18n.ts`.
+ * The shared texts (errors, fields, preferences) were taken from the AGT
+ * Knowledge Base's tables, so the AGT apps say the same things the same way.
  */
+
+/** I18N-1, in this order. `tag` is the BCP 47 tag for `<html lang>` and `Intl`. */
+export const LOCALES = [
+  { value: 'en', label: 'English', flag: '🇬🇧', tag: 'en' },
+  { value: 'fr', label: 'Français (French)', flag: '🇫🇷', tag: 'fr' },
+  { value: 'de', label: 'Deutsch (German)', flag: '🇩🇪', tag: 'de' },
+  { value: 'es', label: 'Español (Spanish)', flag: '🇪🇸', tag: 'es' },
+  { value: 'pt', label: 'Português (Portuguese (Brazilian))', flag: '🇧🇷', tag: 'pt-BR' },
+  { value: 'it', label: 'Italiano (Italian)', flag: '🇮🇹', tag: 'it' },
+  { value: 'th', label: 'ไทย (Thai)', flag: '🇹🇭', tag: 'th' },
+  { value: 'zh', label: '中文 (Mandarin Chinese)', flag: '🇨🇳', tag: 'zh' },
+  { value: 'hi', label: 'हिन्दी (Hindi)', flag: '🇮🇳', tag: 'hi' },
+  { value: 'ja', label: '日本語 (Japanese)', flag: '🇯🇵', tag: 'ja' },
+] as const;
+
+export type Locale = typeof LOCALES[number]['value'];
+
+export function isLocale(value: unknown): value is Locale {
+  return LOCALES.some((locale) => locale.value === value);
+}
+
+/** The BCP 47 tag of a locale (`pt-BR` for `pt`, I18N-1). */
+export function localeTag(locale: Locale) {
+  return LOCALES.find((candidate) => candidate.value === locale)!.tag;
+}
+
+/** Names that are never translated (I18N-2). */
 export const COMMON_TRANSLATIONS = {
   alliance: 'Alliance of Galactic Travellers',
   product: 'AGT Galactic Trivia',
 } as const;
+
+/** Fills `{{name}}` placeholders from `values`; a placeholder without a value stays as it is. */
+export function formatTranslation(template: string, values: Readonly<Record<string, string | number | boolean | undefined>> = {}) {
+  return template.replace(/\{\{\s*(\w+)\s*\}\}/g, (match, name: string) => (values[name] === undefined ? match : String(values[name])));
+}
+
+const en = {
+  unexpectedError: "Something went wrong. Reload the page and try again.",
+  errors: {
+    invalid_request: "The request was not valid.",
+    validation_failed: "Some fields need attention.",
+    unknown_setting: "{{key}} is not a dashboard setting.",
+    invalid_setting: "The value for {{key}} is not valid.",
+    unauthorized: "Sign in to continue.",
+    invalid_credentials: "The username or password is wrong.",
+    invalid_setup_password: "The setup password is wrong.",
+    csrf: "The request was blocked as a possible cross-site request. Reload the page and try again.",
+    not_found: "This could not be found. It may have been deleted.",
+    defined_in_config: "{{key}} is set in config.yaml and cannot be changed here.",
+    setup_complete: "Setup is already complete.",
+    body_too_large: "The request is too large.",
+    rate_limited: "Too many attempts. Try again in {{retryAfterSeconds}} seconds.",
+    internal: "Something went wrong on the server. Try again later.",
+    setup_password_missing: "Setup is unavailable: the setup password is not set on the server.",
+    network_error: "The server could not be reached. Check the connection and try again.",
+  },
+  fieldErrors: {
+    required: "{{field}} is required.",
+    too_long: "{{field}} must be at most {{max}} characters.",
+    too_short: "{{field}} must be at least {{min}} characters.",
+    out_of_range: "{{field}} is out of range.",
+    too_many: "{{field}} can have at most {{max}} items.",
+    invalid_format: "{{field}} is not in the right format.",
+    invalid_url: "{{field}} must be a valid web address.",
+    not_allowed: "{{field}} is not allowed.",
+    duplicate: "{{field}} is already in use.",
+    mismatch: "{{field}} does not match.",
+    same_as_setup_password: "{{field}} must differ from the setup password.",
+  },
+  fields: {
+    username: "Username",
+    password: "Password",
+    passwordConfirmation: "Password confirmation",
+    currentPassword: "Current password",
+    setupPassword: "Setup password",
+  },
+  common: {
+    loading: "Loading…",
+    retry: "Try again",
+    cancel: "Cancel",
+    close: "Close",
+    skipToContent: "Skip to main content",
+  },
+  dialog: {
+    close: "Close",
+  },
+  settings: {
+    display: "Language and display",
+    language: "Language",
+    textSize: "Text size",
+    textSizeDefault: "{{scale}}× (default)",
+    textSizeHelp: "Scales all text from 1× to 2×. Settings are stored only in this browser.",
+  },
+};
+
+export type Translations = typeof en;
+
+const fr: Translations = {
+  unexpectedError: "Une erreur s'est produite. Rechargez la page et réessayez.",
+  errors: {
+    invalid_request: "La requête n'est pas valide.",
+    validation_failed: "Certains champs sont à corriger.",
+    unknown_setting: "{{key}} n'est pas un paramètre du tableau de bord.",
+    invalid_setting: "La valeur de {{key}} n'est pas valide.",
+    unauthorized: "Connectez-vous pour continuer.",
+    invalid_credentials: "Le nom d'utilisateur ou le mot de passe est incorrect.",
+    invalid_setup_password: "Le mot de passe d'installation est incorrect.",
+    csrf: "La requête a été bloquée comme possible requête intersite. Rechargez la page et réessayez.",
+    not_found: "Introuvable. L'élément a peut-être été supprimé.",
+    defined_in_config: "{{key}} est défini dans config.yaml et ne peut pas être modifié ici.",
+    setup_complete: "L'installation est déjà terminée.",
+    body_too_large: "La requête est trop volumineuse.",
+    rate_limited: "Trop de tentatives. Réessayez dans {{retryAfterSeconds}} secondes.",
+    internal: "Une erreur s'est produite sur le serveur. Réessayez plus tard.",
+    setup_password_missing: "L'installation est indisponible : le mot de passe d'installation n'est pas défini sur le serveur.",
+    network_error: "Impossible de joindre le serveur. Vérifiez la connexion et réessayez.",
+  },
+  fieldErrors: {
+    required: "{{field}} est obligatoire.",
+    too_long: "{{field}} doit comporter au plus {{max}} caractères.",
+    too_short: "{{field}} doit comporter au moins {{min}} caractères.",
+    out_of_range: "{{field}} est hors limites.",
+    too_many: "{{field}} peut contenir au plus {{max}} éléments.",
+    invalid_format: "{{field}} n'a pas le bon format.",
+    invalid_url: "{{field}} doit être une adresse web valide.",
+    not_allowed: "{{field}} n'est pas autorisé.",
+    duplicate: "{{field}} est déjà utilisé.",
+    mismatch: "{{field}} ne correspond pas.",
+    same_as_setup_password: "{{field}} doit être différent du mot de passe d'installation.",
+  },
+  fields: {
+    username: "Nom d'utilisateur",
+    password: "Mot de passe",
+    passwordConfirmation: "Confirmation du mot de passe",
+    currentPassword: "Mot de passe actuel",
+    setupPassword: "Mot de passe d'installation",
+  },
+  common: {
+    loading: "Chargement…",
+    retry: "Réessayer",
+    cancel: "Annuler",
+    close: "Fermer",
+    skipToContent: "Aller au contenu principal",
+  },
+  dialog: {
+    close: "Fermer",
+  },
+  settings: {
+    display: "Langue et affichage",
+    language: "Langue",
+    textSize: "Taille du texte",
+    textSizeDefault: "{{scale}}× (par défaut)",
+    textSizeHelp: "Agrandit tout le texte de 1× à 2×. Les paramètres sont enregistrés uniquement dans ce navigateur.",
+  },
+};
+
+const de: Translations = {
+  unexpectedError: "Etwas ist schiefgelaufen. Laden Sie die Seite neu und versuchen Sie es erneut.",
+  errors: {
+    invalid_request: "Die Anfrage ist ungültig.",
+    validation_failed: "Einige Felder müssen korrigiert werden.",
+    unknown_setting: "{{key}} ist keine Dashboard-Einstellung.",
+    invalid_setting: "Der Wert für {{key}} ist ungültig.",
+    unauthorized: "Melden Sie sich an, um fortzufahren.",
+    invalid_credentials: "Benutzername oder Passwort ist falsch.",
+    invalid_setup_password: "Das Einrichtungspasswort ist falsch.",
+    csrf: "Die Anfrage wurde als mögliche Cross-Site-Anfrage blockiert. Laden Sie die Seite neu und versuchen Sie es erneut.",
+    not_found: "Nicht gefunden. Möglicherweise wurde es gelöscht.",
+    defined_in_config: "{{key}} ist in config.yaml festgelegt und kann hier nicht geändert werden.",
+    setup_complete: "Die Einrichtung ist bereits abgeschlossen.",
+    body_too_large: "Die Anfrage ist zu groß.",
+    rate_limited: "Zu viele Versuche. Versuchen Sie es in {{retryAfterSeconds}} Sekunden erneut.",
+    internal: "Auf dem Server ist ein Fehler aufgetreten. Versuchen Sie es später erneut.",
+    setup_password_missing: "Die Einrichtung ist nicht verfügbar: Auf dem Server ist kein Einrichtungspasswort gesetzt.",
+    network_error: "Der Server ist nicht erreichbar. Prüfen Sie die Verbindung und versuchen Sie es erneut.",
+  },
+  fieldErrors: {
+    required: "{{field}} ist erforderlich.",
+    too_long: "{{field}} darf höchstens {{max}} Zeichen lang sein.",
+    too_short: "{{field}} muss mindestens {{min}} Zeichen lang sein.",
+    out_of_range: "{{field}} liegt außerhalb des zulässigen Bereichs.",
+    too_many: "{{field}} darf höchstens {{max}} Einträge haben.",
+    invalid_format: "{{field}} hat nicht das richtige Format.",
+    invalid_url: "{{field}} muss eine gültige Webadresse sein.",
+    not_allowed: "{{field}} ist nicht zulässig.",
+    duplicate: "{{field}} wird bereits verwendet.",
+    mismatch: "{{field}} stimmt nicht überein.",
+    same_as_setup_password: "{{field}} muss sich vom Einrichtungspasswort unterscheiden.",
+  },
+  fields: {
+    username: "Benutzername",
+    password: "Passwort",
+    passwordConfirmation: "Passwortbestätigung",
+    currentPassword: "Aktuelles Passwort",
+    setupPassword: "Einrichtungspasswort",
+  },
+  common: {
+    loading: "Wird geladen…",
+    retry: "Erneut versuchen",
+    cancel: "Abbrechen",
+    close: "Schließen",
+    skipToContent: "Zum Hauptinhalt springen",
+  },
+  dialog: {
+    close: "Schließen",
+  },
+  settings: {
+    display: "Sprache und Anzeige",
+    language: "Sprache",
+    textSize: "Textgröße",
+    textSizeDefault: "{{scale}}× (Standard)",
+    textSizeHelp: "Skaliert den gesamten Text von 1× bis 2×. Die Einstellungen werden nur in diesem Browser gespeichert.",
+  },
+};
+
+const es: Translations = {
+  unexpectedError: "Algo salió mal. Recarga la página e inténtalo de nuevo.",
+  errors: {
+    invalid_request: "La solicitud no es válida.",
+    validation_failed: "Hay campos que revisar.",
+    unknown_setting: "{{key}} no es un ajuste del panel.",
+    invalid_setting: "El valor de {{key}} no es válido.",
+    unauthorized: "Inicia sesión para continuar.",
+    invalid_credentials: "El nombre de usuario o la contraseña no son correctos.",
+    invalid_setup_password: "La contraseña de configuración no es correcta.",
+    csrf: "La solicitud se bloqueó por ser una posible solicitud entre sitios. Recarga la página e inténtalo de nuevo.",
+    not_found: "No se encontró. Puede que se haya eliminado.",
+    defined_in_config: "{{key}} está definido en config.yaml y no se puede cambiar aquí.",
+    setup_complete: "La configuración inicial ya está completa.",
+    body_too_large: "La solicitud es demasiado grande.",
+    rate_limited: "Demasiados intentos. Vuelve a intentarlo en {{retryAfterSeconds}} segundos.",
+    internal: "Algo salió mal en el servidor. Inténtalo más tarde.",
+    setup_password_missing: "La configuración inicial no está disponible: la contraseña de configuración no está definida en el servidor.",
+    network_error: "No se pudo conectar con el servidor. Comprueba la conexión e inténtalo de nuevo.",
+  },
+  fieldErrors: {
+    required: "{{field}} es obligatorio.",
+    too_long: "{{field}} debe tener como máximo {{max}} caracteres.",
+    too_short: "{{field}} debe tener al menos {{min}} caracteres.",
+    out_of_range: "{{field}} está fuera del rango permitido.",
+    too_many: "{{field}} puede tener como máximo {{max}} elementos.",
+    invalid_format: "{{field}} no tiene el formato correcto.",
+    invalid_url: "{{field}} debe ser una dirección web válida.",
+    not_allowed: "{{field}} no está permitido.",
+    duplicate: "{{field}} ya está en uso.",
+    mismatch: "{{field}} no coincide.",
+    same_as_setup_password: "{{field}} debe ser distinto de la contraseña de configuración.",
+  },
+  fields: {
+    username: "Nombre de usuario",
+    password: "Contraseña",
+    passwordConfirmation: "Confirmación de la contraseña",
+    currentPassword: "Contraseña actual",
+    setupPassword: "Contraseña de configuración",
+  },
+  common: {
+    loading: "Cargando…",
+    retry: "Reintentar",
+    cancel: "Cancelar",
+    close: "Cerrar",
+    skipToContent: "Saltar al contenido principal",
+  },
+  dialog: {
+    close: "Cerrar",
+  },
+  settings: {
+    display: "Idioma y pantalla",
+    language: "Idioma",
+    textSize: "Tamaño del texto",
+    textSizeDefault: "{{scale}}× (predeterminado)",
+    textSizeHelp: "Escala todo el texto de 1× a 2×. Los ajustes se guardan solo en este navegador.",
+  },
+};
+
+const pt: Translations = {
+  unexpectedError: "Algo deu errado. Recarregue a página e tente de novo.",
+  errors: {
+    invalid_request: "A solicitação não é válida.",
+    validation_failed: "Alguns campos precisam de correção.",
+    unknown_setting: "{{key}} não é uma configuração do painel.",
+    invalid_setting: "O valor de {{key}} não é válido.",
+    unauthorized: "Entre para continuar.",
+    invalid_credentials: "O nome de usuário ou a senha está incorreto.",
+    invalid_setup_password: "A senha de configuração está incorreta.",
+    csrf: "A solicitação foi bloqueada por parecer uma solicitação entre sites. Recarregue a página e tente de novo.",
+    not_found: "Não encontrado. Talvez tenha sido excluído.",
+    defined_in_config: "{{key}} está definido em config.yaml e não pode ser alterado aqui.",
+    setup_complete: "A configuração inicial já foi concluída.",
+    body_too_large: "A solicitação é grande demais.",
+    rate_limited: "Tentativas demais. Tente de novo em {{retryAfterSeconds}} segundos.",
+    internal: "Algo deu errado no servidor. Tente de novo mais tarde.",
+    setup_password_missing: "A configuração inicial não está disponível: a senha de configuração não está definida no servidor.",
+    network_error: "Não foi possível acessar o servidor. Verifique a conexão e tente de novo.",
+  },
+  fieldErrors: {
+    required: "{{field}} é obrigatório.",
+    too_long: "{{field}} deve ter no máximo {{max}} caracteres.",
+    too_short: "{{field}} deve ter pelo menos {{min}} caracteres.",
+    out_of_range: "{{field}} está fora do intervalo permitido.",
+    too_many: "{{field}} pode ter no máximo {{max}} itens.",
+    invalid_format: "{{field}} não está no formato correto.",
+    invalid_url: "{{field}} deve ser um endereço web válido.",
+    not_allowed: "{{field}} não é permitido.",
+    duplicate: "{{field}} já está em uso.",
+    mismatch: "{{field}} não confere.",
+    same_as_setup_password: "{{field}} deve ser diferente da senha de configuração.",
+  },
+  fields: {
+    username: "Nome de usuário",
+    password: "Senha",
+    passwordConfirmation: "Confirmação da senha",
+    currentPassword: "Senha atual",
+    setupPassword: "Senha de configuração",
+  },
+  common: {
+    loading: "Carregando…",
+    retry: "Tentar de novo",
+    cancel: "Cancelar",
+    close: "Fechar",
+    skipToContent: "Pular para o conteúdo principal",
+  },
+  dialog: {
+    close: "Fechar",
+  },
+  settings: {
+    display: "Idioma e exibição",
+    language: "Idioma",
+    textSize: "Tamanho do texto",
+    textSizeDefault: "{{scale}}× (padrão)",
+    textSizeHelp: "Amplia todo o texto de 1× a 2×. As configurações ficam salvas só neste navegador.",
+  },
+};
+
+const it: Translations = {
+  unexpectedError: "Qualcosa è andato storto. Ricarica la pagina e riprova.",
+  errors: {
+    invalid_request: "La richiesta non è valida.",
+    validation_failed: "Alcuni campi vanno corretti.",
+    unknown_setting: "{{key}} non è un'impostazione della dashboard.",
+    invalid_setting: "Il valore di {{key}} non è valido.",
+    unauthorized: "Accedi per continuare.",
+    invalid_credentials: "Il nome utente o la password non sono corretti.",
+    invalid_setup_password: "La password di configurazione non è corretta.",
+    csrf: "La richiesta è stata bloccata come possibile richiesta cross-site. Ricarica la pagina e riprova.",
+    not_found: "Non trovato. Potrebbe essere stato eliminato.",
+    defined_in_config: "{{key}} è impostato in config.yaml e non può essere modificato qui.",
+    setup_complete: "La configurazione iniziale è già completata.",
+    body_too_large: "La richiesta è troppo grande.",
+    rate_limited: "Troppi tentativi. Riprova tra {{retryAfterSeconds}} secondi.",
+    internal: "Si è verificato un errore sul server. Riprova più tardi.",
+    setup_password_missing: "La configurazione iniziale non è disponibile: la password di configurazione non è impostata sul server.",
+    network_error: "Impossibile raggiungere il server. Controlla la connessione e riprova.",
+  },
+  fieldErrors: {
+    required: "{{field}} è obbligatorio.",
+    too_long: "{{field}} può contenere al massimo {{max}} caratteri.",
+    too_short: "{{field}} deve contenere almeno {{min}} caratteri.",
+    out_of_range: "{{field}} è fuori dall'intervallo consentito.",
+    too_many: "{{field}} può avere al massimo {{max}} elementi.",
+    invalid_format: "{{field}} non è nel formato corretto.",
+    invalid_url: "{{field}} deve essere un indirizzo web valido.",
+    not_allowed: "{{field}} non è consentito.",
+    duplicate: "{{field}} è già in uso.",
+    mismatch: "{{field}} non corrisponde.",
+    same_as_setup_password: "{{field}} deve essere diverso dalla password di configurazione.",
+  },
+  fields: {
+    username: "Nome utente",
+    password: "Password",
+    passwordConfirmation: "Conferma della password",
+    currentPassword: "Password attuale",
+    setupPassword: "Password di configurazione",
+  },
+  common: {
+    loading: "Caricamento…",
+    retry: "Riprova",
+    cancel: "Annulla",
+    close: "Chiudi",
+    skipToContent: "Vai al contenuto principale",
+  },
+  dialog: {
+    close: "Chiudi",
+  },
+  settings: {
+    display: "Lingua e visualizzazione",
+    language: "Lingua",
+    textSize: "Dimensione del testo",
+    textSizeDefault: "{{scale}}× (predefinita)",
+    textSizeHelp: "Ingrandisce tutto il testo da 1× a 2×. Le impostazioni vengono salvate solo in questo browser.",
+  },
+};
+
+const th: Translations = {
+  unexpectedError: "เกิดข้อผิดพลาด โปรดโหลดหน้าใหม่แล้วลองอีกครั้ง",
+  errors: {
+    invalid_request: "คำขอไม่ถูกต้อง",
+    validation_failed: "มีบางช่องที่ต้องแก้ไข",
+    unknown_setting: "{{key}} ไม่ใช่การตั้งค่าของแดชบอร์ด",
+    invalid_setting: "ค่าของ {{key}} ไม่ถูกต้อง",
+    unauthorized: "โปรดลงชื่อเข้าใช้เพื่อดำเนินการต่อ",
+    invalid_credentials: "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง",
+    invalid_setup_password: "รหัสผ่านสำหรับการตั้งค่าไม่ถูกต้อง",
+    csrf: "คำขอถูกบล็อกเพราะอาจเป็นคำขอข้ามไซต์ โปรดโหลดหน้าใหม่แล้วลองอีกครั้ง",
+    not_found: "ไม่พบรายการนี้ อาจถูกลบไปแล้ว",
+    defined_in_config: "{{key}} ถูกกำหนดไว้ใน config.yaml และเปลี่ยนที่นี่ไม่ได้",
+    setup_complete: "การตั้งค่าครั้งแรกเสร็จสมบูรณ์แล้ว",
+    body_too_large: "คำขอมีขนาดใหญ่เกินไป",
+    rate_limited: "พยายามหลายครั้งเกินไป โปรดลองอีกครั้งใน {{retryAfterSeconds}} วินาที",
+    internal: "เกิดข้อผิดพลาดที่เซิร์ฟเวอร์ โปรดลองอีกครั้งภายหลัง",
+    setup_password_missing: "ใช้การตั้งค่าครั้งแรกไม่ได้ เพราะเซิร์ฟเวอร์ไม่ได้กำหนดรหัสผ่านสำหรับการตั้งค่า",
+    network_error: "ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้ โปรดตรวจสอบการเชื่อมต่อแล้วลองอีกครั้ง",
+  },
+  fieldErrors: {
+    required: "ต้องกรอก{{field}}",
+    too_long: "{{field}} ต้องมีไม่เกิน {{max}} อักขระ",
+    too_short: "{{field}} ต้องมีอย่างน้อย {{min}} อักขระ",
+    out_of_range: "{{field}} อยู่นอกช่วงที่อนุญาต",
+    too_many: "{{field}} มีได้ไม่เกิน {{max}} รายการ",
+    invalid_format: "{{field}} มีรูปแบบไม่ถูกต้อง",
+    invalid_url: "{{field}} ต้องเป็นที่อยู่เว็บที่ถูกต้อง",
+    not_allowed: "ไม่อนุญาตให้ใช้{{field}}นี้",
+    duplicate: "{{field}} นี้ถูกใช้แล้ว",
+    mismatch: "{{field}} ไม่ตรงกัน",
+    same_as_setup_password: "{{field}} ต้องไม่เหมือนกับรหัสผ่านสำหรับการตั้งค่า",
+  },
+  fields: {
+    username: "ชื่อผู้ใช้",
+    password: "รหัสผ่าน",
+    passwordConfirmation: "การยืนยันรหัสผ่าน",
+    currentPassword: "รหัสผ่านปัจจุบัน",
+    setupPassword: "รหัสผ่านสำหรับการตั้งค่า",
+  },
+  common: {
+    loading: "กำลังโหลด…",
+    retry: "ลองอีกครั้ง",
+    cancel: "ยกเลิก",
+    close: "ปิด",
+    skipToContent: "ข้ามไปยังเนื้อหาหลัก",
+  },
+  dialog: {
+    close: "ปิด",
+  },
+  settings: {
+    display: "ภาษาและการแสดงผล",
+    language: "ภาษา",
+    textSize: "ขนาดตัวอักษร",
+    textSizeDefault: "{{scale}}× (ค่าเริ่มต้น)",
+    textSizeHelp: "ปรับขนาดตัวอักษรทั้งหมดตั้งแต่ 1× ถึง 2× การตั้งค่าจะบันทึกไว้ในเบราว์เซอร์นี้เท่านั้น",
+  },
+};
+
+const zh: Translations = {
+  unexpectedError: "出现了问题。请重新加载页面后重试。",
+  errors: {
+    invalid_request: "请求无效。",
+    validation_failed: "有些字段需要修改。",
+    unknown_setting: "{{key}} 不是控制台设置。",
+    invalid_setting: "{{key}} 的值无效。",
+    unauthorized: "请登录后继续。",
+    invalid_credentials: "用户名或密码错误。",
+    invalid_setup_password: "设置密码错误。",
+    csrf: "该请求疑似跨站请求，已被拦截。请重新加载页面后重试。",
+    not_found: "未找到。它可能已被删除。",
+    defined_in_config: "{{key}} 已在 config.yaml 中设置，无法在此处更改。",
+    setup_complete: "初始设置已经完成。",
+    body_too_large: "请求过大。",
+    rate_limited: "尝试次数过多。请在 {{retryAfterSeconds}} 秒后重试。",
+    internal: "服务器出现问题。请稍后重试。",
+    setup_password_missing: "无法进行初始设置：服务器上未设置设置密码。",
+    network_error: "无法连接到服务器。请检查网络连接后重试。",
+  },
+  fieldErrors: {
+    required: "{{field}}为必填项。",
+    too_long: "{{field}}最多 {{max}} 个字符。",
+    too_short: "{{field}}至少需要 {{min}} 个字符。",
+    out_of_range: "{{field}}超出允许范围。",
+    too_many: "{{field}}最多 {{max}} 项。",
+    invalid_format: "{{field}}格式不正确。",
+    invalid_url: "{{field}}必须是有效的网址。",
+    not_allowed: "不允许使用此{{field}}。",
+    duplicate: "{{field}}已被使用。",
+    mismatch: "{{field}}不一致。",
+    same_as_setup_password: "{{field}}不能与设置密码相同。",
+  },
+  fields: {
+    username: "用户名",
+    password: "密码",
+    passwordConfirmation: "确认密码",
+    currentPassword: "当前密码",
+    setupPassword: "设置密码",
+  },
+  common: {
+    loading: "正在加载…",
+    retry: "重试",
+    cancel: "取消",
+    close: "关闭",
+    skipToContent: "跳到主要内容",
+  },
+  dialog: {
+    close: "关闭",
+  },
+  settings: {
+    display: "语言和显示",
+    language: "语言",
+    textSize: "文字大小",
+    textSizeDefault: "{{scale}}×（默认）",
+    textSizeHelp: "将所有文字放大 1× 到 2×。设置只保存在此浏览器中。",
+  },
+};
+
+const hi: Translations = {
+  unexpectedError: "कुछ गड़बड़ हो गई। पेज फिर से लोड करें और दोबारा कोशिश करें।",
+  errors: {
+    invalid_request: "अनुरोध मान्य नहीं है।",
+    validation_failed: "कुछ फ़ील्ड ठीक करने ज़रूरी हैं।",
+    unknown_setting: "{{key}} डैशबोर्ड की सेटिंग नहीं है।",
+    invalid_setting: "{{key}} का मान मान्य नहीं है।",
+    unauthorized: "जारी रखने के लिए साइन इन करें।",
+    invalid_credentials: "उपयोगकर्ता नाम या पासवर्ड गलत है।",
+    invalid_setup_password: "सेटअप पासवर्ड गलत है।",
+    csrf: "अनुरोध को संभावित क्रॉस-साइट अनुरोध मानकर रोक दिया गया। पेज फिर से लोड करें और दोबारा कोशिश करें।",
+    not_found: "यह नहीं मिला। हो सकता है इसे हटा दिया गया हो।",
+    defined_in_config: "{{key}} config.yaml में तय है और इसे यहाँ नहीं बदला जा सकता।",
+    setup_complete: "प्रारंभिक सेटअप पहले ही पूरा हो चुका है।",
+    body_too_large: "अनुरोध बहुत बड़ा है।",
+    rate_limited: "बहुत ज़्यादा प्रयास हुए। {{retryAfterSeconds}} सेकंड बाद दोबारा कोशिश करें।",
+    internal: "सर्वर पर कुछ गड़बड़ हो गई। बाद में दोबारा कोशिश करें।",
+    setup_password_missing: "सेटअप उपलब्ध नहीं है: सर्वर पर सेटअप पासवर्ड सेट नहीं है।",
+    network_error: "सर्वर से संपर्क नहीं हो सका। कनेक्शन जाँचें और दोबारा कोशिश करें।",
+  },
+  fieldErrors: {
+    required: "{{field}} ज़रूरी है।",
+    too_long: "{{field}} में ज़्यादा से ज़्यादा {{max}} अक्षर हो सकते हैं।",
+    too_short: "{{field}} में कम से कम {{min}} अक्षर होने चाहिए।",
+    out_of_range: "{{field}} अनुमत सीमा से बाहर है।",
+    too_many: "{{field}} में ज़्यादा से ज़्यादा {{max}} आइटम हो सकते हैं।",
+    invalid_format: "{{field}} का प्रारूप सही नहीं है।",
+    invalid_url: "{{field}} एक मान्य वेब पता होना चाहिए।",
+    not_allowed: "{{field}} की अनुमति नहीं है।",
+    duplicate: "{{field}} पहले से इस्तेमाल में है।",
+    mismatch: "{{field}} मेल नहीं खाता।",
+    same_as_setup_password: "{{field}} सेटअप पासवर्ड से अलग होना चाहिए।",
+  },
+  fields: {
+    username: "उपयोगकर्ता नाम",
+    password: "पासवर्ड",
+    passwordConfirmation: "पासवर्ड की पुष्टि",
+    currentPassword: "मौजूदा पासवर्ड",
+    setupPassword: "सेटअप पासवर्ड",
+  },
+  common: {
+    loading: "लोड हो रहा है…",
+    retry: "फिर से कोशिश करें",
+    cancel: "रद्द करें",
+    close: "बंद करें",
+    skipToContent: "मुख्य सामग्री पर जाएँ",
+  },
+  dialog: {
+    close: "बंद करें",
+  },
+  settings: {
+    display: "भाषा और प्रदर्शन",
+    language: "भाषा",
+    textSize: "टेक्स्ट का आकार",
+    textSizeDefault: "{{scale}}× (डिफ़ॉल्ट)",
+    textSizeHelp: "सारे टेक्स्ट को 1× से 2× तक बड़ा करता है। सेटिंग्स सिर्फ़ इसी ब्राउज़र में सेव होती हैं।",
+  },
+};
+
+const ja: Translations = {
+  unexpectedError: "問題が発生しました。ページを再読み込みして、もう一度お試しください。",
+  errors: {
+    invalid_request: "リクエストが無効です。",
+    validation_failed: "修正が必要な項目があります。",
+    unknown_setting: "{{key}} はダッシュボードの設定ではありません。",
+    invalid_setting: "{{key}} の値が無効です。",
+    unauthorized: "続けるにはサインインしてください。",
+    invalid_credentials: "ユーザー名またはパスワードが正しくありません。",
+    invalid_setup_password: "セットアップ用パスワードが正しくありません。",
+    csrf: "クロスサイトリクエストの可能性があるため、リクエストをブロックしました。ページを再読み込みして、もう一度お試しください。",
+    not_found: "見つかりません。削除された可能性があります。",
+    defined_in_config: "{{key}} は config.yaml で設定されているため、ここでは変更できません。",
+    setup_complete: "初期設定はすでに完了しています。",
+    body_too_large: "リクエストが大きすぎます。",
+    rate_limited: "試行回数が多すぎます。{{retryAfterSeconds}} 秒後にもう一度お試しください。",
+    internal: "サーバーで問題が発生しました。しばらくしてからもう一度お試しください。",
+    setup_password_missing: "初期設定を利用できません。サーバーにセットアップ用パスワードが設定されていません。",
+    network_error: "サーバーに接続できません。接続を確認して、もう一度お試しください。",
+  },
+  fieldErrors: {
+    required: "{{field}}は必須です。",
+    too_long: "{{field}}は {{max}} 文字以内で入力してください。",
+    too_short: "{{field}}は {{min}} 文字以上で入力してください。",
+    out_of_range: "{{field}}が許可された範囲外です。",
+    too_many: "{{field}}は {{max}} 件までです。",
+    invalid_format: "{{field}}の形式が正しくありません。",
+    invalid_url: "{{field}}には有効なウェブアドレスを入力してください。",
+    not_allowed: "この{{field}}は使用できません。",
+    duplicate: "この{{field}}はすでに使われています。",
+    mismatch: "{{field}}が一致しません。",
+    same_as_setup_password: "{{field}}はセットアップ用パスワードと異なる必要があります。",
+  },
+  fields: {
+    username: "ユーザー名",
+    password: "パスワード",
+    passwordConfirmation: "パスワードの確認",
+    currentPassword: "現在のパスワード",
+    setupPassword: "セットアップ用パスワード",
+  },
+  common: {
+    loading: "読み込み中…",
+    retry: "再試行",
+    cancel: "キャンセル",
+    close: "閉じる",
+    skipToContent: "メインコンテンツへ移動",
+  },
+  dialog: {
+    close: "閉じる",
+  },
+  settings: {
+    display: "言語と表示",
+    language: "言語",
+    textSize: "文字サイズ",
+    textSizeDefault: "{{scale}}×（既定）",
+    textSizeHelp: "すべての文字を 1× から 2× まで拡大します。設定はこのブラウザーにのみ保存されます。",
+  },
+};
+
+export const TRANSLATIONS: Record<Locale, Translations> = { en, fr, de, es, pt, it, th, zh, hi, ja };
+
+/** The table of a locale, English for anything else (I18N-2). */
+export function getTranslations(locale: string | null | undefined): Translations {
+  return isLocale(locale) ? TRANSLATIONS[locale] : en;
+}

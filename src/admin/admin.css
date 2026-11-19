@@ -7,3 +7,17 @@
 .admin-header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 1rem; padding: 0.9rem clamp(1rem, 4vw, 3rem); border-bottom: 1px solid var(--agt-red); background: var(--surface-raised); }
 .admin-main { display: grid; grid-template-columns: minmax(0, 1fr); width: min(100%, 80rem); margin-inline: auto; padding: 2rem clamp(1rem, 4vw, 3rem) 4rem; gap: 1.25rem; align-content: start; flex: 1; }
 .admin-main:focus { outline: none; }
+/* UI-12: nothing in the dashboard may widen the page; long words wrap. */
+.admin-main { overflow-wrap: anywhere; }
+.admin-main > * { min-width: 0; }
+.admin-title { display: flex; flex-wrap: wrap; align-items: center; gap: 0.85rem; min-width: 0; }
+.admin-title h1 { margin: 0; font-size: 1.25rem; }
+.admin-identity { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem; }
+.admin-version { color: var(--muted); font-family: ui-monospace, monospace; font-size: 0.7rem; }
+.admin-tabs { display: flex; flex-wrap: wrap; gap: 0.5rem; padding-bottom: 0.75rem; border-bottom: 1px solid var(--line); }
+.admin-tabs .button[aria-selected='true'] { color: #fff; border-color: var(--agt-red); background: rgba(255, 5, 0, 0.16); }
+.admin-tab-panel:focus-visible { outline: 2px solid var(--agt-orange); outline-offset: 3px; }
+.admin-panel { max-width: 46rem; padding: 1.25rem; border: 1px solid var(--line); border-radius: var(--radius); color: var(--text); background: var(--surface); }
+.admin-panel h2 { margin: 0 0 1rem; color: var(--agt-orange); font-size: 1.2rem; }
+.settings-group { display: grid; gap: 1rem; min-width: 0; margin: 0; padding: 1rem; border: 1px solid var(--line); border-radius: var(--radius-sm); }
+.settings-group legend { padding: 0 0.4rem; color: var(--agt-orange); font-size: 0.72rem; font-weight: 900; letter-spacing: 0.18em; text-transform: uppercase; }

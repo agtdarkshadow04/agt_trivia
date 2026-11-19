@@ -7,6 +7,11 @@
  * so the user's font scale (A11Y-6) scales all of them.
  */
 
+/* A11Y-6: the reader's font scale; every size below is in rem. */
+html[data-font-scale='1.25'] { font-size: 125%; }
+html[data-font-scale='1.5'] { font-size: 150%; }
+html[data-font-scale='1.75'] { font-size: 175%; }
+html[data-font-scale='2'] { font-size: 200%; }
 body { color: var(--text); }
 button, input, select, textarea { font: inherit; }
 a { color: inherit; }
@@ -19,10 +24,40 @@ img { max-width: 100%; }
 .brand-copy { display: flex; min-width: 0; flex-direction: column; text-transform: uppercase; }
 .brand-name { overflow: hidden; color: var(--agt-orange); font-size: 0.72rem; font-weight: 900; letter-spacing: 0.2em; text-overflow: ellipsis; white-space: nowrap; }
 .brand-product { color: #fff; font-size: 0.62rem; font-weight: 900; letter-spacing: 0.24em; }
+.skip-link { position: fixed; top: 0.75rem; left: 0.75rem; z-index: 200; transform: translateY(-180%); padding: 0.75rem 1rem; color: #000; background: var(--agt-orange); border-radius: 0.5rem; font-weight: 800; }
+.skip-link:focus { transform: translateY(0); }
+.eyebrow { margin: 0 0 0.75rem; color: var(--agt-orange); font-family: ui-monospace, monospace; font-size: 0.68rem; font-weight: 900; letter-spacing: 0.23em; text-transform: uppercase; }
+.identity-badge { display: inline-flex; max-width: 13rem; align-items: center; overflow: hidden; padding: 0.38rem 0.65rem; border: 1px solid var(--agt-orange); border-radius: 0.45rem; color: var(--agt-orange); background: rgba(255, 180, 81, 0.08); font-family: ui-monospace, monospace; font-size: 0.66rem; letter-spacing: 0.06em; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Dialogs (A11Y-2): the UI-9 .modal-* classes come from the base stylesheet. */
+.modal-dialog { position: relative; display: flex; width: min(100%, 40rem); max-height: calc(100vh - 2rem); flex-direction: column; overflow: hidden; border: 1px solid var(--line-strong); border-radius: var(--radius-lg); color: var(--text); background: var(--surface); box-shadow: var(--shadow); }
+.modal-dialog:focus { outline: none; }
+.modal-dialog .eyebrow { margin-bottom: 0.2rem; }
+.modal-description { color: var(--muted); line-height: 1.6; }
+.modal-footer { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 0.75rem; padding: 1rem 1.25rem; border-top: 1px solid var(--line); background: var(--surface-raised); }
+.confirm-dialog { width: min(100%, 32rem); }
+.button-danger { border-color: #ff4f4b; color: #fff; background: #8f1e1b; }
+.settings-controls { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
+.settings-help { grid-column: 1 / -1; margin: 0; }
+
+/* Forms and sign-in cards. */
+.stack-form { display: grid; gap: 1rem; margin-top: 1.5rem; }
+.form-actions { display: flex; flex-wrap: wrap; gap: 0.75rem; }
+.auth-card { width: min(100%, 34rem); min-width: 0; margin-inline: auto; overflow-wrap: break-word; padding: clamp(1.5rem, 5vw, 3rem); border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow); }
+.auth-card > p:not(.eyebrow) { color: var(--muted); line-height: 1.6; }
+.account-details { display: grid; gap: 0.75rem; margin: 0 0 1rem; }
+.account-details div { display: grid; grid-template-columns: minmax(8rem, 0.8fr) minmax(0, 1.2fr); gap: 1rem; }
+.account-details dt { color: var(--muted); font-size: 0.68rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; }
+.account-details dd { overflow-wrap: anywhere; margin: 0; color: var(--text); }
 .main-content { flex: 1; }
 .main-content:focus { outline: none; }
 .site-footer { display: flex; align-items: center; justify-content: space-between; gap: 2rem; padding: 2.5rem clamp(1rem, 4vw, 3rem); color: #090909; background: var(--agt-orange); }
 .site-footer p { margin: 0; font-family: ui-monospace, monospace; font-size: 0.6rem; font-weight: 900; letter-spacing: 0.16em; text-transform: uppercase; }
+
+@media (max-width: 640px) {
+  .settings-controls { grid-template-columns: 1fr; }
+  .account-details div { grid-template-columns: 1fr; gap: 0.3rem; }
+}
 
 @media (max-width: 520px) {
   .brand { gap: 0.65rem; }
