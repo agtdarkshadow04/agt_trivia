@@ -54,3 +54,9 @@ export function deleteSession(db: Database, tokenHash: string) {
 export function deleteAllSessions(sqlite: Sqlite) {
   sqlite.prepare('DELETE FROM sessions').run();
 }
+
+/** When an unexpired session ends; the BAK-11 recovery session keeps this expiry. */
+export function sessionExpiry(db: Database, tokenHash: string): Date | null {
+  const row = db.connection.prepare('SELECT expires_at FROM sessions WHERE token_hash = ?').get(tokenHash) as { expires_at: string } | undefined;
+  return row ? new Date(row.expires_at) : null;
+}

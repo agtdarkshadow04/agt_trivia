@@ -2,13 +2,13 @@ import { readFileSync, statSync } from 'node:fs';
 import { Type, type Static, type TSchema } from '@sinclair/typebox';
 import { Value } from '@sinclair/typebox/value';
 import { parse as parseYaml } from 'yaml';
-import { quizLengthLimits, quizLengthsError } from '../src/lib/validation.js';
+import { backupLimits, quizLengthLimits, quizLengthsError } from '../src/lib/validation.js';
 
 /**
  * `config.yaml`: its TypeBox schema (CFG-3), the standard keys (CFG-5) and the
  * dashboard-editable settings (CFG-6). Only `server/startup.ts` decides where
  * the file lives; nothing here reads the environment (SRV-1). Later sub-issues
- * of #6 add their groups (`backup`, `iam`).
+ * of #6 add their groups (`iam`).
  */
 
 /** Where the server looks for its configuration file unless AGT_TRIVIA_CONFIG_FILE says otherwise. */
@@ -53,6 +53,21 @@ export const EDITABLE_SETTINGS = {
     integer(quizLengthLimits.long.min, quizLengthLimits.long.max),
     30,
     'Number of questions in a long quiz (2-500, more than quiz.shortLength).',
+  ),
+  'backup.maxZipBytes': editable(
+    integer(backupLimits.maxZipBytes.min, backupLimits.maxZipBytes.max),
+    200 * 1024 * 1024,
+    'Largest backup upload in bytes.',
+  ),
+  'backup.maxUncompressedBytes': editable(
+    integer(backupLimits.maxUncompressedBytes.min, backupLimits.maxUncompressedBytes.max),
+    1024 * 1024 * 1024,
+    'Largest total uncompressed size of an uploaded backup, in bytes.',
+  ),
+  'backup.maxEntries': editable(
+    integer(backupLimits.maxEntries.min, backupLimits.maxEntries.max),
+    10_000,
+    'Most entries an uploaded backup archive may contain.',
   ),
   'logs.serverRetentionDays': editable(integer(1, 3650), 30, 'Days the server log keeps an entry (1-3650).'),
   'logs.serverMaxEntries': editable(integer(1000, 10_000_000), 100_000, 'Most entries the server log keeps; the oldest go first.'),
@@ -112,6 +127,8 @@ export const ConfigSchema = Type.Object({
     databaseFile: Type.String({ minLength: 1, default: 'agt-trivia.sqlite' }),
     /** The log store (LOG-1), a SQLite file of its own; never in backups. */
     logDatabaseFile: Type.String({ minLength: 1, default: 'logs.sqlite' }),
+    /** Pre-restore backups and the temporary files of backups and restores, relative to dataDir (BAK-4). */
+    backupsDir: Type.String({ minLength: 1, default: 'backups' }),
   }),
   session: group({
     ttlHours: Type.Number({ minimum: 1, maximum: 168, default: 12 }),
@@ -121,6 +138,7 @@ export const ConfigSchema = Type.Object({
   rateLimits: group({
     login: rateLimit(10, 15),
     setup: rateLimit(10, 15),
+    adminUploads: rateLimit(120, 15),
   }),
   site: group({
     title: fileSetting('site.title'),
@@ -129,6 +147,11 @@ export const ConfigSchema = Type.Object({
   quiz: group({
     shortLength: fileSetting('quiz.shortLength'),
     longLength: fileSetting('quiz.longLength'),
+  }),
+  backup: group({
+    maxZipBytes: fileSetting('backup.maxZipBytes'),
+    maxUncompressedBytes: fileSetting('backup.maxUncompressedBytes'),
+    maxEntries: fileSetting('backup.maxEntries'),
   }),
   logs: group({
     serverRetentionDays: fileSetting('logs.serverRetentionDays'),

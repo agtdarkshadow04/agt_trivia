@@ -38,6 +38,12 @@ The server's REST API lives under `/api/`. The complete, generated description i
 | `POST /api/admin/password` | `{ currentPassword, password }`: changes the password, ends every other session; `200 { username }` |
 | `GET /api/admin/settings` | `{ settings }`: every dashboard setting with `value`, `source` (`config`, `dashboard` or `default`), `locked`, `default` and `description` |
 | `PUT /api/admin/settings` | `{ values: { key: value or null } }`: changes settings (`null` resets one); `200 { settings, notices }` |
+| `GET /api/admin/logs/server`, `GET /api/admin/logs/audit` | The server log and the audit log, newest first, with filters (`limit`, `cursor`) |
+| `GET /api/admin/logs/server/export`, `GET /api/admin/logs/audit/export` | The same entries as JSON Lines or CSV (`format=jsonl` or `csv`) |
+| `GET /api/admin/logs/server/summary`, `POST /api/admin/logs/server/seen` | Unseen warnings and errors, and marking them seen |
+| `DELETE /api/admin/logs/server` | Clears the server log; the audit log cannot be cleared |
+| `GET /api/admin/backup` | A backup archive (`application/zip`): `manifest.json`, `database.sqlite` and `config.yaml` |
+| `POST /api/admin/restore` | `multipart/form-data` with `action` (`preview` or `restore`) and the `backup` file: previews or restores a backup |
 | `GET /api/openapi.json` | The OpenAPI document |
 
 ## Errors
@@ -63,17 +69,23 @@ and `fields` lists field-level problems, each with a `field` (the request proper
 | `validation_failed` | 400 | The body failed validation; `fields` says where | — |
 | `unknown_setting` | 400 | A settings update names a key that is not a dashboard setting | `{ key }` |
 | `invalid_setting` | 400 | A settings update has a value the setting does not allow | `{ key }` |
+| `file_required` | 400 | A restore upload without its `backup` file | — |
 | `unauthorized` | 401 | No valid Admin session | — |
 | `invalid_credentials` | 401 | Wrong username or password, or wrong current password | — |
 | `invalid_setup_password` | 401 | Wrong setup password | — |
 | `csrf` | 403 | A state-changing request without `x-agt-request: 1` | — |
 | `not_found` | 404 | Unknown route, or an unknown or invisible resource | — |
+| `conflict` | 409 | A backup or restore is already running, or the server stayed busy for 30 seconds; nothing was changed | — |
 | `defined_in_config` | 409 | A settings update names a key that `config.yaml` sets; nothing was changed | `{ key }` |
 | `setup_complete` | 410 | First-run setup after the Admin exists | — |
+| `file_too_large` | 413 | A backup upload larger than `backup.maxZipBytes` | `{ maxBytes }` |
 | `body_too_large` | 413 | The request body is larger than the route accepts | `{ maxBytes }` |
+| `multipart_required` | 415 | A restore that is not `multipart/form-data` | — |
+| `archive_rejected` | 422 | The backup archive failed a check; nothing was changed. `params.reason` says which: `too_large`, `not_zip`, `unsafe_zip`, `missing_manifest`, `invalid_manifest`, `not_a_backup`, `newer_format`, `unlisted_file`, `missing_file`, `checksum_mismatch`, `invalid_database`, `disallowed_entry`, `newer_schema`, `schema_mismatch`, `missing_tables`, `invalid_admin` | `{ reason }` |
 | `rate_limited` | 429 | Too many requests; the `Retry-After` header says when to retry | `{ retryAfterSeconds }` |
 | `internal` | 500 | An unexpected error; the server log has the details | — |
 | `setup_password_missing` | 503 | First-run setup, but `AGT_TRIVIA_SETUP_PASSWORD` is not set | — |
+| `maintenance` | 503 | A restore is running or has failed, or a write waited 30 seconds for a backup; `Retry-After: 10` | `{ retryAfterSeconds }` |
 
 Field codes: `required`, `too_long` (`{ max }`), `too_short` (`{ min }`), `out_of_range` (`{ min?, max? }`),
 `too_many` (`{ max }`), `invalid_format`, `invalid_url`, `not_allowed`, `duplicate`, `mismatch` (`{ other }`) and

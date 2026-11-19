@@ -39,6 +39,13 @@ All notable changes to AGT Galactic Trivia are documented in this file. The form
   log. Addresses are stored only as pseudonymous hashes; retention is set with the `logs.*` settings (#12).
 - A time-zone choice (the device's, or a fixed UTC offset) in the Settings dialog, for the times the dashboard shows
   (#12).
+- **Backup & restore** tab: download a backup (a ZIP with the database, `config.yaml` and a manifest with checksums;
+  never `.env`, sessions or the logs), preview an uploaded backup without changing anything, and restore it. A
+  restore saves the current data as a pre-restore backup first, puts it back if anything fails, and signs everyone
+  out; `config.yaml` is never restored, but its differences are shown. Limits for uploads are the `backup.*`
+  settings; pre-restore backups go to `storage.backupsDir` (#13).
+- While a restore runs, the API answers `503` with `Retry-After` and both pages show a maintenance notice and retry;
+  `GET /api/health` reports `maintenance`. Changes made while a backup is taken wait for it (#13).
 
 ### Changed
 
@@ -54,6 +61,10 @@ All notable changes to AGT Galactic Trivia are documented in this file. The form
 ### Security
 
 - Pages may load images only from the app itself: the Content-Security-Policy's `img-src` is `'self'` (#10).
+- An uploaded backup is checked completely before anything changes: only the expected files, safe paths, size and
+  entry limits before unpacking, checksums, database integrity, no triggers or views, and a valid Admin password
+  hash. If a restore fails and even putting the old data back fails, the app stays in maintenance and refuses to
+  start until the data is restored (#13).
 
 ## [1.0.0] - 2026-08-04
 

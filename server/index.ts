@@ -4,7 +4,11 @@ import { buildApp } from './app.js';
 import { ConfigError } from './config.js';
 import { settingValues } from './context.js';
 import { openDatabase, SchemaTooNewError, SCHEMA_VERSION, type OpenedDatabase } from './db.js';
+import { existsSync, readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { markerFile } from './backup.js';
 import { createLogger, LOG_MIGRATIONS, logStoreStream, openLogStore, startRetention } from './logs.js';
+import { OperationLock } from './operation.js';
 import { readSettings } from './repository/settings.js';
 import { setupPasswordCheck } from './session.js';
 import { loadStartup, type Startup } from './startup.js';
@@ -33,6 +37,15 @@ try {
   fail(`The configuration could not be read: ${error instanceof Error ? error.message : String(error)}`, error);
 }
 const { config } = startup.configFile;
+const dataDir = resolve(config.storage.dataDir);
+
+// BAK-11: after a failed restore whose rollback failed too, the data must not be served until the operator restores it.
+const marker = markerFile(dataDir);
+if (existsSync(marker)) {
+  let preRestore: unknown = null;
+  try { preRestore = (JSON.parse(readFileSync(marker, 'utf8')) as { preRestoreBackup?: unknown }).preRestoreBackup; } catch { /* named as unknown below */ }
+  fail(`A restore failed and could not be rolled back, so the server refuses to start (${marker}). The data before the restore is in ${typeof preRestore === 'string' ? preRestore : 'an unknown file'} in the backups directory. Restore it by hand as README, Troubleshooting, "A restore failed" explains, then delete the marker file.`);
+}
 
 // LOG-1, LOG-3: the log store; a failure to write it is reported once, to stdout only.
 const reportFailure = (message: string) => { process.stdout.write(`${JSON.stringify({ level: 40, time: Date.now(), source: 'logs', msg: message })}\n`); };
@@ -65,11 +78,14 @@ for (const migration of opened.applied) {
   logger.info({ source: 'migrations', version: migration.version, name: migration.name }, `Applied migration ${migration.name}.`);
 }
 
+const operations = new OperationLock();
 const context = {
   config,
   configFile: { path: startup.configFile.path, text: startup.configFile.text },
   db: opened.db,
+  dataDir,
   logs,
+  operations,
   setupPassword: startup.setupPassword,
   version,
 };
@@ -84,6 +100,7 @@ if (setupCheck.warning) logger.warn({ source: 'config' }, setupCheck.warning);
 const app = buildApp(context, { logger, staticDir: startup.staticDir });
 
 // LOG-15: retention now and every hour, with the effective logs.* settings.
+// BAK-8: retention is a job; it pauses during a restore and counts as activity while it runs.
 const retention = startRetention(logs, () => {
   const values = settingValues(config, readSettings(context.db));
   return {
@@ -92,7 +109,7 @@ const retention = startRetention(logs, () => {
     auditRetentionDays: values['logs.auditRetentionDays'],
     auditMaxEntries: values['logs.auditMaxEntries'],
   };
-}, logger);
+}, logger, () => (operations.inMaintenance ? null : operations.enterActivity()));
 
 let stopping = false;
 async function shutdown(signal: string) {

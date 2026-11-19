@@ -13,6 +13,13 @@ export const quizLengthLimits = {
   long: { min: 2, max: 500 },
 } as const;
 
+/** CFG-6: the allowed backup upload limits (`backup.*`). */
+export const backupLimits = {
+  maxZipBytes: { min: 1024, max: 2 * 1024 * 1024 * 1024 },
+  maxUncompressedBytes: { min: 1024, max: 8 * 1024 * 1024 * 1024 },
+  maxEntries: { min: 1, max: 100_000 },
+} as const;
+
 /** A long quiz must have more questions than a short one; null when the pair is fine. */
 export function quizLengthsError(shortLength: number, longLength: number): FieldError | null {
   if (longLength > shortLength) return null;

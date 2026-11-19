@@ -1,3 +1,4 @@
+import type { ArchiveRejectionReason } from './backupCodes.js';
 import { fieldError, type FieldCode, type FieldError } from '../src/lib/errors.js';
 
 /**
@@ -37,6 +38,20 @@ export function invalidField(field: string, code: FieldCode, message: string, pa
 export class RateLimitedError extends HttpError {
   constructor(readonly retryAfterSeconds: number) {
     super(429, 'rate_limited', `Too many requests. Try again in ${retryAfterSeconds} seconds.`, { params: { retryAfterSeconds } });
+  }
+}
+
+/** BAK-8: a restore is running, or a write waited too long for a backup. Sent with `Retry-After: 10`. */
+export class MaintenanceError extends HttpError {
+  constructor() {
+    super(503, 'maintenance', 'Maintenance in progress. Try again in a moment.', { params: { retryAfterSeconds: 10 } });
+  }
+}
+
+/** BAK-3, BAK-7: the archive failed a check; nothing changed. `params.reason` says which, for translation. */
+export class ArchiveRejectedError extends HttpError {
+  constructor(readonly reason: ArchiveRejectionReason, message: string) {
+    super(422, 'archive_rejected', message, { params: { reason } });
   }
 }
 

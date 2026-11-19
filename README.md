@@ -74,10 +74,12 @@ Settings come from three places:
 | `storage.dataDir` | `data` | Where the app keeps its data, relative to the working directory |
 | `storage.databaseFile` | `agt-trivia.sqlite` | The SQLite database, relative to `storage.dataDir` |
 | `storage.logDatabaseFile` | `logs.sqlite` | The log store (server log and audit log), relative to `storage.dataDir`; never in backups |
+| `storage.backupsDir` | `backups` | Pre-restore backups and the temporary files of backups and restores, relative to `storage.dataDir` |
 | `session.ttlHours` | `12` | How long an Admin sign-in lasts, in hours (1–168) |
 | `session.secureCookie` | `auto` | Whether the session cookie is `Secure`: `auto` (when the request came over HTTPS; behind a proxy that needs `server.trustProxy`), `true` or `false` |
 | `rateLimits.login` | 10 per 15 minutes | Admin sign-in and the Admin password change, each counted separately, per client address |
 | `rateLimits.setup` | 10 per 15 minutes | First-run setup, per client address |
+| `rateLimits.adminUploads` | 120 per 15 minutes | Backup previews and restores, per client address |
 
 ### Dashboard-editable keys
 
@@ -87,6 +89,9 @@ Settings come from three places:
 | `site.supportUrl` | `https://www.nms-agt.com/support` | Support link: an absolute `http:` or `https:` URL |
 | `quiz.shortLength` | `10` | Questions in a short quiz (1–100, fewer than `quiz.longLength`) |
 | `quiz.longLength` | `30` | Questions in a long quiz (2–500, more than `quiz.shortLength`) |
+| `backup.maxZipBytes` | `209715200` (200 MiB) | Largest backup upload, in bytes (1024 to 2 GiB) |
+| `backup.maxUncompressedBytes` | `1073741824` (1 GiB) | Largest total size of a backup's files once unpacked, in bytes (1024 to 8 GiB) |
+| `backup.maxEntries` | `10000` | Most files in a backup archive (1–100000) |
 | `logs.serverRetentionDays` | `30` | Days the server log keeps an entry (1–3650) |
 | `logs.serverMaxEntries` | `100000` | Most server log entries (1000–10000000); the oldest go first |
 | `logs.auditRetentionDays` | `365` | Days the audit log keeps an entry (30–3650) |
@@ -114,9 +119,10 @@ and text size (stored in this browser and shared with the game), **View site** a
 - **Server log** shows, filters, searches, exports and clears the server log (see [Logs](#logs)). While there are
   unseen warnings or errors, the tab shows a badge with their count and the dashboard a link to it.
 - **Audit log** shows, filters, searches and exports the audit log. It cannot be edited or cleared.
+- **Backup & restore** downloads a backup, and previews and restores one (see [Backup & restore](#backup--restore)).
 - **Account** changes the Admin password. This signs out every other Admin session.
 
-Members, Import and Backup & restore arrive in #13 to #22.
+Members and Import arrive in #17 to #22.
 
 ## Playing
 
@@ -124,7 +130,40 @@ Categories, quizzes, member accounts and score history: added in #15 to #21.
 
 ## Backup & restore
 
-Added in #13.
+The **Backup & restore** tab of the dashboard downloads a backup and restores one. A backup is one ZIP file,
+`agt-trivia-backup-<time>.zip`, with:
+
+- `database.sqlite`: a consistent copy of the database (the Admin account and the dashboard settings; categories,
+  questions, members and scores as they arrive), without sessions;
+- `config.yaml`, when the server has one;
+- `manifest.json`: the app and schema versions, the time, and each file's size and SHA-256 checksum.
+
+`.env`, sessions and the [logs](#logs) are never in a backup. **A backup contains the Admin's password hash** (and,
+later, the members'): keep it as safe as the server itself, and restore only backups you made or trust.
+
+Taking a backup takes a moment: changes wait while the copy is made (at most 30 seconds, then they answer "Maintenance
+in progress"); reading goes on.
+
+To restore, choose the file and **Preview backup**. The server checks the whole archive first and changes nothing:
+the manifest and every checksum, that it holds only the files a backup has, the size limits (`backup.*`), that the
+database is intact, contains only the app's tables and indexes, and is not from a newer version, and that its Admin
+password hash is valid. The preview shows when and by which version the backup was made, what it contains, the
+settings `config.yaml` overrides, and how its `config.yaml` differs from the current one. **`config.yaml` is never
+restored**: copy what you want from the diff (or download the backup's file) and edit the server's file by hand.
+
+Then confirm and **Restore backup**. The restore:
+
+1. checks the archive again, then puts the app in maintenance: requests in progress finish (if they take longer
+   than 30 seconds, the restore gives up and changes nothing), and new ones answer "Maintenance in progress";
+2. saves the current data as `pre-restore-backup-<time>.zip` in `storage.backupsDir` (the server keeps it; delete
+   it when you no longer need it);
+3. replaces the database file, upgrades an older backup's database, and checks it;
+4. drops dashboard settings that the current `config.yaml` sets, and ends every session.
+
+Everyone is signed out; sign in with the Admin account from the backup. If anything fails in steps 3 or 4, the
+previous database is put back and nothing changes.
+
+Backups and restores run one at a time. Older backups are upgraded; backups from a newer version are refused.
 
 ## Logs
 
@@ -205,8 +244,8 @@ Contributor and AI-agent guidance is in [`AGENTS.md`](AGENTS.md); the rules the 
   - `AGT_TRIVIA_SETUP_PASSWORD is longer than 1024 characters`: set a shorter value in `.env` and restart.
 - **"Setup is unavailable" on `/admin`:** `AGT_TRIVIA_SETUP_PASSWORD` is not set, or the server was not restarted
   after you set it.
-- **Locked out of the Admin account:** restore a backup that has an Admin whose password you know (#13), or delete
-  the Admin and its sessions with the SQLite command-line tool and run first-run setup again:
+- **Locked out of the Admin account:** delete the Admin and its sessions with the SQLite command-line tool and run
+  first-run setup again:
   1. Stop the server.
   2. Run `sqlite3 data/agt-trivia.sqlite "DELETE FROM sessions; DELETE FROM admin;"` (the path is
      `storage.dataDir`/`storage.databaseFile`).
@@ -219,7 +258,20 @@ Contributor and AI-agent guidance is in [`AGENTS.md`](AGENTS.md); the rules the 
   `session.secureCookie: true`.
 - **Something went wrong:** open the **Server log** tab first. Unexpected errors are there with their details, and
   the matching audit entry has the same request ID.
-- More topics (maintenance, failed restores) arrive with their features (#13, #14).
+- **"Maintenance in progress":** a restore is running, or a change waited 30 seconds for a backup. The page retries
+  by itself after a few seconds.
+- **A restore failed** and could not be rolled back (the dashboard says so): the app stays in maintenance, and only
+  the Admin who ran the restore can use the **Backup & restore** tab, to restore another backup. Restore the
+  `pre-restore-backup-<time>.zip` the server log names (in `storage.backupsDir`), or another backup. If the server
+  was restarted meanwhile, it refuses to start, because `restore-failed.json` is in the data directory. Then restore
+  by hand:
+  1. Stop the server.
+  2. Unpack `database.sqlite` from the pre-restore backup the marker file names (or from another backup) and copy it
+     over the database (`storage.dataDir`/`storage.databaseFile`); delete the database's `-wal` and `-shm` files and
+     any `*.restore-old-*` and `*.restore-new-*` files beside it.
+  3. Delete `restore-failed.json` from the data directory and start the server.
+- **"The replaced database files could not be deleted"** after a restore: delete the `*.restore-old-*` files the
+  server log names, next to the database in `storage.dataDir`.
 
 ## Credits
 

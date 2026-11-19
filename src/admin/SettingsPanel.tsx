@@ -8,12 +8,17 @@ import { useAdminI18n } from './context';
 import type { AdminTranslations } from './i18n';
 
 type Key = 'site.title' | 'site.supportUrl' | 'quiz.shortLength' | 'quiz.longLength'
+  | 'backup.maxZipBytes' | 'backup.maxUncompressedBytes' | 'backup.maxEntries'
   | 'logs.serverRetentionDays' | 'logs.serverMaxEntries' | 'logs.auditRetentionDays' | 'logs.auditMaxEntries';
 
 /** The form's fields, grouped as in config.yaml (CFG-6). */
 const groups: { title: (a: AdminTranslations) => string; help?: (a: AdminTranslations) => string; keys: { key: Key; type: 'text' | 'url' | 'number' }[] }[] = [
   { title: (a) => a.settings.site, keys: [{ key: 'site.title', type: 'text' }, { key: 'site.supportUrl', type: 'url' }] },
   { title: (a) => a.settings.quiz, help: (a) => a.settings.quizHelp, keys: [{ key: 'quiz.shortLength', type: 'number' }, { key: 'quiz.longLength', type: 'number' }] },
+  {
+    title: (a) => a.settings.backupLimits,
+    keys: [{ key: 'backup.maxZipBytes', type: 'number' }, { key: 'backup.maxUncompressedBytes', type: 'number' }, { key: 'backup.maxEntries', type: 'number' }],
+  },
   {
     title: (a) => a.settings.logRetention,
     help: (a) => a.settings.logRetentionHelp,
@@ -29,6 +34,9 @@ const labels = (a: AdminTranslations): Record<Key, string> => ({
   'site.supportUrl': a.settings.supportUrl,
   'quiz.shortLength': a.settings.quizShortLength,
   'quiz.longLength': a.settings.quizLongLength,
+  'backup.maxZipBytes': a.settings.maxZipBytes,
+  'backup.maxUncompressedBytes': a.settings.maxUncompressedBytes,
+  'backup.maxEntries': a.settings.maxEntries,
   'logs.serverRetentionDays': a.settings.serverRetentionDays,
   'logs.serverMaxEntries': a.settings.serverMaxEntries,
   'logs.auditRetentionDays': a.settings.auditRetentionDays,
