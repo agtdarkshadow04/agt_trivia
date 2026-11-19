@@ -1,0 +1,78 @@
+import assert from 'node:assert/strict';
+import { describe, it } from 'node:test';
+import type { PublicQuestion } from './api.js';
+import { choiceState, choose, currentQuestion, isFinished, isMultiAnswer, lockAnswer, nextQuestion, quizResult, startSession } from './quizSession.js';
+
+const single: PublicQuestion = {
+  id: 'q1', prompt: 'Largest planet?', authorCredit: null,
+  choices: [{ id: 'a', text: 'Jupiter' }, { id: 'b', text: 'Mars' }], correctChoiceIds: ['a'],
+};
+const multi: PublicQuestion = {
+  id: 'q2', prompt: 'Gas giants?', authorCredit: 'Traveller',
+  choices: [{ id: 'c', text: 'Jupiter' }, { id: 'd', text: 'Mars' }, { id: 'e', text: 'Saturn' }], correctChoiceIds: ['c', 'e'],
+};
+
+describe('a quiz session (#16)', () => {
+  it('tells single- from multi-answer questions', () => {
+    assert.equal(isMultiAnswer(single), false);
+    assert.equal(isMultiAnswer(multi), true);
+  });
+
+  it('keeps one choice for a single-answer question and toggles them for a multi-answer one', () => {
+    let session = startSession([single, multi]);
+    session = choose(session, 'a');
+    session = choose(session, 'b');
+    assert.deepEqual(session.selected, ['b']);
+    session = choose(session, 'unknown');
+    assert.deepEqual(session.selected, ['b']);
+    session = nextQuestion(lockAnswer(session));
+    session = choose(choose(choose(session, 'c'), 'd'), 'e');
+    assert.deepEqual(session.selected, ['c', 'd', 'e']);
+    session = choose(session, 'd', false);
+    assert.deepEqual(session.selected, ['c', 'e']);
+  });
+
+  it('locks only with a choice, grades it, and freezes the choices', () => {
+    let session = startSession([single]);
+    assert.equal(lockAnswer(session), session);
+    assert.equal(choiceState(session, 'a'), null);
+    session = lockAnswer(choose(session, 'a'));
+    assert.equal(session.locked, true);
+    assert.equal(session.lastCorrect, true);
+    assert.equal(session.score, 1);
+    assert.equal(choose(session, 'b'), session);
+    assert.equal(lockAnswer(session), session);
+    assert.equal(choiceState(session, 'a'), 'correct-chosen');
+    assert.equal(choiceState(session, 'b'), 'other');
+  });
+
+  it('needs every correct answer of a multi-answer question and nothing else', () => {
+    const partial = lockAnswer(choose(startSession([multi]), 'c'));
+    assert.equal(partial.lastCorrect, false);
+    assert.equal(partial.score, 0);
+    assert.equal(choiceState(partial, 'c'), 'correct-chosen');
+    assert.equal(choiceState(partial, 'e'), 'correct-missed');
+    const extra = lockAnswer(choose(choose(choose(startSession([multi]), 'c'), 'e'), 'd'));
+    assert.equal(extra.lastCorrect, false);
+    assert.equal(choiceState(extra, 'd'), 'wrong-chosen');
+    assert.equal(lockAnswer(choose(choose(startSession([multi]), 'e'), 'c')).lastCorrect, true);
+  });
+
+  it('moves on only after locking, then finishes with the score, percentage and rank', () => {
+    let session = startSession([single, multi]);
+    assert.equal(nextQuestion(session), session);
+    session = nextQuestion(lockAnswer(choose(session, 'a')));
+    assert.equal(currentQuestion(session), multi);
+    assert.deepEqual(session.selected, []);
+    session = nextQuestion(lockAnswer(choose(session, 'd')));
+    assert.equal(isFinished(session), true);
+    assert.equal(currentQuestion(session), null);
+    assert.deepEqual(quizResult(session), { score: 1, total: 2, percent: 50, rank: 'seasonedTraveller' });
+  });
+
+  it('ranks a perfect score and an empty quiz', () => {
+    const perfect = nextQuestion(lockAnswer(choose(startSession([single]), 'a')));
+    assert.deepEqual(quizResult(perfect), { score: 1, total: 1, percent: 100, rank: 'atlasArchivist' });
+    assert.deepEqual(quizResult(startSession([])), { score: 0, total: 0, percent: 0, rank: 'pathfinder' });
+  });
+});

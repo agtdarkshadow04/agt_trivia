@@ -1,6 +1,6 @@
 import { createContext, type ReactNode, useContext, useEffect, useMemo, useState } from 'react';
 import { errorText } from '../lib/errors';
-import { formatDate, formatDateTime, formatNumber } from '../lib/format';
+import { formatDate, formatDateTime, formatNumber, formatPercent } from '../lib/format';
 import { preferencesChangedEvent, readPreferences, writePreference, type Preferences } from '../lib/preferences';
 import { getTranslations, localeTag, type Locale, type Translations } from '../translations';
 
@@ -19,6 +19,8 @@ export interface I18nValue {
   dateTime(value: string | Date): string;
   date(value: string | Date): string;
   number(value: number): string;
+  /** A whole percentage, `percent` from 0 to 100. */
+  percent(percent: number): string;
   /** The reader's text for any error (I18N-6). */
   error(cause: unknown): string;
 }
@@ -35,6 +37,7 @@ function i18nValue(preferences: Preferences): I18nValue {
     dateTime: (value) => formatDateTime(value, options),
     date: (value) => formatDate(value, options),
     number: (value) => formatNumber(value, options),
+    percent: (value) => formatPercent(value, options),
     error: (cause) => errorText(cause, t),
   };
 }

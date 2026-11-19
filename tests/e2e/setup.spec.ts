@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { setupPassword } from './environment';
+import { seedQuizData, setupPassword } from './environment';
 import { admin, adminState, expectAccessible, watchPage } from './fixtures';
 
 /**
@@ -39,4 +39,11 @@ test('first-run setup creates the Admin and signs it in', async ({ page }) => {
   expect(watched.consoleErrors).toEqual([]);
   expect(await watched.violations()).toEqual([]);
   await page.context().storageState({ path: adminState });
+});
+
+test('seeds the quiz the player tests play', async ({ request }) => {
+  await seedQuizData();
+  const categories = await (await request.get('/api/categories')).json();
+  expect(categories.map((category: { shortName: string; questionCount: number }) => [category.shortName, category.questionCount]))
+    .toEqual([['space', 12], ['bio', 3], ['empty', 0]]);
 });

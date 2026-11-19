@@ -19,11 +19,15 @@ img { max-width: 100%; }
 .app-shell { display: flex; min-height: 100vh; flex-direction: column; }
 .site-header { position: sticky; top: 0; z-index: 50; background: rgba(0, 0, 0, 0.86); }
 .header-inner { display: flex; align-items: center; justify-content: space-between; width: 100%; min-height: 5rem; padding: 0.75rem clamp(1rem, 4vw, 3rem); gap: 1rem; }
-.brand { display: inline-flex; align-items: center; gap: 1rem; min-width: 0; }
+.brand { display: inline-flex; align-items: center; gap: 1rem; min-width: 0; text-decoration: none; }
 .brand-logo { width: 2.75rem; height: 2.75rem; flex: 0 0 auto; object-fit: contain; }
 .brand-copy { display: flex; min-width: 0; flex-direction: column; text-transform: uppercase; }
 .brand-name { overflow: hidden; color: var(--agt-orange); font-size: 0.72rem; font-weight: 900; letter-spacing: 0.2em; text-overflow: ellipsis; white-space: nowrap; }
 .brand-product { color: #fff; font-size: 0.62rem; font-weight: 900; letter-spacing: 0.24em; }
+/* FE-7: icons sit on the text's middle; a button with an icon and a label uses the .button-with-icon modifier. */
+.icon { flex: none; vertical-align: middle; }
+.button-with-icon { display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; }
+.button-with-icon .icon { width: 1.1rem; height: 1.1rem; }
 .skip-link { position: fixed; top: 0.75rem; left: 0.75rem; z-index: 200; transform: translateY(-180%); padding: 0.75rem 1rem; color: #000; background: var(--agt-orange); border-radius: 0.5rem; font-weight: 800; }
 .skip-link:focus { transform: translateY(0); }
 .eyebrow { margin: 0 0 0.75rem; color: var(--agt-orange); font-family: ui-monospace, monospace; font-size: 0.68rem; font-weight: 900; letter-spacing: 0.23em; text-transform: uppercase; }
@@ -69,3 +73,107 @@ img { max-width: 100%; }
 .maintenance-region:empty { display: none; }
 .maintenance-region { width: min(100%, 80rem); margin: 1rem auto 0; padding-inline: clamp(1rem, 4vw, 3rem); }
 .maintenance-notice { margin: 0; padding: 0.85rem 1rem; border: 1px solid var(--agt-orange); border-radius: var(--radius-sm); color: var(--text); background: var(--surface); }
+
+/* UI-7: the header's round icon buttons and the footer's links. */
+.header-actions { display: flex; align-items: center; gap: 0.75rem; }
+.site-footer nav { display: flex; flex-wrap: wrap; gap: 0.45rem 1.2rem; }
+.site-footer nav a { font-size: 0.65rem; font-weight: 900; letter-spacing: 0.13em; text-decoration: none; text-transform: uppercase; }
+.site-footer nav a:hover { opacity: 0.6; }
+.settings-heading { margin: 0 0 1rem; color: var(--agt-orange); font-size: 0.75rem; letter-spacing: 0.12em; text-transform: uppercase; }
+
+/* The player UI (#16). Headings follow UI-4: uppercase, wide letter spacing, heavy weight. */
+.player { display: grid; grid-template-columns: minmax(0, 1fr); width: min(100%, 80rem); margin-inline: auto; padding: 2rem clamp(1rem, 4vw, 3rem) 4rem; gap: 1.5rem; align-content: start; }
+.player > * { min-width: 0; }
+.player h1 { margin: 0; color: #fff; font-size: clamp(1.4rem, 3vw, 2.1rem); font-weight: 900; letter-spacing: 0.12em; line-height: 1.2; text-transform: uppercase; overflow-wrap: anywhere; }
+.player h1:focus { outline: none; }
+.player h1:focus-visible { outline: 2px solid var(--agt-orange); outline-offset: 3px; }
+.player-section { display: grid; gap: 1.25rem; }
+.section-heading { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 0.5rem 1.5rem; }
+.section-heading-meta, .player-empty { margin: 0; color: var(--muted); font-size: 0.8rem; }
+.status-panel { display: grid; justify-items: start; gap: 1rem; padding: clamp(1.25rem, 4vw, 2rem); border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+.status-panel p { margin: 0; }
+.loader { width: 2rem; height: 2rem; border: 3px solid var(--line-strong); border-top-color: var(--agt-orange); border-radius: 50%; animation: player-spin 0.9s linear infinite; }
+@keyframes player-spin { to { transform: rotate(360deg); } }
+
+/* Category and length choices: one card per choice, a whole-card button. */
+.choice-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 22rem), 1fr)); gap: 1rem; margin: 0; padding: 0; list-style: none; }
+.choice-grid > li { display: flex; min-width: 0; }
+.choice-card { display: grid; width: 100%; grid-template-columns: auto minmax(0, 1fr) auto; align-items: start; gap: 1rem; padding: 1.25rem; border: 1px solid var(--line); border-radius: var(--radius); color: var(--text); background: var(--surface); font: inherit; text-align: left; cursor: pointer; transition: border-color 0.15s ease, background 0.15s ease, transform 0.15s ease; }
+.choice-card:hover:not(:disabled) { border-color: var(--line-strong); background: var(--surface-soft); transform: translateY(-2px); }
+.choice-card:disabled { cursor: not-allowed; opacity: 0.55; }
+.choice-card-index { color: var(--agt-orange); font-family: ui-monospace, monospace; font-size: 0.75rem; font-weight: 900; }
+.choice-card-body { display: grid; min-width: 0; gap: 0.45rem; overflow-wrap: anywhere; }
+.choice-card-meta { color: var(--muted); font-family: ui-monospace, monospace; font-size: 0.68rem; letter-spacing: 0.08em; text-transform: uppercase; }
+.choice-card-name { color: #fff; font-size: 1rem; font-weight: 900; letter-spacing: 0.08em; text-transform: uppercase; }
+.choice-card-text { color: var(--text); font-size: 0.85rem; line-height: 1.5; }
+.choice-card-arrow { width: 1.25rem; height: 1.25rem; color: var(--agt-orange); }
+
+/* A question: the bar with the way back and the score, the progress, the answers and the feedback. */
+.quiz-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.75rem; }
+.quiz-score { margin: 0; color: var(--agt-orange); font-family: ui-monospace, monospace; font-size: 0.8rem; font-weight: 900; letter-spacing: 0.1em; text-transform: uppercase; }
+.quiz-panel, .results-panel { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1rem; padding: clamp(1.25rem, 4vw, 2.25rem); border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow); }
+.quiz-meta { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0.5rem; color: var(--muted); font-family: ui-monospace, monospace; font-size: 0.7rem; letter-spacing: 0.1em; text-transform: uppercase; }
+.quiz-progress { width: 100%; height: 0.4rem; overflow: hidden; border: 0; border-radius: 999px; background: var(--surface-soft); appearance: none; }
+.quiz-progress::-webkit-progress-bar { border-radius: 999px; background: var(--surface-soft); }
+.quiz-progress::-webkit-progress-value { border-radius: 999px; background: var(--agt-red-orange); }
+.quiz-progress::-moz-progress-bar { border-radius: 999px; background: var(--agt-red-orange); }
+.selection-hint { margin: 0.5rem 0 0; color: var(--agt-orange); font-size: 0.75rem; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; }
+.player h1.question-prompt { font-size: clamp(1.15rem, 2.4vw, 1.6rem); letter-spacing: 0.04em; text-transform: none; }
+.answer-fieldset { min-width: 0; margin: 0; padding: 0; border: 0; }
+.answer-list { display: grid; gap: 0.75rem; margin: 0; padding: 0; list-style: none; }
+.answer { display: grid; grid-template-columns: auto auto minmax(0, 1fr); align-items: center; gap: 0.75rem; padding: 0.9rem 1rem; border: 1px solid var(--line); border-radius: var(--radius-sm); color: var(--text); background: var(--surface-raised); cursor: pointer; transition: border-color 0.15s ease, background 0.15s ease; }
+.answer:hover { border-color: var(--line-strong); background: var(--surface-soft); }
+.answer:has(input:checked) { border-color: var(--agt-orange); }
+.answer input { width: 1.15rem; height: 1.15rem; margin: 0; accent-color: var(--agt-red-orange); }
+.answer:has(input:disabled) { cursor: default; }
+.answer-marker { display: inline-grid; width: 1.8rem; height: 1.8rem; place-items: center; border: 1px solid var(--line-strong); border-radius: 50%; color: var(--agt-orange); font-family: ui-monospace, monospace; font-size: 0.75rem; font-weight: 900; }
+.answer-text { min-width: 0; overflow-wrap: anywhere; line-height: 1.4; }
+/* A11Y-1: a locked answer's state is an icon and words; the colours only add to them. */
+.answer-state { display: inline-flex; min-width: 0; flex-wrap: wrap; grid-column: 3; align-items: center; overflow-wrap: anywhere; gap: 0.4rem; font-size: 0.75rem; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; }
+.answer-state .icon { width: 1.1rem; height: 1.1rem; flex: none; }
+.answer-state-correct .icon { color: #5ee08a; }
+.answer-state-wrong .icon { color: var(--agt-red); }
+.answer.answer-correct { border-color: #5ee08a; }
+.answer.answer-wrong { border-color: var(--agt-red); }
+.answer.answer-muted { opacity: 0.7; }
+.feedback { display: flex; align-items: flex-start; gap: 0.75rem; margin-top: 1rem; padding: 1rem; border: 1px solid; border-radius: var(--radius-sm); color: var(--text); background: var(--surface-raised); }
+.feedback > .icon { width: 1.5rem; height: 1.5rem; flex: none; }
+.feedback strong { color: #fff; letter-spacing: 0.08em; text-transform: uppercase; }
+.feedback p { margin: 0.35rem 0 0; overflow-wrap: anywhere; }
+.feedback-correct { border-color: #5ee08a; }
+.feedback-correct > .icon { color: #5ee08a; }
+.feedback-wrong { border-color: var(--agt-red); }
+.feedback-wrong > .icon { color: var(--agt-red); }
+.quiz-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 1rem; margin-top: 1.25rem; }
+.quiz-credit { min-width: 0; color: var(--muted); font-size: 0.8rem; overflow-wrap: anywhere; }
+.quiz-submit { max-width: 100%; overflow-wrap: anywhere; text-align: left; }
+
+/* The results: the score ring next to the rank. */
+.results-panel { grid-template-columns: clamp(9rem, 22vw, 12rem) minmax(0, 1fr); align-items: center; gap: clamp(1.25rem, 4vw, 3rem); }
+.score-ring { position: relative; display: grid; width: 100%; max-width: 12rem; aspect-ratio: 1; place-items: center; }
+.score-ring svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.score-ring-track, .score-ring-value { fill: none; stroke-width: 10; }
+.score-ring-track { stroke: var(--surface-soft); }
+.score-ring-value { stroke: var(--agt-red-orange); stroke-linecap: round; }
+.score-ring-text { position: relative; display: grid; justify-items: center; color: var(--muted); font-size: 0.75rem; letter-spacing: 0.1em; text-transform: uppercase; }
+.score-ring-text strong { color: #fff; font-size: 2.2rem; letter-spacing: 0; }
+.score-ring-text small { color: var(--muted); font-size: 1rem; }
+.results-copy { display: grid; gap: 1rem; min-width: 0; }
+.results-copy p:not(.eyebrow) { margin: 0; color: var(--text); line-height: 1.6; overflow-wrap: anywhere; }
+
+@media (max-width: 760px) {
+  .site-footer { align-items: flex-start; flex-direction: column; }
+}
+
+@media (max-width: 520px) {
+  .header-actions { gap: 0.3rem; }
+  .player { padding-top: 1.25rem; }
+  .choice-card { grid-template-columns: minmax(0, 1fr) auto; padding: 1rem; }
+  .choice-card-index { display: none; }
+  .quiz-panel, .results-panel { padding: 1rem; }
+  .answer { grid-template-columns: auto minmax(0, 1fr); gap: 0.6rem; padding: 0.75rem; }
+  .answer-marker { display: none; }
+  .answer-state { grid-column: 2; }
+  .results-panel { grid-template-columns: minmax(0, 1fr); justify-items: center; text-align: center; }
+  .results-copy .form-actions { justify-content: center; }
+}

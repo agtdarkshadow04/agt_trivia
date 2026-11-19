@@ -72,3 +72,27 @@ export function EyeIcon(props: IconProps) {
 export function UploadIcon(props: IconProps) {
   return <Icon name="upload" {...props}><path d="M12 3v12" /><path d="m17 8-5-5-5 5" /><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /></Icon>;
 }
+
+export function ArrowLeftIcon(props: IconProps) {
+  return <Icon name="arrow-left" {...props}><path d="m12 19-7-7 7-7" /><path d="M19 12H5" /></Icon>;
+}
+
+export function ArrowRightIcon(props: IconProps) {
+  return <Icon name="arrow-right" {...props}><path d="M5 12h14" /><path d="m12 5 7 7-7 7" /></Icon>;
+}
+
+export function CheckCircleIcon(props: IconProps) {
+  return <Icon name="circle-check" {...props}><circle cx="12" cy="12" r="10" /><path d="m9 12 2 2 4-4" /></Icon>;
+}
+
+export function XCircleIcon(props: IconProps) {
+  return <Icon name="circle-x" {...props}><circle cx="12" cy="12" r="10" /><path d="m15 9-6 6" /><path d="m9 9 6 6" /></Icon>;
+}
+
+export function RotateCcwIcon(props: IconProps) {
+  return <Icon name="rotate-ccw" {...props}><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" /><path d="M3 3v5h5" /></Icon>;
+}
+
+export function RefreshIcon(props: IconProps) {
+  return <Icon name="refresh-cw" {...props}><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" /><path d="M21 3v5h-5" /><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" /><path d="M8 16H3v5" /></Icon>;
+}

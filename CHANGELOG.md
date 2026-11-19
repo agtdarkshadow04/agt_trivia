@@ -57,11 +57,19 @@ All notable changes to AGT Galactic Trivia are documented in this file. The form
 - `GET /api/categories` lists the categories with their number of approved questions, and
   `GET /api/categories/{id}/quiz?length=short|long|all` draws a random quiz from them (#15).
 - Backup previews and restore reports count categories and questions (#15).
+- The game, rebuilt on the new server: choose a category, a short, long or full quiz, answer single- and
+  multi-answer questions with feedback after each one, and see your score, percentage and rank. Links like
+  `/?category=space` open a category directly, ignoring case (#16).
+- A **Settings** button in the header for the language and the text size, shared with the admin dashboard, and a
+  footer with the Alliance links and the support link (#16).
 
 ### Changed
 
 - The app is rebuilt on the AGT Web Application Specification v6.0.1 stack: a Fastify 5 server with a React 19 +
   Vite 8 client, in TypeScript, with a separate admin page at `/admin` (#9).
+- The game is fully keyboard-accessible and announces its feedback to screen readers; whether an answer was right
+  is shown with an icon and words, not only colour. The former starfield, "Network online" signal and themes are
+  gone (#16).
 - The page uses the AGT look: the official AGT logo, the NMS Futura font and the AGT base stylesheet, bundled and
   served by the app itself (#9).
 

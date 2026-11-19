@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { formatBytes, formatDate, formatDateTime, formatNumber, isTimeZoneSetting, offsetLabel, TIME_ZONE_OFFSETS } from './format.js';
+import { formatBytes, formatDate, formatDateTime, formatNumber, formatPercent, isTimeZoneSetting, offsetLabel, TIME_ZONE_OFFSETS } from './format.js';
 
 const moment = '2026-01-02T03:04:00.000Z';
 
@@ -30,5 +30,13 @@ describe('Intl formatting (I18N-5)', () => {
     for (const offset of TIME_ZONE_OFFSETS) assert.equal(isTimeZoneSetting(offset), true);
     for (const value of ['UTC', '+5:30', 'Europe/Paris', 3, null]) assert.equal(isTimeZoneSetting(value), false);
     assert.equal(offsetLabel('-03:30'), 'UTC−03:30');
+  });
+});
+
+describe('percentages (I18N-5)', () => {
+  it('formats whole percentages in the reader\'s language', () => {
+    assert.equal(formatPercent(75, { tag: 'en' }), '75%');
+    assert.equal(formatPercent(100, { tag: 'fr' }).replace(/\s/g, ' '), '100 %');
+    assert.equal(formatPercent(33, { tag: 'de' }).replace(/\s/g, ' '), '33 %');
   });
 });
