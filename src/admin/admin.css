@@ -21,3 +21,22 @@
 .admin-panel h2 { margin: 0 0 1rem; color: var(--agt-orange); font-size: 1.2rem; }
 .settings-group { display: grid; gap: 1rem; min-width: 0; margin: 0; padding: 1rem; border: 1px solid var(--line); border-radius: var(--radius-sm); }
 .settings-group legend { padding: 0 0.4rem; color: var(--agt-orange); font-size: 0.72rem; font-weight: 900; letter-spacing: 0.18em; text-transform: uppercase; }
+/* LOG-21: the unseen warnings and errors on the Server log tab; the error badge adds a red border, never red text. */
+.admin-badge { display: inline-flex; min-width: 1.4rem; justify-content: center; margin-left: 0.45rem; padding: 0.1rem 0.4rem; border: 1px solid var(--agt-orange); border-radius: 999px; color: var(--agt-orange); background: var(--surface); font-size: 0.65rem; font-weight: 900; }
+.admin-badge-error { border-color: var(--agt-red); color: var(--text); }
+/* LOG-19: the log tabs. Wide tables scroll inside their own box (UI-12); it is positioned so the .sr-only header text inside it is clipped too. */
+.log-panel { max-width: none; }
+.log-filters { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr)); align-items: end; gap: 0.75rem; margin: 1rem 0; }
+.log-actions { align-items: end; margin-bottom: 1rem; }
+.table-scroll { position: relative; max-width: 100%; overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius-sm); }
+.table-scroll:focus-visible { outline: 2px solid var(--agt-orange); outline-offset: 3px; }
+.log-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+.log-table th, .log-table td { padding: 0.55rem 0.7rem; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+.log-table th { color: var(--agt-orange); font-size: 0.68rem; letter-spacing: 0.08em; text-transform: uppercase; white-space: nowrap; }
+.log-table time, .log-table code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; white-space: nowrap; }
+.log-table td:last-child { white-space: nowrap; }
+.log-muted { color: var(--muted); }
+.log-severity { font-weight: 800; }
+.log-severity-error { color: var(--text); border-bottom: 2px solid var(--agt-red); }
+.log-severity-warn { color: var(--agt-orange); }
+.log-details { max-width: 100%; margin: 0; overflow-x: auto; padding: 0.75rem; border-radius: var(--radius-sm); color: var(--text); background: var(--surface-soft); font-size: 0.72rem; white-space: pre-wrap; overflow-wrap: anywhere; }

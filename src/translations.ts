@@ -96,6 +96,8 @@ const en = {
   settings: {
     display: "Language and display",
     language: "Language",
+    timeZone: "Time zone",
+    timeZoneAuto: "Auto (this device)",
     textSize: "Text size",
     textSizeDefault: "{{scale}}× (default)",
     textSizeHelp: "Scales all text from 1× to 2×. Settings are stored only in this browser.",
@@ -157,6 +159,8 @@ const fr: Translations = {
   settings: {
     display: "Langue et affichage",
     language: "Langue",
+    timeZone: "Fuseau horaire",
+    timeZoneAuto: "Automatique (cet appareil)",
     textSize: "Taille du texte",
     textSizeDefault: "{{scale}}× (par défaut)",
     textSizeHelp: "Agrandit tout le texte de 1× à 2×. Les paramètres sont enregistrés uniquement dans ce navigateur.",
@@ -216,6 +220,8 @@ const de: Translations = {
   settings: {
     display: "Sprache und Anzeige",
     language: "Sprache",
+    timeZone: "Zeitzone",
+    timeZoneAuto: "Automatisch (dieses Gerät)",
     textSize: "Textgröße",
     textSizeDefault: "{{scale}}× (Standard)",
     textSizeHelp: "Skaliert den gesamten Text von 1× bis 2×. Die Einstellungen werden nur in diesem Browser gespeichert.",
@@ -275,6 +281,8 @@ const es: Translations = {
   settings: {
     display: "Idioma y pantalla",
     language: "Idioma",
+    timeZone: "Zona horaria",
+    timeZoneAuto: "Automática (este dispositivo)",
     textSize: "Tamaño del texto",
     textSizeDefault: "{{scale}}× (predeterminado)",
     textSizeHelp: "Escala todo el texto de 1× a 2×. Los ajustes se guardan solo en este navegador.",
@@ -334,6 +342,8 @@ const pt: Translations = {
   settings: {
     display: "Idioma e exibição",
     language: "Idioma",
+    timeZone: "Fuso horário",
+    timeZoneAuto: "Automático (este dispositivo)",
     textSize: "Tamanho do texto",
     textSizeDefault: "{{scale}}× (padrão)",
     textSizeHelp: "Amplia todo o texto de 1× a 2×. As configurações ficam salvas só neste navegador.",
@@ -393,6 +403,8 @@ const it: Translations = {
   settings: {
     display: "Lingua e visualizzazione",
     language: "Lingua",
+    timeZone: "Fuso orario",
+    timeZoneAuto: "Automatico (questo dispositivo)",
     textSize: "Dimensione del testo",
     textSizeDefault: "{{scale}}× (predefinita)",
     textSizeHelp: "Ingrandisce tutto il testo da 1× a 2×. Le impostazioni vengono salvate solo in questo browser.",
@@ -452,6 +464,8 @@ const th: Translations = {
   settings: {
     display: "ภาษาและการแสดงผล",
     language: "ภาษา",
+    timeZone: "เขตเวลา",
+    timeZoneAuto: "อัตโนมัติ (อุปกรณ์นี้)",
     textSize: "ขนาดตัวอักษร",
     textSizeDefault: "{{scale}}× (ค่าเริ่มต้น)",
     textSizeHelp: "ปรับขนาดตัวอักษรทั้งหมดตั้งแต่ 1× ถึง 2× การตั้งค่าจะบันทึกไว้ในเบราว์เซอร์นี้เท่านั้น",
@@ -511,6 +525,8 @@ const zh: Translations = {
   settings: {
     display: "语言和显示",
     language: "语言",
+    timeZone: "时区",
+    timeZoneAuto: "自动（此设备）",
     textSize: "文字大小",
     textSizeDefault: "{{scale}}×（默认）",
     textSizeHelp: "将所有文字放大 1× 到 2×。设置只保存在此浏览器中。",
@@ -570,6 +586,8 @@ const hi: Translations = {
   settings: {
     display: "भाषा और प्रदर्शन",
     language: "भाषा",
+    timeZone: "समय क्षेत्र",
+    timeZoneAuto: "अपने आप (यह डिवाइस)",
     textSize: "टेक्स्ट का आकार",
     textSizeDefault: "{{scale}}× (डिफ़ॉल्ट)",
     textSizeHelp: "सारे टेक्स्ट को 1× से 2× तक बड़ा करता है। सेटिंग्स सिर्फ़ इसी ब्राउज़र में सेव होती हैं।",
@@ -629,6 +647,8 @@ const ja: Translations = {
   settings: {
     display: "言語と表示",
     language: "言語",
+    timeZone: "タイムゾーン",
+    timeZoneAuto: "自動（この端末）",
     textSize: "文字サイズ",
     textSizeDefault: "{{scale}}×（既定）",
     textSizeHelp: "すべての文字を 1× から 2× まで拡大します。設定はこのブラウザーにのみ保存されます。",

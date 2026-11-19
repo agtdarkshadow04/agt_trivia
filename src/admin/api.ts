@@ -1,4 +1,4 @@
-import { ApiError, apiRequest, type RequestOptions } from '../lib/client';
+import { ApiError, apiFetch, apiRequest, attachmentName, type RequestOptions } from '../lib/client';
 
 /**
  * The admin dashboard's API calls, all through `apiRequest()` (FE-2). A `401`
@@ -79,3 +79,72 @@ export const listSettings = () => adminRequest<{ settings: SettingState[] }>('/a
 export const updateSettings = (values: Record<string, SettingValue | null>) => (
   adminRequest<{ settings: SettingState[] }>('/api/admin/settings', { method: 'PUT', body: { values } })
 );
+
+// --- Logs (LOG-18) -------------------------------------------------------------
+
+export type LogKind = 'server' | 'audit';
+
+export interface ServerLogEntry {
+  id: string;
+  at: string;
+  level: 'info' | 'warn' | 'error' | 'fatal';
+  source: string;
+  message: string;
+  requestId: string | null;
+  details: Record<string, unknown>;
+}
+
+export interface AuditLogEntry {
+  id: string;
+  at: string;
+  lastAt: string;
+  count: number;
+  actorType: 'admin' | 'anonymous';
+  actor: string | null;
+  ipHash: string | null;
+  client: 'web' | 'api';
+  action: string;
+  method: string;
+  route: string;
+  targetType: string | null;
+  targetId: string | null;
+  outcome: 'success' | 'denied' | 'rate_limited' | 'failure';
+  statusCode: number;
+  requestId: string | null;
+  details: Record<string, unknown>;
+}
+
+export interface LogPage<Entry> {
+  items: Entry[];
+  nextCursor: string | null;
+}
+
+export interface ServerLogSummary {
+  unseenWarnings: number;
+  unseenErrors: number;
+}
+
+/** The filters of either log; empty values are left out of the query. */
+export type LogFilters = Partial<Record<'level' | 'source' | 'actorType' | 'action' | 'outcome' | 'targetType' | 'targetId' | 'from' | 'to' | 'q', string>>;
+
+function logQuery(filters: LogFilters, extra: Record<string, string> = {}) {
+  const query = new URLSearchParams(Object.entries({ ...filters, ...extra }).filter(([, value]) => value) as [string, string][]);
+  return query.size ? `?${query}` : '';
+}
+
+export const listServerLog = (filters: LogFilters, cursor = '') => adminRequest<LogPage<ServerLogEntry>>(`/api/admin/logs/server${logQuery(filters, { cursor })}`);
+export const listAuditLog = (filters: LogFilters, cursor = '') => adminRequest<LogPage<AuditLogEntry>>(`/api/admin/logs/audit${logQuery(filters, { cursor })}`);
+export const getServerLogSummary = () => adminRequest<ServerLogSummary>('/api/admin/logs/server/summary');
+export const markServerLogSeen = () => adminRequest<void>('/api/admin/logs/server/seen', { method: 'POST' });
+export const clearServerLog = () => adminRequest<void>('/api/admin/logs/server', { method: 'DELETE' });
+
+/** Downloads the entries matching `filters` as JSON Lines or CSV (LOG-22). */
+export async function exportLog(log: LogKind, filters: LogFilters, format: 'jsonl' | 'csv') {
+  try {
+    const response = await apiFetch(`/api/admin/logs/${log}/export${logQuery(filters, { format })}`);
+    return { blob: await response.blob(), filename: attachmentName(response, `agt-trivia-${log}-log.${format}`) };
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 401) window.dispatchEvent(new Event(adminUnauthorizedEvent));
+    throw error;
+  }
+}

@@ -31,7 +31,8 @@ describe('the route table', () => {
     for (const route of apiRoutes.filter((entry) => entry.method === 'GET')) {
       assert.equal(route.writesData, false, route.url);
       const before = totalChanges(context);
-      const response = await app.inject({ url: route.url, headers: route.auth === 'admin' ? { cookie } : {} });
+      const query = route.url.endsWith('/export') ? '?format=jsonl' : '';
+      const response = await app.inject({ url: `${route.url}${query}`, headers: route.auth === 'admin' ? { cookie } : {} });
       assert.equal(response.statusCode, 200, route.url);
       assert.equal(totalChanges(context), before, `${route.url} writes nothing (BAK-8)`);
     }

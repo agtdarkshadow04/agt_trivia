@@ -52,3 +52,15 @@ export function SettingsIcon(props: IconProps) {
 export function CloseIcon(props: IconProps) {
   return <Icon name="close" {...props}><path d="M18 6 6 18" /><path d="m6 6 12 12" /></Icon>;
 }
+
+export function DownloadIcon(props: IconProps) {
+  return <Icon name="download" {...props}><path d="M12 15V3" /><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><path d="m7 10 5 5 5-5" /></Icon>;
+}
+
+export function SearchIcon(props: IconProps) {
+  return <Icon name="search" {...props}><path d="m21 21-4.34-4.34" /><circle cx="11" cy="11" r="8" /></Icon>;
+}
+
+export function TrashIcon(props: IconProps) {
+  return <Icon name="trash" {...props}><path d="M10 11v6" /><path d="M14 11v6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" /><path d="M3 6h18" /><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /></Icon>;
+}

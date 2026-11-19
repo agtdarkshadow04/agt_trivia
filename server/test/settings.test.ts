@@ -29,7 +29,10 @@ describe('setting precedence (CFG-7)', () => {
   });
 
   it('lists every setting in EDITABLE_SETTINGS order', () => {
-    assert.deepEqual(settingStates(parseConfig(''), new Map()).map((state) => state.key), ['site.title', 'site.supportUrl', 'quiz.shortLength', 'quiz.longLength']);
+    assert.deepEqual(settingStates(parseConfig(''), new Map()).map((state) => state.key), [
+      'site.title', 'site.supportUrl', 'quiz.shortLength', 'quiz.longLength',
+      'logs.serverRetentionDays', 'logs.serverMaxEntries', 'logs.auditRetentionDays', 'logs.auditMaxEntries',
+    ]);
   });
 });
 

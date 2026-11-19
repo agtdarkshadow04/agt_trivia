@@ -3,6 +3,7 @@ import { mkdtempSync, readdirSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, it } from 'node:test';
+import { LOG_MIGRATIONS, openLogStore } from '../logs.js';
 import { EXPECTED_TABLES, MIGRATIONS, missingTables, openDatabase, openSqlite, runMigrations, SCHEMA_VERSION, SchemaTooNewError, schemaVersion } from '../db.js';
 
 describe('migrations (DATA-3, DATA-4)', () => {
@@ -16,6 +17,15 @@ describe('migrations (DATA-3, DATA-4)', () => {
       assert.doesNotMatch(migration.sql, /\b(BEGIN|COMMIT)\b/i, 'the runner wraps each migration in its transaction');
     });
     assert.equal(SCHEMA_VERSION, MIGRATIONS.length);
+  });
+
+  it('lists every log store migration file once, in order, and migrates an empty log store (LOG-1)', () => {
+    const files = readdirSync('server/migrations/logs').filter((file) => file.endsWith('.sql')).sort();
+    assert.deepEqual(LOG_MIGRATIONS.map((migration) => `${migration.name}.sql`), files);
+    LOG_MIGRATIONS.forEach((migration, index) => assert.equal(migration.version, index + 1));
+    const { store, applied } = openLogStore(':memory:');
+    assert.equal(applied.length, LOG_MIGRATIONS.length);
+    store.close();
   });
 
   it('migrates an empty database to the expected tables, once', () => {

@@ -7,9 +7,13 @@ import { LogOutIcon, SettingsIcon } from '../components/Icons';
 import { adminUsernameError, confirmationError, errorsOf, newPasswordError, requiredError } from '../lib/validation';
 import { formatTranslation } from '../translations';
 import { AccountPanel } from './AccountPanel';
-import { adminUnauthorizedEvent, completeSetup, getSession, getSetupStatus, signIn, signOut, type AdminSession, type SetupStatus } from './api';
+import {
+  adminUnauthorizedEvent, completeSetup, getServerLogSummary, getSession, getSetupStatus, markServerLogSeen, signIn, signOut,
+  type AdminSession, type ServerLogSummary, type SetupStatus,
+} from './api';
 import { useAdminI18n } from './context';
 import type { AdminTranslations } from './i18n';
+import { LogPanel } from './LogPanel';
 import { SettingsPanel } from './SettingsPanel';
 
 type Phase =
@@ -19,9 +23,9 @@ type Phase =
   | { name: 'login'; notice?: Notice }
   | { name: 'dashboard'; session: AdminSession };
 
-/** UI-8, in order: the resource tabs (#17, #22), Settings, the logs (#12), Backup & restore (#13), Account. */
-type Tab = 'settings' | 'account';
-const tabs: Tab[] = ['settings', 'account'];
+/** UI-8, in order: the resource tabs (#17, #22), Settings, Server log, Audit log, Backup & restore (#13), Account. */
+type Tab = 'settings' | 'serverLog' | 'auditLog' | 'account';
+const tabs: Tab[] = ['settings', 'serverLog', 'auditLog', 'account'];
 
 /** Why the sign-in screen is shown again. */
 type Notice = 'signedOut' | 'sessionEnded';
@@ -118,8 +122,27 @@ function LoginScreen({ notice, onSignedIn }: { notice?: Notice; onSignedIn(sessi
 }
 
 function Dashboard({ session, onSessionChange }: { session: AdminSession; onSessionChange(session: AdminSession): void }) {
-  const { a } = useAdminI18n();
+  const { a, number } = useAdminI18n();
   const [tab, setTab] = useState<Tab>('settings');
+  const [summary, setSummary] = useState<ServerLogSummary | null>(null);
+
+  // LOG-21: the summary when the dashboard loads and whenever the tab changes, never in the background.
+  // Opening the Server log tab marks it seen.
+  useEffect(() => {
+    let current = true;
+    void (async () => {
+      try {
+        if (tab === 'serverLog') await markServerLogSeen();
+        const next = await getServerLogSummary();
+        if (current) setSummary(next);
+      } catch {
+        if (current) setSummary(null);
+      }
+    })();
+    return () => { current = false; };
+  }, [tab]);
+  const unseen = summary ? summary.unseenWarnings + summary.unseenErrors : 0;
+  const showUnseen = unseen > 0 && tab !== 'serverLog';
 
   /** WAI-ARIA tabs: arrow keys, Home and End move between the tabs. */
   function selectWithKeys(event: KeyboardEvent<HTMLButtonElement>, index: number) {
@@ -134,6 +157,12 @@ function Dashboard({ session, onSessionChange }: { session: AdminSession; onSess
   return (
     <>
       {session.setupPasswordStillSet && <div className="admin-notice danger" role="alert">{a.app.setupPasswordStillSet}</div>}
+      {showUnseen && (
+        <div className="admin-notice" role="status">
+          {formatTranslation(a.app.unseenLog, { count: number(unseen) })}{' '}
+          <button className="link-button" type="button" onClick={() => setTab('serverLog')}>{a.app.openServerLog}</button>
+        </div>
+      )}
       <div className="admin-tabs" role="tablist" aria-label={a.app.sections}>
         {tabs.map((id, index) => (
           <button
@@ -149,11 +178,18 @@ function Dashboard({ session, onSessionChange }: { session: AdminSession; onSess
             onKeyDown={(event) => selectWithKeys(event, index)}
           >
             {a.tabs[id]}
+            {id === 'serverLog' && showUnseen && (
+              <span className={`admin-badge${summary!.unseenErrors > 0 ? ' admin-badge-error' : ''}`}>
+                {number(unseen)}<span className="sr-only"> {summary!.unseenErrors > 0 ? a.app.unseenErrors : a.app.unseenWarnings}</span>
+              </span>
+            )}
           </button>
         ))}
       </div>
       <div className="admin-tab-panel" role="tabpanel" id={panelId(tab)} aria-labelledby={tabId(tab)} tabIndex={0}>
         {tab === 'settings' && <SettingsPanel />}
+        {tab === 'serverLog' && <LogPanel kind="server" />}
+        {tab === 'auditLog' && <LogPanel kind="audit" />}
         {tab === 'account' && <AccountPanel session={session} onSessionRenewed={onSessionChange} />}
       </div>
     </>

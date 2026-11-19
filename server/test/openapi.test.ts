@@ -65,7 +65,7 @@ describe('the OpenAPI document (API-10..API-13)', () => {
         const success = Object.entries(operation.responses ?? {}).filter(([status]) => /^2\d\d$/.test(status));
         assert.ok(success.length, `${name}: a 2xx response`);
         for (const [status, response] of success) {
-          if (status !== '204') assert.ok(response.content?.['application/json']?.schema, `${name}: ${status} has a schema`);
+          if (status !== '204') assert.ok(Object.values(response.content ?? {}).some((media) => media.schema), `${name}: ${status} has a schema`);
         }
         assert.ok(operation.responses?.default, `${name}: default error response`);
       }

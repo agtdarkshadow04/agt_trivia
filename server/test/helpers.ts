@@ -2,23 +2,26 @@ import { parseConfig } from '../config.js';
 import type { AppContext } from '../context.js';
 import { withDataWrite } from '../dataWrite.js';
 import { Database, openSqlite, runMigrations } from '../db.js';
+import { openLogStore } from '../logs.js';
 import { adminSessionCookie, AdminAuthService } from '../session.js';
 
 /**
  * A context on a fresh, migrated in-memory database (TEST-3). `config` is
  * `config.yaml` text; call `close()` in `after()`.
  */
-export function testContext(config = '', options: { setupPassword?: string | null } = {}): AppContext & { close(): void } {
+export function testContext(config = '', options: { setupPassword?: string | null; now?: () => Date } = {}): AppContext & { close(): void } {
   const sqlite = openSqlite(':memory:');
   runMigrations(sqlite);
   const db = new Database(sqlite);
+  const { store: logs } = openLogStore(':memory:', { now: options.now });
   return {
     config: parseConfig(config),
     configFile: { path: 'config.yaml', text: config || null },
     db,
+    logs,
     setupPassword: options.setupPassword === undefined ? testSetupPassword : options.setupPassword,
     version: '0.0.0-test',
-    close: () => db.close(),
+    close: () => { db.close(); logs.close(); },
   };
 }
 

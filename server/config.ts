@@ -8,7 +8,7 @@ import { quizLengthLimits, quizLengthsError } from '../src/lib/validation.js';
  * `config.yaml`: its TypeBox schema (CFG-3), the standard keys (CFG-5) and the
  * dashboard-editable settings (CFG-6). Only `server/startup.ts` decides where
  * the file lives; nothing here reads the environment (SRV-1). Later sub-issues
- * of #6 add their groups (`backup`, `logs`, `iam`).
+ * of #6 add their groups (`backup`, `iam`).
  */
 
 /** Where the server looks for its configuration file unless AGT_TRIVIA_CONFIG_FILE says otherwise. */
@@ -53,6 +53,15 @@ export const EDITABLE_SETTINGS = {
     integer(quizLengthLimits.long.min, quizLengthLimits.long.max),
     30,
     'Number of questions in a long quiz (2-500, more than quiz.shortLength).',
+  ),
+  'logs.serverRetentionDays': editable(integer(1, 3650), 30, 'Days the server log keeps an entry (1-3650).'),
+  'logs.serverMaxEntries': editable(integer(1000, 10_000_000), 100_000, 'Most entries the server log keeps; the oldest go first.'),
+  // LOG-16: at least 30 days, so recent audit history cannot be erased by shortening retention.
+  'logs.auditRetentionDays': editable(integer(30, 3650), 365, 'Days the audit log keeps an entry (at least 30).'),
+  'logs.auditMaxEntries': editable(
+    integer(10_000, 10_000_000),
+    1_000_000,
+    'Most entries the audit log keeps; the oldest failures go first, then the oldest successes.',
   ),
 } satisfies Record<string, EditableSetting>;
 
@@ -101,6 +110,8 @@ export const ConfigSchema = Type.Object({
   storage: group({
     dataDir: Type.String({ minLength: 1, default: 'data' }),
     databaseFile: Type.String({ minLength: 1, default: 'agt-trivia.sqlite' }),
+    /** The log store (LOG-1), a SQLite file of its own; never in backups. */
+    logDatabaseFile: Type.String({ minLength: 1, default: 'logs.sqlite' }),
   }),
   session: group({
     ttlHours: Type.Number({ minimum: 1, maximum: 168, default: 12 }),
@@ -118,6 +129,12 @@ export const ConfigSchema = Type.Object({
   quiz: group({
     shortLength: fileSetting('quiz.shortLength'),
     longLength: fileSetting('quiz.longLength'),
+  }),
+  logs: group({
+    serverRetentionDays: fileSetting('logs.serverRetentionDays'),
+    serverMaxEntries: fileSetting('logs.serverMaxEntries'),
+    auditRetentionDays: fileSetting('logs.auditRetentionDays'),
+    auditMaxEntries: fileSetting('logs.auditMaxEntries'),
   }),
 }, { additionalProperties: false });
 
