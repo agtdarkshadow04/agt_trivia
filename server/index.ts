@@ -1,19 +1,54 @@
-import { resolve } from 'node:path';
 import pino from 'pino';
 import packageJson from '../package.json' with { type: 'json' };
 import { buildApp } from './app.js';
+import { ConfigError } from './config.js';
+import { openDatabase, SchemaTooNewError, SCHEMA_VERSION, type OpenedDatabase } from './db.js';
+import { loadStartup, type Startup } from './startup.js';
 
 /**
  * The entry point and the only file that reads `process.env` or calls
- * `listen()` (SRV-1). `config.yaml`, the database and the log store arrive in
- * #10 and #12; until then the server listens on the registry port (#8).
+ * `listen()` (SRV-1). It loads `config.yaml`, opens and migrates the
+ * database, builds the app and listens; on SIGTERM or SIGINT it closes both
+ * (SRV-7). Any startup problem stops the server with one clear line (SRV-8).
  */
-const host = process.env.AGT_TRIVIA_SERVER_HOST || '127.0.0.1';
-const port = 8082;
-const staticDir = resolve(process.env.AGT_TRIVIA_STATIC_DIR || 'dist');
 
-const logger = pino({ level: 'info' });
-const app = buildApp({ version: packageJson.version }, { logger, staticDir });
+const version = packageJson.version;
+let logger = pino({ level: 'info' });
+
+function fail(message: string, error?: unknown): never {
+  logger.fatal({ source: 'startup', ...(error ? { err: error } : {}) }, message);
+  process.exit(1);
+}
+
+let startup: Startup;
+try {
+  startup = loadStartup(process.env);
+} catch (error) {
+  if (error instanceof ConfigError) fail(error.message);
+  fail(`The configuration could not be read: ${error instanceof Error ? error.message : String(error)}`, error);
+}
+
+const { config } = startup.configFile;
+logger = pino({ level: config.server.logLevel });
+if (startup.configFile.text === null) {
+  logger.warn({ source: 'config', path: startup.configFile.path }, `No configuration file at ${startup.configFile.path}; using the defaults.`);
+}
+
+let opened: OpenedDatabase;
+try {
+  opened = openDatabase(startup.databaseFile);
+} catch (error) {
+  if (error instanceof SchemaTooNewError) fail(error.message);
+  fail(`The database ${startup.databaseFile} could not be opened: ${error instanceof Error ? error.message : String(error)}`, error);
+}
+for (const migration of opened.applied) {
+  logger.info({ source: 'migrations', version: migration.version, name: migration.name }, `Applied migration ${migration.name}.`);
+}
+
+const app = buildApp(
+  { config, configFile: { path: startup.configFile.path, text: startup.configFile.text }, db: opened.db, version },
+  { logger, staticDir: startup.staticDir },
+);
 
 let stopping = false;
 async function shutdown(signal: string) {
@@ -21,16 +56,24 @@ async function shutdown(signal: string) {
   stopping = true;
   logger.info({ source: 'shutdown', signal }, 'Shutting down.');
   await app.close();
+  opened.db.close();
   process.exit(0);
 }
-// SRV-7.
 process.on('SIGTERM', () => void shutdown('SIGTERM'));
 process.on('SIGINT', () => void shutdown('SIGINT'));
 
 try {
-  const address = await app.listen({ host, port });
-  logger.info({ source: 'startup', version: packageJson.version, address }, `AGT Galactic Trivia ${packageJson.version} listening on ${address}.`);
+  const address = await app.listen({ host: config.server.host, port: config.server.port });
+  // LOG-8: the startup entry, with the versions, the address and the configuration file.
+  logger.info({
+    source: 'startup',
+    version,
+    schemaVersion: opened.schemaVersion,
+    supportedSchemaVersion: SCHEMA_VERSION,
+    address,
+    configFile: startup.configFile.text === null ? null : startup.configFile.path,
+  }, `AGT Galactic Trivia ${version} listening on ${address}.`);
 } catch (error) {
-  logger.fatal({ source: 'startup', err: error }, 'The server could not start.');
-  process.exit(1);
+  opened.db.close();
+  fail(`The server could not listen on ${config.server.host}:${config.server.port}: ${error instanceof Error ? error.message : String(error)}`, error);
 }

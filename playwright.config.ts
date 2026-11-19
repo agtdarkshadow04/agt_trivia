@@ -1,15 +1,22 @@
 import { defineConfig } from '@playwright/test';
+import { baseURL, prepare } from './tests/e2e/environment';
 
 /**
  * Browser tests (TEST-6) against the built server and client
- * (`npm run test:e2e` builds both first). The suite shares one server, so it
+ * (`npm run test:e2e` builds both first), started on a fresh data directory
+ * (`tests/e2e/environment.ts`). The suite shares one server, so it
  * runs with one worker. PLAYWRIGHT_CHROMIUM_EXECUTABLE points at a
  * preinstalled Chromium when the one `npx playwright install --with-deps
  * chromium` installs is not available.
  */
 const executablePath = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE || undefined;
-const port = 8082;
-const baseURL = `http://127.0.0.1:${port}`;
+
+// The config is also loaded in each worker: prepare the data directory only once, in the runner.
+let serverEnv: Record<string, string> = JSON.parse(process.env.AGT_TRIVIA_E2E_SERVER_ENV ?? 'null');
+if (!serverEnv) {
+  serverEnv = prepare(process.env);
+  process.env.AGT_TRIVIA_E2E_SERVER_ENV = JSON.stringify(serverEnv);
+}
 
 export default defineConfig({
   testDir: 'tests/e2e',
@@ -27,7 +34,7 @@ export default defineConfig({
     command: 'node dist-server/index.mjs',
     url: `${baseURL}/api/health`,
     reuseExistingServer: false,
-    env: { PATH: process.env.PATH ?? '', NODE_ENV: 'production', AGT_TRIVIA_STATIC_DIR: 'dist' },
+    env: serverEnv,
     stdout: 'ignore',
     stderr: 'pipe',
   },

@@ -1,0 +1,45 @@
+# AGT Galactic Trivia configuration (CFG-4).
+#
+# Copy this file to config.yaml and uncomment what you want to change. Every
+# key is optional; the value shown is its default. An unknown key or an
+# invalid value stops the server with a message naming the key.
+#
+# Secrets never go here: they go in .env (see .env.example). The app never
+# writes this file.
+#
+# The keys under "Keys that can also be set in the dashboard" can be changed in
+# the admin dashboard's Settings tab too. The configuration file wins: a key set
+# here is shown read-only in the dashboard and cannot be changed there.
+
+# --- Config-file-only keys -------------------------------------------------
+
+# server:
+#   # Listen address. Default: AGT_TRIVIA_SERVER_HOST if set (0.0.0.0 in the
+#   # Docker image), else 127.0.0.1, so only this machine can connect.
+#   host: 127.0.0.1
+#   port: 8082
+#   # Trust X-Forwarded-* headers from a TLS reverse proxy: true, or the proxy's
+#   # address or CIDR range (a string or a list). false ignores the headers.
+#   trustProxy: false
+#   # fatal, error, warn, info, debug, trace or silent (stdout).
+#   logLevel: info
+
+# storage:
+#   # Where the app keeps its data, relative to the working directory.
+#   dataDir: data
+#   # The SQLite database file, relative to dataDir.
+#   databaseFile: agt-trivia.sqlite
+
+# --- Keys that can also be set in the dashboard ----------------------------
+
+# site:
+#   # Name shown in the header and the browser title (1-100 characters).
+#   title: AGT Galactic Trivia
+#   # Support link: an absolute http: or https: URL.
+#   supportUrl: https://www.nms-agt.com/support
+
+# quiz:
+#   # Questions in a short quiz (1-100, less than longLength).
+#   shortLength: 10
+#   # Questions in a long quiz (2-500, more than shortLength).
+#   longLength: 30
