@@ -24,6 +24,16 @@ All notable changes to AGT Galactic Trivia are documented in this file. The form
 - `GET /api/health` now checks the database, `GET /api/settings/public` returns the public settings, and
   `GET /api/openapi.json` describes the API (OpenAPI 3.1). Every error has the same JSON body with a stable code
   (`docs/API.md`) (#10).
+- First-run setup at `/admin`: with the one-time `AGT_TRIVIA_SETUP_PASSWORD` from `.env`, create the single Admin
+  account. Setup cannot run again once the Admin exists; the server and the dashboard remind you to remove the
+  variable (#11).
+- Admin sign-in with a session cookie, sign-out, and a password change that signs out every other session.
+  Sign-in, setup and the password change are rate limited (`session.*` and `rateLimits.*` in `config.yaml`) (#11).
+- The admin dashboard with its **Settings** tab, where the Admin changes the site title and the quiz lengths
+  (settings set in `config.yaml` are shown read-only), and its **Account** tab (#11).
+- All ten AGT languages (English, French, German, Spanish, Brazilian Portuguese, Italian, Thai, Mandarin Chinese,
+  Hindi and Japanese) and a text size from 1× to 2×, chosen in the dashboard's Settings dialog and remembered in this
+  browser for both pages. Error messages are shown in the chosen language (#11).
 
 ### Changed
 

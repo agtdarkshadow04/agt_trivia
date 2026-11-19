@@ -8,6 +8,10 @@ import { join } from 'node:path';
  */
 export const port = 8082;
 export const baseURL = `http://127.0.0.1:${port}`;
+/** AGT_TRIVIA_SETUP_PASSWORD of the test server (AUTH-5). */
+export const setupPassword = 'e2e-setup-password-1';
+/** A setting config.yaml locks, so the Settings tab shows it read-only (CFG-9). */
+export const lockedSupportUrl = 'https://support.example.org/trivia';
 
 /** Creates the run's data directory and config file; returns the server's environment. */
 export function prepare(env: NodeJS.ProcessEnv): Record<string, string> {
@@ -20,6 +24,12 @@ export function prepare(env: NodeJS.ProcessEnv): Record<string, string> {
     '  logLevel: warn',
     'storage:',
     `  dataDir: ${JSON.stringify(join(directory, 'data'))}`,
+    'site:',
+    `  supportUrl: ${lockedSupportUrl}`,
+    // The suite signs in more often than a person would.
+    'rateLimits:',
+    '  login: { max: 1000, windowMinutes: 15 }',
+    '  setup: { max: 1000, windowMinutes: 15 }',
     '',
   ].join('\n'));
   return {
@@ -27,5 +37,6 @@ export function prepare(env: NodeJS.ProcessEnv): Record<string, string> {
     NODE_ENV: 'production',
     AGT_TRIVIA_CONFIG_FILE: configFile,
     AGT_TRIVIA_STATIC_DIR: 'dist',
+    AGT_TRIVIA_SETUP_PASSWORD: setupPassword,
   };
 }

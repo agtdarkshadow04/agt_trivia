@@ -71,12 +71,9 @@ describe('config.yaml (CFG-3, CFG-5)', () => {
   });
 });
 
-/** Every leaf key of the config schema, dotted. */
-function schemaKeys(schema: { properties?: Record<string, unknown> }, prefix = ''): string[] {
-  return Object.entries(schema.properties ?? {}).flatMap(([key, value]) => {
-    const child = value as { type?: string; properties?: Record<string, unknown> };
-    return child.type === 'object' && child.properties ? schemaKeys(child, `${prefix}${key}.`) : [`${prefix}${key}`];
-  });
+/** Every `group.key` of the config schema (a rate limit's `max` and `windowMinutes` are one value). */
+function schemaKeys(schema: { properties: Record<string, { properties?: Record<string, unknown> }> }): string[] {
+  return Object.entries(schema.properties).flatMap(([group, value]) => Object.keys(value.properties ?? {}).map((key) => `${group}.${key}`));
 }
 
 describe('config.example.yaml (CFG-4)', async () => {

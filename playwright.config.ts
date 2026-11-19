@@ -30,6 +30,11 @@ export default defineConfig({
     trace: 'retain-on-failure',
     launchOptions: executablePath ? { executablePath } : {},
   },
+  projects: [
+    // First-run setup through the UI, once; it saves the signed-in Admin for the other tests.
+    { name: 'setup', testMatch: /setup\.spec\.ts/ },
+    { name: 'chromium', testIgnore: /setup\.spec\.ts/, dependencies: ['setup'] },
+  ],
   webServer: {
     command: 'node dist-server/index.mjs',
     url: `${baseURL}/api/health`,

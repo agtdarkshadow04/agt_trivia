@@ -2,9 +2,7 @@ import fastifySwagger from '@fastify/swagger';
 import type { FastifyInstance } from 'fastify';
 import type { RouteDefinition } from './routes.js';
 import { ErrorBodySchema, FieldErrorSchema } from './schemas.js';
-
-/** The Admin session cookie (NAME-2, AUTH-8); sessions arrive in #11. */
-export const adminSessionCookie = 'agt_trivia_session';
+import { adminSessionCookie } from './session.js';
 
 /** What each kind of route really requires (API-11, AUTH-9, SEC-5); every route uses one of these. */
 export const SECURITY = {
@@ -23,6 +21,10 @@ export function routeSecurity(route: Pick<RouteDefinition, 'auth' | 'method'>) {
   switch (route.auth) {
     case 'none':
       return SECURITY.none;
+    case 'csrf':
+      return SECURITY.csrfOnly;
+    case 'admin':
+      return route.method === 'GET' ? SECURITY.adminRead : SECURITY.adminWrite;
   }
 }
 
@@ -49,6 +51,8 @@ export function registerOpenApi(app: FastifyInstance, version: string) {
       },
       tags: [
         { name: 'public', description: 'Public reads that need no sign-in.' },
+        { name: 'auth', description: 'First-run setup, Admin sign-in, the session and the password.' },
+        { name: 'admin', description: 'The admin dashboard.' },
       ],
     },
     refResolver: { buildLocalReference: (json, _baseUri, _fragment, index) => (typeof json.$id === 'string' ? json.$id : `def-${index}`) },

@@ -37,7 +37,18 @@ describes.
 
 ## First run
 
-First-run setup of the Admin account with `AGT_TRIVIA_SETUP_PASSWORD`: added in #11.
+The installation has a single **Admin** account, created once on first run with a one-time setup password.
+
+1. Choose a setup password and put it in `.env` (copy [`.env.example`](.env.example)):
+   `AGT_TRIVIA_SETUP_PASSWORD=<something long and random>` (at most 1024 characters). Start or restart the server.
+2. Open `/admin`. The setup screen asks for the setup password, the Admin username and a new password (at least 12
+   characters, different from the setup password). The setup password never becomes the Admin password and is
+   never stored.
+3. **Remove `AGT_TRIVIA_SETUP_PASSWORD` from `.env` and restart.** It is no longer needed: setup cannot run again
+   once the Admin exists. Until you remove it, the server log warns at every start and the dashboard shows a
+   reminder.
+
+If the variable is not set, the setup screen says "Setup is unavailable" and nothing can be created.
 
 ## Configuration reference
 
@@ -47,8 +58,8 @@ Settings come from three places:
   `AGT_TRIVIA_CONFIG_FILE` names); without one it uses the defaults and logs a warning. Copy
   [`config.example.yaml`](config.example.yaml), which lists every key with its default, and uncomment what you change.
   An unknown key or an invalid value stops the server with a message naming the key. The app never writes this file.
-- **`.env`**, for secrets only (the setup password arrives in #11).
-- **The dashboard's Settings tab** (#11), for the keys in the second table below.
+- **`.env`**, for secrets only: see [`.env.example`](.env.example).
+- **The dashboard's Settings tab**, for the keys in the second table below.
 
 **Precedence: config file > dashboard > default.** A key set in `config.yaml` cannot be changed from the dashboard.
 
@@ -62,6 +73,10 @@ Settings come from three places:
 | `server.logLevel` | `info` | `fatal`, `error`, `warn`, `info`, `debug`, `trace` or `silent` (stdout) |
 | `storage.dataDir` | `data` | Where the app keeps its data, relative to the working directory |
 | `storage.databaseFile` | `agt-trivia.sqlite` | The SQLite database, relative to `storage.dataDir` |
+| `session.ttlHours` | `12` | How long an Admin sign-in lasts, in hours (1–168) |
+| `session.secureCookie` | `auto` | Whether the session cookie is `Secure`: `auto` (when the request came over HTTPS; behind a proxy that needs `server.trustProxy`), `true` or `false` |
+| `rateLimits.login` | 10 per 15 minutes | Admin sign-in and the Admin password change, each counted separately, per client address |
+| `rateLimits.setup` | 10 per 15 minutes | First-run setup, per client address |
 
 ### Dashboard-editable keys
 
@@ -76,6 +91,7 @@ Settings come from three places:
 
 | Variable | Purpose |
 | --- | --- |
+| `AGT_TRIVIA_SETUP_PASSWORD` | In `.env`: the one-time setup password for [First run](#first-run). Remove it after setup |
 | `AGT_TRIVIA_CONFIG_FILE` | Path of `config.yaml` (default `./config.yaml`); set by the Dockerfile and the systemd unit |
 | `AGT_TRIVIA_SERVER_HOST` | Listen address when `server.host` is not in `config.yaml`; set by the Dockerfile |
 | `AGT_TRIVIA_STATIC_DIR` | Development only: the built client, instead of `dist/` |
@@ -85,8 +101,14 @@ app stops the server instead of being changed.
 
 ## Admin dashboard
 
-The page at `/admin`. Its tabs (Members, Settings, Server log, Audit log, Import, Backup & restore, Account) are
-added in #11 to #22.
+The Admin signs in at `/admin`. The header shows the app version, a **Settings** button for the language and text
+size (stored in this browser and shared with the game), **View site** and **Sign out**. The tabs:
+
+- **Settings** edits the [dashboard-editable keys](#dashboard-editable-keys). Settings defined in `config.yaml` are
+  shown read-only, marked "Set in the configuration file".
+- **Account** changes the Admin password. This signs out every other Admin session.
+
+Members, Server log, Audit log, Import and Backup & restore arrive in #12 to #22.
 
 ## Playing
 
@@ -106,6 +128,10 @@ Added in #12.
   `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy` and `Cross-Origin-Opener-Policy`, and
   API and HTML responses are never cached. The API sends no CORS headers.
 - The fonts and the logo are bundled and served by the app; nothing is loaded from another site.
+- The Admin password is hashed with scrypt (`N = 2^15, r = 8, p = 1`); a stored hash in any other format can never
+  verify. Sessions use random tokens stored only as SHA-256 hashes, in an `HttpOnly`, `SameSite=Strict` cookie, and
+  every request that changes something needs the `x-agt-request: 1` header. Setup, sign-in and the password change
+  are rate limited.
 
 ## Development
 
@@ -147,8 +173,22 @@ Contributor and AI-agent guidance is in [`AGENTS.md`](AGENTS.md); the rules the 
   - `The database schema version N is newer than this version of the app supports`: the data was written by a newer
     release. Run that release again, or restore a backup made by this one. The database is left unchanged.
   - `The server could not listen on …`: another program uses port 8082; set `server.port`.
-- More topics (setup password, locked out, rate limits, proxies, maintenance, failed restores) arrive with their
-  features (#11 to #14).
+  - `AGT_TRIVIA_SETUP_PASSWORD is longer than 1024 characters`: set a shorter value in `.env` and restart.
+- **"Setup is unavailable" on `/admin`:** `AGT_TRIVIA_SETUP_PASSWORD` is not set, or the server was not restarted
+  after you set it.
+- **Locked out of the Admin account:** restore a backup that has an Admin whose password you know (#13), or delete
+  the Admin and its sessions with the SQLite command-line tool and run first-run setup again:
+  1. Stop the server.
+  2. Run `sqlite3 data/agt-trivia.sqlite "DELETE FROM sessions; DELETE FROM admin;"` (the path is
+     `storage.dataDir`/`storage.databaseFile`).
+  3. Set `AGT_TRIVIA_SETUP_PASSWORD` in `.env`, start the server and open `/admin`.
+- **"Too many attempts. Try again in N seconds."** Sign-in, the password change and setup are rate limited per
+  client address (`rateLimits.*`). Behind a reverse proxy, set `server.trustProxy` to the proxy's address, or every
+  visitor shares the proxy's address and one limit.
+- **Signed out right after signing in, behind HTTPS:** the session cookie is `Secure` only when the server knows the
+  request came over HTTPS. Set `server.trustProxy` so it believes the proxy's `X-Forwarded-Proto`, or set
+  `session.secureCookie: true`.
+- More topics (proxies, maintenance, failed restores) arrive with their features (#12 to #14).
 
 ## Credits
 

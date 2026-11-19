@@ -3,6 +3,7 @@ import packageJson from '../package.json' with { type: 'json' };
 import { buildApp } from './app.js';
 import { ConfigError } from './config.js';
 import { openDatabase, SchemaTooNewError, SCHEMA_VERSION, type OpenedDatabase } from './db.js';
+import { setupPasswordCheck } from './session.js';
 import { loadStartup, type Startup } from './startup.js';
 
 /**
@@ -45,10 +46,22 @@ for (const migration of opened.applied) {
   logger.info({ source: 'migrations', version: migration.version, name: migration.name }, `Applied migration ${migration.name}.`);
 }
 
-const app = buildApp(
-  { config, configFile: { path: startup.configFile.path, text: startup.configFile.text }, db: opened.db, version },
-  { logger, staticDir: startup.staticDir },
-);
+const context = {
+  config,
+  configFile: { path: startup.configFile.path, text: startup.configFile.text },
+  db: opened.db,
+  setupPassword: startup.setupPassword,
+  version,
+};
+// AUTH-5, AUTH-6: a setup password too long to type stops the server; one left set after setup is a warning.
+const setupCheck = setupPasswordCheck(context);
+if (setupCheck.error) {
+  opened.db.close();
+  fail(setupCheck.error);
+}
+if (setupCheck.warning) logger.warn({ source: 'config' }, setupCheck.warning);
+
+const app = buildApp(context, { logger, staticDir: startup.staticDir });
 
 let stopping = false;
 async function shutdown(signal: string) {
