@@ -14,7 +14,7 @@ are far from sustained concurrent writes, one process serves the app, and nothin
 server opens `storage.dataDir/storage.databaseFile` (default `data/agt-trivia.sqlite`) and applies the migrations
 itself at startup.
 Deployment: Docker Compose (service `trivia`, port 8082 on loopback, volume `trivia-data`) or a systemd service on
-Ubuntu/Debian (`deploy/agt-trivia.service`), both added in #14.
+Ubuntu/Debian (`deploy/agt-trivia.service`), with `deploy/Caddyfile.example` for TLS (README, Installation).
 
 This app follows the **[AGT Web Application Specification](docs/agt-webapp-spec.md) v6.0.1**
 (`agtdarkshadow04/agt_webapp_specification@v6.0.1`). Read it before changing architecture, API, security, UI or
@@ -57,7 +57,9 @@ npx playwright test tests/e2e/shell.spec.ts -g "name"   # one browser test file,
 (`tests/e2e/environment.ts`); it needs Chromium
 (`npx playwright install --with-deps chromium`, or `PLAYWRIGHT_CHROMIUM_EXECUTABLE` pointing at an installed one).
 CI (`.github/workflows/ci.yml`) runs `npm ci`, the install-script check (STACK-7) and `npm run check`, then
-`npm run test:e2e`, on pull requests and pushes to `main`.
+`npm run test:e2e`, and builds the image and starts the Compose stack until it is healthy (TEST-8), on pull requests
+and pushes to `main`. A change to the image, the Compose file or `deploy/` follows the spec's §18 templates; check
+it with the TEST-8 smoke tests the README's Installation steps describe.
 
 ## Where things live
 
@@ -93,6 +95,8 @@ CI (`.github/workflows/ci.yml`) runs `npm ci`, the install-script check (STACK-7
 | `src/admin/` | Admin dashboard: `main.tsx`, `AdminApp.tsx` (UI-8 shell: setup, sign-in, header, the tablist, the preferences dialog), `SettingsPanel.tsx`, `LogPanel.tsx` (the Server log and Audit log tabs), `BackupPanel.tsx` (BAK-1), `AccountPanel.tsx`, `api.ts` (its API calls and types), `download.ts`, `i18n.ts` (the admin string tables for all 10 locales), `context.ts` (`useAdminI18n()`), `admin.css` (imported after `src/styles.css`). The public bundle must never import from `src/admin/` |
 | `public/` | The AGT logo, NMS Futura, the flag font and the font licences, copied unmodified from the spec's v6.0.1 `assets/` and checked by SHA-256 in `server/test/assets.test.ts` (UI-15); the server serves them at their own paths |
 | `tests/e2e/`, `playwright.config.ts` | Playwright browser tests (TEST-6) against `node dist-server/index.mjs`: `environment.ts` (the run's data directory and `config.yaml`), `fixtures.ts` (console/CSP watch, axe, dialog and layout checks), `setup.spec.ts` (the setup project: first-run setup through the UI, saving the signed-in Admin in `tests/e2e/.auth/`), `admin.spec.ts`, `backup.spec.ts` (a real restore, which re-saves the signed-in state), `shell.spec.ts` |
+| `Dockerfile`, `docker-compose.yml`, `.dockerignore`, `.env.example` | The DEP-1 image (`node:26-bookworm-slim`, healthcheck, non-root `node`), the DEP-2 Compose stack (service `trivia`, `127.0.0.1:8082`, volume `trivia-data`, read-only, SEC-15), and the secrets template (DEP-4) |
+| `deploy/` | `agt-trivia.service` (the DEP-7 systemd unit) and `Caddyfile.example` (DEP-10) |
 | `.github/workflows/ci.yml` | CI |
 
 ## Conventions and gotchas
@@ -198,6 +202,5 @@ Principle 1 and SEC-14 (AGT sign-in, #18) and SEC-9 (CSV files in the Admin's sh
 
 | Rule | What differs | Why |
 | --- | --- | --- |
-| DEP-1..DEP-10, SEC-15, REPO-1 (`Dockerfile`, `docker-compose.yml`, `deploy/`), TEST-8 | **To fix (#14):** no Docker image, Compose file, systemd unit or Caddy example | Scaffold (#9) |
-| DOC-1 | **To fix (#14–#22):** README sections for features that do not exist yet say so and name their sub-issue | Scaffold (#9) |
+| DOC-1 | **To fix (#15–#22):** README sections for features that do not exist yet say so and name their sub-issue | Scaffold (#9) |
 | UI-7, I18N-4 | **To fix (#16):** the public header has no icon buttons, so the player UI has no settings dialog of its own (the Admin's sets the same preferences) and no sign-in; the footer has no support link | Scaffold (#9) |

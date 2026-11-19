@@ -1,0 +1,43 @@
+# systemd unit for a local (non-Docker) installation of AGT Galactic Trivia (DEP-7).
+# Install: sudo cp deploy/agt-trivia.service /etc/systemd/system/
+# See "Local installation (Ubuntu/Debian)" in README.md.
+
+[Unit]
+Description=AGT Galactic Trivia
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=agt-trivia
+Group=agt-trivia
+WorkingDirectory=/opt/agt-trivia
+Environment=NODE_ENV=production
+Environment=AGT_TRIVIA_CONFIG_FILE=/etc/agt-trivia/config.yaml
+# Secrets only (AGT_TRIVIA_SETUP_PASSWORD). Optional: the leading "-".
+EnvironmentFile=-/etc/agt-trivia/.env
+ExecStart=/usr/bin/node dist-server/index.mjs
+Restart=on-failure
+RestartSec=5
+
+# /var/lib/agt-trivia: the database, the log store and the backups (storage.dataDir).
+StateDirectory=agt-trivia
+StateDirectoryMode=0750
+UMask=0027
+
+# Hardening (SEC-15). Do not add MemoryDenyWriteExecute=true: it breaks the V8 JIT.
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+RestrictNamespaces=true
+LockPersonality=true
+CapabilityBoundingSet=
+
+[Install]
+WantedBy=multi-user.target

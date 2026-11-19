@@ -1,0 +1,13 @@
+# Example Caddy configuration: HTTPS in front of AGT Galactic Trivia (DEP-10).
+# Caddy obtains and renews the TLS certificate automatically.
+#
+# Replace trivia.example.org with your domain, then in config.yaml set
+# server.trustProxy to the address the app sees Caddy connect from:
+#   server:
+#     trustProxy: 127.0.0.1   # Caddy on the same host as a local installation
+# For Docker, use the Docker network's gateway or the proxy container's address/CIDR.
+# Keep session.secureCookie: auto so the Admin cookie is marked Secure.
+
+trivia.example.org {
+	reverse_proxy 127.0.0.1:8082
+}
