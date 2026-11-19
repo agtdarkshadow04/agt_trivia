@@ -1,18 +1,52 @@
 name: CI
 
 on:
-  pull_request:
   push:
     branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  check:
+  checks:
+    name: npm run check
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 26
           cache: npm
       - run: npm ci
+      - name: Every install script has a decision (STACK-7)
+        run: |
+          npm install-scripts ls
+          npm install-scripts ls --json | node -e 'process.exit(JSON.parse(require("fs").readFileSync(0, "utf8")).allowScripts.length ? 1 : 0)'
       - run: npm run check
+
+  e2e:
+    name: npm run test:e2e
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 26
+          cache: npm
+      - run: npm ci
+      # TEST-6: Chromium and its system libraries, from the locked @playwright/test.
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e
+      - name: Traces of failed tests
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-traces
+          path: test-results/
+          retention-days: 7
