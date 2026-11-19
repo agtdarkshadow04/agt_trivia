@@ -9,6 +9,8 @@ coverage
 config.yaml
 dist-server
 .test-build
+tests/e2e/.auth
+.claude/settings.local.json
 test-results
 playwright-report
 data

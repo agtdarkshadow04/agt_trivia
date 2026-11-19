@@ -50,3 +50,34 @@ jobs:
           name: playwright-traces
           path: test-results/
           retention-days: 7
+
+  docker:
+    name: Docker Compose smoke test (TEST-8)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # As the README's Installation says: config.yaml and .env first.
+      - name: Configuration
+        run: |
+          cp config.example.yaml config.yaml
+          cp .env.example .env
+          sed -i 's/^AGT_TRIVIA_SETUP_PASSWORD=$/AGT_TRIVIA_SETUP_PASSWORD=ci-smoke-test-setup-password/' .env
+      - run: docker compose config --quiet
+      - run: docker compose up -d --build --wait --wait-timeout 180
+      - name: The service is healthy, answers on loopback only, and is ready for first-run setup
+        run: |
+          set -x
+          docker compose ps
+          app="$(docker compose ps -q trivia)"
+          test "$(docker inspect --format '{{.State.Health.Status}}' "$app")" = healthy
+          test "$(docker inspect --format '{{.Config.User}} {{.HostConfig.ReadonlyRootfs}}' "$app")" = 'node true'
+          curl -fsS http://127.0.0.1:8082/api/health | grep -q '"status":"ok"'
+          status="$(curl -fsS http://127.0.0.1:8082/api/setup/status)"
+          echo "$status" | grep -q '"adminExists":false'
+          echo "$status" | grep -q '"setupPasswordConfigured":true'
+          test "$(docker port "$app")" = '8082/tcp -> 127.0.0.1:8082'
+      - name: Logs
+        if: always()
+        run: docker compose logs --no-color
+      - run: docker compose down -v
+        if: always()

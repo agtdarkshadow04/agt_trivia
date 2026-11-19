@@ -31,22 +31,150 @@ secrets in `.env`.
 
 ## Installation
 
-Docker Compose and a local installation on Ubuntu 24.04 LTS or Debian 12/13, both from a release tag, with a TLS
-reverse proxy, upgrading and rolling back: added in #14. Until then, run the server as [Development](#development)
-describes.
+Two methods, both on Ubuntu 24.04 LTS or Debian 12/13: [Docker Compose](#docker-compose) or a
+[local installation](#local-installation-ubuntudebian) as a systemd service. Either way, install a **release tag**,
+never `main`: in the commands below, replace `vX.Y.Z` with the latest release from the repository's Releases page
+(2.0.0 or later; the 1.x tags are the former static app). The app serves plain HTTP on port 8082 of the loopback
+interface; put a [TLS reverse proxy](#tls-and-reverse-proxies) in front of it.
+
+### Docker Compose
+
+Needs Docker Engine with the Compose plugin.
+
+```bash
+git clone https://github.com/agtdarkshadow04/agt_trivia.git
+cd agt_trivia
+git checkout vX.Y.Z
+cp config.example.yaml config.yaml
+cp .env.example .env
+chmod 600 .env
+# Edit .env: set AGT_TRIVIA_SETUP_PASSWORD (see First run)
+docker compose up -d --build
+```
+
+`config.yaml` must exist before the first `docker compose up`, because it is mounted into the container (read-only);
+uncomment in it what you change. Data lives in the Docker volume `trivia-data` (`/app/data` in the container): the
+database, the log store and the pre-restore backups. The container runs as the non-root `node` user on a read-only
+file system, and the port is published on `127.0.0.1` only.
+
+`docker compose ps` shows the service `healthy` after a few seconds; then open `http://127.0.0.1:8082/admin` (or
+your proxy's address) for [First run](#first-run). Logs: `docker compose logs trivia`.
+
+### Local installation (Ubuntu/Debian)
+
+As a user with `sudo`:
+
+```bash
+# 1. Node.js 26 from NodeSource, and build tools for the SQLite module
+curl -fsSL https://deb.nodesource.com/setup_26.x -o /tmp/nodesource_setup.sh
+sudo -E bash /tmp/nodesource_setup.sh
+sudo apt-get install -y nodejs git build-essential python3
+
+# 2. System user and code
+sudo useradd --system --home-dir /var/lib/agt-trivia --shell /usr/sbin/nologin agt-trivia
+sudo git clone https://github.com/agtdarkshadow04/agt_trivia.git /opt/agt-trivia
+sudo git -C /opt/agt-trivia checkout vX.Y.Z
+cd /opt/agt-trivia
+sudo npm ci && sudo npm run build && sudo npm prune --omit=dev
+
+# 3. Configuration
+sudo mkdir -p /etc/agt-trivia
+sudo cp config.example.yaml /etc/agt-trivia/config.yaml
+sudo cp .env.example /etc/agt-trivia/.env
+sudo chmod 600 /etc/agt-trivia/.env
+# Edit /etc/agt-trivia/config.yaml: uncomment storage: and set dataDir: /var/lib/agt-trivia
+# Edit /etc/agt-trivia/.env: set AGT_TRIVIA_SETUP_PASSWORD (see First run)
+
+# 4. Service
+sudo cp deploy/agt-trivia.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now agt-trivia
+```
+
+The service ([`deploy/agt-trivia.service`](deploy/agt-trivia.service)) runs as the `agt-trivia` user with systemd's
+sandboxing; it may write only to `/var/lib/agt-trivia`, which holds the database, the log store and the backups.
+`systemctl status agt-trivia` should say `active (running)`; then open `http://127.0.0.1:8082/admin` for
+[First run](#first-run). Logs: `journalctl -u agt-trivia`.
+
+### TLS and reverse proxies
+
+The app speaks plain HTTP and is reachable only from the same machine. Serve it over HTTPS through a reverse proxy
+on that machine. With [Caddy](https://caddyserver.com), [`deploy/Caddyfile.example`](deploy/Caddyfile.example) is
+all it takes: replace `trivia.example.org` with your domain, and Caddy obtains and renews the certificate.
+
+Then tell the app to trust the proxy, in `config.yaml`:
+
+```yaml
+server:
+  trustProxy: 127.0.0.1
+```
+
+Use `127.0.0.1` for a local installation. With Docker, the app sees the proxy connect from the Docker network's
+gateway: use that address (`docker network inspect agt_trivia_default`, `Gateway`) or the network's CIDR range.
+Without `trustProxy`, the app ignores `X-Forwarded-*`: it cannot tell that visitors used HTTPS, so the Admin's
+session cookie is not marked `Secure` and every visitor shares the proxy's address for rate limits and logs. Keep
+`session.secureCookie: auto`.
+
+Only if the proxy runs on another machine: set `server.host` (local installation) or the published address in
+`docker-compose.yml` (Docker) to an interface that machine can reach, and allow that port from the proxy's address
+only, with a firewall.
+
+### Upgrading
+
+1. Read the release's upgrade notes in [`CHANGELOG.md`](CHANGELOG.md).
+2. Download a backup (**Backup & restore** tab), and keep it until the new version works.
+3. Check out the new tag and rebuild. Migrations run at startup.
+
+Docker Compose:
+
+```bash
+git fetch --tags
+git checkout vX.Y.Z
+docker compose up -d --build
+```
+
+Local installation:
+
+```bash
+cd /opt/agt-trivia
+sudo git fetch --tags
+sudo git checkout vX.Y.Z
+sudo npm ci && sudo npm run build && sudo npm prune --omit=dev
+sudo systemctl restart agt-trivia
+```
+
+The dashboard's header shows the running version.
+
+### Rolling back
+
+Going back to an older version in place is not possible: once a newer version has migrated the database, an older
+one refuses to start with it. To roll back, check out the previous tag and rebuild as in [Upgrading](#upgrading),
+then put back the backup from before the upgrade:
+
+- **Docker Compose:** `docker compose down`, then `docker volume rm agt_trivia_trivia-data` (this deletes the
+  current data and the logs), `git checkout` the previous tag, `docker compose up -d --build`.
+- **Local installation:** `sudo systemctl stop agt-trivia`, then
+  `sudo rm /var/lib/agt-trivia/agt-trivia.sqlite*` (the database only; the logs stay), check out the previous tag
+  and rebuild, `sudo systemctl start agt-trivia`.
+
+The app then starts empty: run [First run](#first-run) again with a setup password, and restore the backup in the
+**Backup & restore** tab. A backup made by the newer version cannot be restored into the older one.
 
 ## First run
 
 The installation has a single **Admin** account, created once on first run with a one-time setup password.
 
-1. Choose a setup password and put it in `.env` (copy [`.env.example`](.env.example)):
-   `AGT_TRIVIA_SETUP_PASSWORD=<something long and random>` (at most 1024 characters). Start or restart the server.
+1. Choose a setup password and put it in `.env` (Docker Compose: `.env` beside `docker-compose.yml`; local
+   installation: `/etc/agt-trivia/.env`; both copied from [`.env.example`](.env.example)):
+   `AGT_TRIVIA_SETUP_PASSWORD=<something long and random>` (at most 1024 characters). Start or restart the server
+   (`docker compose up -d`, or `sudo systemctl restart agt-trivia`).
 2. Open `/admin`. The setup screen asks for the setup password, the Admin username and a new password (at least 12
    characters, different from the setup password). The setup password never becomes the Admin password and is
    never stored.
-3. **Remove `AGT_TRIVIA_SETUP_PASSWORD` from `.env` and restart.** It is no longer needed: setup cannot run again
-   once the Admin exists. Until you remove it, the server log warns at every start and the dashboard shows a
-   reminder.
+3. **Remove `AGT_TRIVIA_SETUP_PASSWORD` and restart.** It is no longer needed: setup cannot run again once the
+   Admin exists. Until you remove it, the server log warns at every start and the dashboard shows a reminder.
+   - Docker Compose: delete the line from `.env`, then `docker compose up -d`.
+   - Local installation: delete the line from `/etc/agt-trivia/.env`, then `sudo systemctl restart agt-trivia`.
 
 If the variable is not set, the setup screen says "Setup is unavailable" and nothing can be created.
 

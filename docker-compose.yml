@@ -1,0 +1,37 @@
+# AGT Galactic Trivia with Docker Compose (DEP-2). Before the first start:
+#   cp config.example.yaml config.yaml
+#   cp .env.example .env    # then set AGT_TRIVIA_SETUP_PASSWORD
+# See README.md, Installation.
+services:
+  trivia:
+    build: .
+    image: agt-trivia:latest
+    restart: unless-stopped
+    # Plain HTTP only, so the port is published on this host's loopback interface only (SEC-4).
+    # Put a TLS-terminating reverse proxy in front (README: TLS and reverse proxies) and set
+    # server.trustProxy. Publish on another interface only if that proxy runs on another machine.
+    ports:
+      - "127.0.0.1:8082:8082"
+    # Secrets only (AGT_TRIVIA_SETUP_PASSWORD). See .env.example.
+    env_file:
+      - path: .env
+        required: false
+    volumes:
+      # The SQLite database, the log store and the pre-restore backups.
+      - trivia-data:/app/data
+      # Configuration, read-only: the app never writes it, and it always wins over the dashboard.
+      - ./config.yaml:/app/config.yaml:ro
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8082/api/health').then((r) => process.exit(r.ok ? 0 : 1), () => process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      start_period: 15s
+      retries: 3
+
+volumes:
+  trivia-data:

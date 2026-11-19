@@ -47,6 +47,10 @@ All notable changes to AGT Galactic Trivia are documented in this file. The form
 - While a restore runs, the API answers `503` with `Retry-After` and both pages show a maintenance notice and retry;
   `GET /api/health` reports `maintenance`. Changes made while a backup is taken wait for it (#13).
 
+- Installation with Docker Compose (an image that runs as a non-root user on a read-only file system, published on
+  `127.0.0.1:8082` only) or as a systemd service on Ubuntu/Debian, with an example Caddy configuration for HTTPS.
+  The README covers installing a release, TLS and reverse proxies, upgrading and rolling back (#14).
+
 ### Changed
 
 - The app is rebuilt on the AGT Web Application Specification v6.0.1 stack: a Fastify 5 server with a React 19 +
