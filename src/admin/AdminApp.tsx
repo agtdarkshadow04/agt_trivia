@@ -4,9 +4,11 @@ import { Dialog } from '../components/Dialog';
 import { DisplaySettings } from '../components/DisplaySettings';
 import { formErrors, noFormErrors, TextField } from '../components/Field';
 import { LogOutIcon, SettingsIcon } from '../components/Icons';
+import { MaintenanceNotice } from '../components/MaintenanceNotice';
 import { adminUsernameError, confirmationError, errorsOf, newPasswordError, requiredError } from '../lib/validation';
 import { formatTranslation } from '../translations';
 import { AccountPanel } from './AccountPanel';
+import { BackupPanel } from './BackupPanel';
 import {
   adminUnauthorizedEvent, completeSetup, getServerLogSummary, getSession, getSetupStatus, markServerLogSeen, signIn, signOut,
   type AdminSession, type ServerLogSummary, type SetupStatus,
@@ -23,13 +25,13 @@ type Phase =
   | { name: 'login'; notice?: Notice }
   | { name: 'dashboard'; session: AdminSession };
 
-/** UI-8, in order: the resource tabs (#17, #22), Settings, Server log, Audit log, Backup & restore (#13), Account. */
-type Tab = 'settings' | 'serverLog' | 'auditLog' | 'account';
-const tabs: Tab[] = ['settings', 'serverLog', 'auditLog', 'account'];
+/** UI-8, in order: the resource tabs (#17, #22), Settings, Server log, Audit log, Backup & restore, Account. */
+type Tab = 'settings' | 'serverLog' | 'auditLog' | 'backup' | 'account';
+const tabs: Tab[] = ['settings', 'serverLog', 'auditLog', 'backup', 'account'];
 
 /** Why the sign-in screen is shown again. */
-type Notice = 'signedOut' | 'sessionEnded';
-const noticeText = (notice: Notice, a: AdminTranslations) => ({ signedOut: a.app.signedOut, sessionEnded: a.app.sessionEnded })[notice];
+type Notice = 'signedOut' | 'sessionEnded' | 'restored';
+const noticeText = (notice: Notice, a: AdminTranslations) => ({ signedOut: a.app.signedOut, sessionEnded: a.app.sessionEnded, restored: a.app.restored })[notice];
 
 const tabId = (tab: Tab) => `admin-tab-${tab}`;
 const panelId = (tab: Tab) => `admin-panel-${tab}`;
@@ -121,9 +123,10 @@ function LoginScreen({ notice, onSignedIn }: { notice?: Notice; onSignedIn(sessi
   );
 }
 
-function Dashboard({ session, onSessionChange }: { session: AdminSession; onSessionChange(session: AdminSession): void }) {
+function Dashboard({ session, onSessionChange, onRestored }: { session: AdminSession; onSessionChange(session: AdminSession): void; onRestored(): void }) {
   const { a, number } = useAdminI18n();
-  const [tab, setTab] = useState<Tab>('settings');
+  // BAK-11: after a failed restore only the Backup & restore tab works.
+  const [tab, setTab] = useState<Tab>(session.restoreFailed ? 'backup' : 'settings');
   const [summary, setSummary] = useState<ServerLogSummary | null>(null);
 
   // LOG-21: the summary when the dashboard loads and whenever the tab changes, never in the background.
@@ -156,6 +159,7 @@ function Dashboard({ session, onSessionChange }: { session: AdminSession; onSess
 
   return (
     <>
+      {session.restoreFailed && <div className="admin-notice danger" role="alert">{a.app.restoreFailed}</div>}
       {session.setupPasswordStillSet && <div className="admin-notice danger" role="alert">{a.app.setupPasswordStillSet}</div>}
       {showUnseen && (
         <div className="admin-notice" role="status">
@@ -190,6 +194,7 @@ function Dashboard({ session, onSessionChange }: { session: AdminSession; onSess
         {tab === 'settings' && <SettingsPanel />}
         {tab === 'serverLog' && <LogPanel kind="server" />}
         {tab === 'auditLog' && <LogPanel kind="audit" />}
+        {tab === 'backup' && <BackupPanel onRestored={onRestored} />}
         {tab === 'account' && <AccountPanel session={session} onSessionRenewed={onSessionChange} />}
       </div>
     </>
@@ -270,6 +275,7 @@ export function AdminApp() {
           {session && <button className="button button-secondary" type="button" onClick={() => void leave()}><LogOutIcon />{a.app.signOut}</button>}
         </div>
       </header>
+      <MaintenanceNotice />
       <main id="main-content" className="admin-main" tabIndex={-1}>
         <div role="status" aria-live="polite">{phase.name === 'loading' && <p>{a.app.checkingSession}</p>}</div>
         {phase.name === 'error' && (
@@ -280,7 +286,13 @@ export function AdminApp() {
         )}
         {phase.name === 'setup' && <SetupScreen status={phase.status} onComplete={signedIn} />}
         {phase.name === 'login' && <LoginScreen notice={phase.notice} onSignedIn={signedIn} />}
-        {phase.name === 'dashboard' && <Dashboard session={phase.session} onSessionChange={(next) => setPhase({ name: 'dashboard', session: next })} />}
+        {phase.name === 'dashboard' && (
+          <Dashboard
+            session={phase.session}
+            onSessionChange={(next) => setPhase({ name: 'dashboard', session: next })}
+            onRestored={() => setPhase({ name: 'login', notice: 'restored' })}
+          />
+        )}
       </main>
       {preferencesOpen && <PreferencesDialog onClose={() => setPreferencesOpen(false)} returnFocusRef={preferencesButton} />}
     </div>

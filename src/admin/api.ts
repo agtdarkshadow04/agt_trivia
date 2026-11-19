@@ -15,6 +15,8 @@ export interface AdminSession {
   username: string;
   version: string;
   setupPasswordStillSet: boolean;
+  /** BAK-11: a restore failed and could not be rolled back; only the Backup & restore tab works. */
+  restoreFailed: boolean;
 }
 
 export type SettingValue = string | number | boolean;
@@ -73,6 +75,49 @@ export async function changePassword(currentPassword: string, password: string) 
   await adminRequest('/api/admin/password', { method: 'POST', body: { currentPassword, password } });
   return getSession();
 }
+
+// --- Backup and restore (§12) --------------------------------------------------
+
+export type RestoreWarningCode = 'no_admin' | 'set_aside_not_deleted';
+
+export interface DiffLine {
+  kind: '+' | '-' | ' ';
+  text: string;
+}
+
+/** What a preview found, and what a restore did (BAK-3, BAK-4). */
+export interface RestoreReport {
+  createdAt: string;
+  appVersion: string;
+  schemaVersion: { backup: number; current: number };
+  counts: { admin: number; settings: number };
+  adminUsername: string | null;
+  ignoredSettings: string[];
+  warningCodes: RestoreWarningCode[];
+  config: { included: boolean; identical: boolean; diff: DiffLine[]; content: string | null };
+  preRestoreBackup: string | null;
+}
+
+/** Downloads a backup archive (BAK-1). */
+export async function downloadBackup() {
+  try {
+    const response = await apiFetch('/api/admin/backup', { accept: 'application/zip' });
+    return { blob: await response.blob(), filename: attachmentName(response, 'agt-trivia-backup.zip') };
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 401) window.dispatchEvent(new Event(adminUnauthorizedEvent));
+    throw error;
+  }
+}
+
+function restoreForm(action: 'preview' | 'restore', file: File) {
+  const form = new FormData();
+  form.append('action', action);
+  form.append('backup', file);
+  return form;
+}
+
+export const previewBackup = (file: File) => adminRequest<RestoreReport>('/api/admin/restore', { method: 'POST', body: restoreForm('preview', file) });
+export const restoreBackup = (file: File) => adminRequest<RestoreReport>('/api/admin/restore', { method: 'POST', body: restoreForm('restore', file) });
 
 export const listSettings = () => adminRequest<{ settings: SettingState[] }>('/api/admin/settings');
 

@@ -7,8 +7,10 @@ import {
   type SettingKey,
   type SettingValues,
 } from './config.js';
+import type { BackupHooks } from './backup.js';
 import type { Database } from './db.js';
 import type { LogStore } from './logs.js';
+import type { OperationLock } from './operation.js';
 
 /**
  * Everything the routes and services need, built once by `server/index.ts`
@@ -21,12 +23,18 @@ export interface AppContext {
   readonly configFile: { readonly path: string; readonly text: string | null };
   /** The main database; a restore swaps it (#13). */
   readonly db: Database;
+  /** The backup and restore operation lock (BAK-8). */
+  readonly operations: OperationLock;
+  /** The data directory (`storage.dataDir`, resolved): the database, the log store, `backups/` and the BAK-11 marker. */
+  readonly dataDir: string;
   /** The log store: the server log and the audit log (§13). */
   readonly logs: LogStore;
   /** `AGT_TRIVIA_SETUP_PASSWORD`, or null when it is unset or empty (AUTH-5). Never stored. */
   readonly setupPassword: string | null;
   /** The app version from `package.json` (VER-2). */
   readonly version: string;
+  /** Tests only: failures injected into backups and restores (TEST-4). */
+  readonly backupHooks?: BackupHooks;
 }
 
 export type SettingSource = 'config' | 'dashboard' | 'default';

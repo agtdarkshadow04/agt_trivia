@@ -26,14 +26,20 @@ export const errorCodes = [
   'unauthorized',
   'invalid_credentials',
   'invalid_setup_password',
+  'file_required',
   'csrf',
   'not_found',
+  'conflict',
   'defined_in_config',
   'setup_complete',
+  'file_too_large',
   'body_too_large',
+  'multipart_required',
+  'archive_rejected',
   'rate_limited',
   'internal',
   'setup_password_missing',
+  'maintenance',
 ] as const;
 
 const Params = Type.Record(Type.String(), Type.Union([Type.String(), Type.Number(), Type.Boolean()]), {
@@ -98,6 +104,7 @@ export const AdminSession = object({
   username: Type.String(),
   version: Type.String({ description: 'The app version (VER-2).' }),
   setupPasswordStillSet: Type.Boolean({ description: 'AGT_TRIVIA_SETUP_PASSWORD is still set and should be removed (AUTH-6).' }),
+  restoreFailed: Type.Boolean({ description: 'A restore failed and could not be rolled back: only a restore ends the maintenance (BAK-11).' }),
 });
 
 export const NoContent = Type.Null({ description: 'No content.' });
@@ -217,3 +224,42 @@ export const LogExport = {
     'text/csv': { schema: Type.String({ description: 'A header row, then one row per entry.' }) },
   },
 };
+
+// --- Backup and restore (§12) -------------------------------------------------
+
+export const BackupDownload = {
+  description: 'The backup archive (BAK-2), as an attachment.',
+  content: { 'application/zip': { schema: Type.String({ format: 'binary' }) } },
+};
+
+/** The restore upload as the OpenAPI document shows it; the route reads the parts itself (BAK-1). */
+export const RestoreUploadDocument = {
+  description: 'multipart/form-data with the `action` field and the `backup` file.',
+  content: {
+    'multipart/form-data': {
+      schema: object({
+        action: Type.Union([Type.Literal('preview'), Type.Literal('restore')], { description: '`preview` checks the archive and changes nothing; `restore` checks it again and replaces the data.' }),
+        backup: Type.String({ format: 'binary', description: 'A backup archive (BAK-2).' }),
+      }),
+    },
+  },
+};
+
+const DiffLine = object({ kind: Type.Union([Type.Literal('+'), Type.Literal('-'), Type.Literal(' ')]), text: Type.String() });
+
+export const RestoreReport = object({
+  createdAt: Type.String({ format: 'date-time' }),
+  appVersion: Type.String(),
+  schemaVersion: object({ backup: Type.Integer(), current: Type.Integer() }),
+  counts: object({ admin: Type.Integer(), settings: Type.Integer() }),
+  adminUsername: Type.Union([Type.String(), Type.Null()]),
+  ignoredSettings: Type.Array(Type.String(), { description: 'Settings the backup has that this config.yaml locks: dropped (CFG-8).' }),
+  warningCodes: Type.Array(Type.String(), { description: '`no_admin`, `set_aside_not_deleted`.' }),
+  config: object({
+    included: Type.Boolean(),
+    identical: Type.Boolean(),
+    diff: Type.Array(DiffLine, { description: 'The current config.yaml against the backup\'s, line by line. It is never restored (BAK-5).' }),
+    content: Type.Union([Type.String(), Type.Null()], { description: 'The backup\'s config.yaml, to download and apply by hand.' }),
+  }),
+  preRestoreBackup: Type.Union([Type.String(), Type.Null()], { description: 'After a restore: the pre-restore backup\'s file name.' }),
+}, 'What the backup holds, and after a restore, what was done (BAK-3, BAK-4).');

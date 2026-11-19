@@ -89,7 +89,7 @@ describe('first-run setup (AUTH-5, AUTH-6)', () => {
       assert.equal(response.statusCode, 201);
       assert.deepEqual(response.json(), { username: testAdmin.username });
       const session = await app.inject({ url: '/api/admin/session', headers: { cookie: cookieOf(response) } });
-      assert.deepEqual(session.json(), { username: testAdmin.username, version: context.version, setupPasswordStillSet: true });
+      assert.deepEqual(session.json(), { username: testAdmin.username, version: context.version, setupPasswordStillSet: true, restoreFailed: false });
       const again = await app.inject({ method: 'POST', url: '/api/setup', headers: csrf, payload: setupBody });
       assert.equal(again.statusCode, 410);
       assert.equal(again.json().error, 'setup_complete');

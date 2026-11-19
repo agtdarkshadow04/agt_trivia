@@ -87,7 +87,8 @@ export function missingTables(sqlite: Sqlite): string[] {
  * through it, so a restore (#13) can swap the file underneath.
  */
 export class Database {
-  constructor(private sqlite: Sqlite) {}
+  /** `file` is the database's path, which a restore replaces (BAK-4); `:memory:` in tests. */
+  constructor(private sqlite: Sqlite, readonly file = ':memory:') {}
 
   /** The open connection, for the repository functions. */
   get connection(): Sqlite {
@@ -107,6 +108,17 @@ export class Database {
   close() {
     if (this.sqlite.open) this.sqlite.close();
   }
+
+  /** Whether the connection is open; false while a restore has the file closed. */
+  get open() {
+    return this.sqlite.open;
+  }
+
+  /** BAK-4 step 4: the restore swaps the connection after renaming the files. */
+  replace(sqlite: Sqlite) {
+    this.close();
+    this.sqlite = sqlite;
+  }
 }
 
 export interface OpenedDatabase {
@@ -121,7 +133,7 @@ export function openDatabase(file: string): OpenedDatabase {
   const sqlite = openSqlite(file);
   try {
     const applied = runMigrations(sqlite);
-    return { db: new Database(sqlite), applied, schemaVersion: schemaVersion(sqlite) };
+    return { db: new Database(sqlite, file), applied, schemaVersion: schemaVersion(sqlite) };
   } catch (error) {
     sqlite.close();
     throw error;

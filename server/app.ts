@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { existsSync, readdirSync } from 'node:fs';
 import { join, relative, resolve, sep } from 'node:path';
 import fastifyCookie from '@fastify/cookie';
+import fastifyMultipart from '@fastify/multipart';
 import fastifyRateLimit from '@fastify/rate-limit';
 import fastifyStatic from '@fastify/static';
 import type { TypeBoxTypeProvider } from '@fastify/type-provider-typebox';
@@ -11,11 +12,11 @@ import { auditHook } from './audit.js';
 import type { AppContext } from './context.js';
 import { withDataWrite } from './dataWrite.js';
 import { noStoreHeaders, securityHeaders } from './headers.js';
-import { errorReply, HttpError, RateLimitedError, type ErrorReply } from './http.js';
+import { errorReply, HttpError, MaintenanceError, RateLimitedError, type ErrorReply } from './http.js';
 import { registerOpenApi, routeSecurity } from './openapi.js';
 import { apiRoutes, type RateLimitName, type RouteDefinition } from './routes.js';
 import { Empty } from './schemas.js';
-import { AdminAuthService, adminSessionCookie, clearedCookie, secureCookie } from './session.js';
+import { AdminAuthService, adminSessionCookie, clearedCookie, hashSessionToken, secureCookie } from './session.js';
 
 /** The header every state-changing request to `/api/setup` and `/api/admin/*` must carry (SEC-5, NAME-3). */
 export const csrfHeader = 'x-agt-request';
@@ -39,7 +40,16 @@ declare module 'fastify' {
     /** The route table entry, for the hooks and the tests (`server/routes.ts`). */
     apiRoute?: RouteDefinition;
   }
+  interface FastifyRequest {
+    /** Ends this request's count on the operation lock (BAK-8). */
+    endActivity: (() => void) | null;
+    /** BAK-11: the request carries the recovery session while the restore has failed. */
+    recoveryAdmin: string | null;
+  }
 }
+
+/** BAK-11: the only routes the recovery session may use while a restore has failed. */
+const recoveryRoutes = new Set(['getAdminSession', 'restoreBackup']);
 
 /**
  * The Fastify app, fully configured but not listening (SRV-2), so tests can
@@ -68,11 +78,39 @@ export function buildApp(context: AppContext, options: BuildAppOptions = {}): Fa
   });
 
   app.register(fastifyCookie);
+  // BAK-1: the restore upload; the route streams the file part to disk itself.
+  app.register(fastifyMultipart, { limits: { files: 1, fields: 1, parts: 2 } });
   app.decorateRequest('admin', null);
   app.decorateRequest('audit', null);
   app.decorateRequest('auditError', null);
   // LOG-11: one hook audits every request that needs it.
   app.addHook('onResponse', auditHook(context.logs));
+
+  /**
+   * BAK-8, BAK-11: every `/api/` request except the health check is counted on
+   * the operation lock, so a restore can drain them. During a restore they get
+   * `503 maintenance`; while a restore has failed, only the recovery session's
+   * `GET /api/admin/session` and `POST /api/admin/restore` get through, and the
+   * restored sessions table is never consulted.
+   */
+  app.decorateRequest('endActivity', null);
+  app.decorateRequest('recoveryAdmin', null);
+  app.addHook('onRequest', async (request) => {
+    const route = request.routeOptions.config.apiRoute;
+    if (!route || route.operationId === 'getHealth') return;
+    const lock = context.operations;
+    if (lock.state === 'restore_failed' && recoveryRoutes.has(route.operationId)) {
+      const token = request.cookies[adminSessionCookie];
+      const recovery = lock.recovery;
+      if (token && recovery && hashSessionToken(token) === recovery.tokenHash && Date.now() < recovery.expiresAt.getTime()) {
+        request.recoveryAdmin = recovery.username;
+      }
+    }
+    if (lock.inMaintenance && !request.recoveryAdmin) throw new MaintenanceError();
+    request.endActivity = lock.enterActivity();
+  });
+  app.addHook('onResponse', async (request) => request.endActivity?.());
+  app.addHook('onRequestAbort', async (request) => request.endActivity?.());
 
   // SEC-4: one warning per process, the first time credentials arrive over plain HTTP from another machine.
   let plainHttpWarned = false;
@@ -96,6 +134,10 @@ export function buildApp(context: AppContext, options: BuildAppOptions = {}): Fa
       throw new HttpError(403, 'csrf', `Requests that change data must include the ${csrfHeader}: 1 header.`);
     }
     if (route.auth !== 'admin') return;
+    if (request.recoveryAdmin) {
+      request.admin = request.recoveryAdmin;
+      return;
+    }
     const token = request.cookies[adminSessionCookie];
     request.admin = auth.session(token);
     if (request.admin) return;
@@ -153,11 +195,12 @@ function registerRoute(app: FastifyInstance, context: AppContext, route: RouteDe
       // API-10: a route without query parameters rejects any, like an undeclared body property.
       querystring: route.schema.querystring ?? Empty,
       ...(route.schema.body ? { body: route.schema.body } : {}),
+      ...(route.multipart ? { consumes: ['multipart/form-data'] } : {}),
       response: { ...route.schema.response, default: Type.Ref('ErrorBody', { description: 'Error (API-6).' }) },
     },
     // BAK-8: a writing route's handler runs as a data write; its response is computed before it is sent.
     handler: async (request: FastifyRequest, reply: FastifyReply) => (
-      route.writesData ? withDataWrite(() => route.handler(context, request, reply)) : route.handler(context, request, reply)
+      route.writesData ? withDataWrite(context.operations, () => route.handler(context, request, reply)) : route.handler(context, request, reply)
     ),
   });
 }

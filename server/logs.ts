@@ -232,8 +232,12 @@ export function startRetention(
   store: Pick<LogStore, 'applyRetention'>,
   settings: () => RetentionSettings,
   log: { info(details: object, message: string): void; error(details: object, message: string): void },
+  /** BAK-8: admits the run as a job, or null to skip it while a restore runs or has failed. */
+  admit: () => (() => void) | null = () => () => undefined,
 ) {
   const run = () => {
+    const end = admit();
+    if (!end) return;
     try {
       const deleted = store.applyRetention(settings());
       if (deleted.server || deleted.audit) {
@@ -241,6 +245,8 @@ export function startRetention(
       }
     } catch (error) {
       log.error({ source: 'retention', err: error }, 'Log retention failed.');
+    } finally {
+      end();
     }
   };
   run();

@@ -31,7 +31,7 @@ describe('setting precedence (CFG-7)', () => {
   it('lists every setting in EDITABLE_SETTINGS order', () => {
     assert.deepEqual(settingStates(parseConfig(''), new Map()).map((state) => state.key), [
       'site.title', 'site.supportUrl', 'quiz.shortLength', 'quiz.longLength',
-      'logs.serverRetentionDays', 'logs.serverMaxEntries', 'logs.auditRetentionDays', 'logs.auditMaxEntries',
+      'backup.maxZipBytes', 'backup.maxUncompressedBytes', 'backup.maxEntries', 'logs.serverRetentionDays', 'logs.serverMaxEntries', 'logs.auditRetentionDays', 'logs.auditMaxEntries',
     ]);
   });
 });
@@ -40,13 +40,13 @@ describe('the settings table', () => {
   const context = testContext();
   after(() => context.close());
 
-  it('stores, replaces and removes values as JSON, only inside a data write (BAK-8)', () => {
+  it('stores, replaces and removes values as JSON, only inside a data write (BAK-8)', async () => {
     assert.throws(() => writeSettings(context.db, { 'site.title': 'Nope' }), /outside withDataWrite/);
     assert.equal(readSettings(context.db).size, 0);
-    withDataWrite(() => writeSettings(context.db, { 'site.title': 'First', 'quiz.shortLength': 5 }));
-    withDataWrite(() => writeSettings(context.db, { 'site.title': 'Second' }));
+    await withDataWrite(context.operations, () => writeSettings(context.db, { 'site.title': 'First', 'quiz.shortLength': 5 }));
+    await withDataWrite(context.operations, () => writeSettings(context.db, { 'site.title': 'Second' }));
     assert.deepEqual([...readSettings(context.db)], [['quiz.shortLength', 5], ['site.title', 'Second']]);
-    withDataWrite(() => writeSettings(context.db, { 'site.title': null }));
+    await withDataWrite(context.operations, () => writeSettings(context.db, { 'site.title': null }));
     assert.deepEqual([...readSettings(context.db)], [['quiz.shortLength', 5]]);
     const row = context.db.connection.prepare('SELECT created_at, updated_at FROM settings').get() as { created_at: string; updated_at: string };
     assert.match(row.created_at, /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/);
@@ -56,7 +56,7 @@ describe('the settings table', () => {
 describe('GET /api/settings/public (CFG-10)', () => {
   it('returns the effective public values, config file first', async () => {
     const context = testContext('quiz:\n  longLength: 40\n');
-    withDataWrite(() => writeSettings(context.db, { 'site.title': 'Trivia Night', 'quiz.longLength': 99 }));
+    await withDataWrite(context.operations, () => writeSettings(context.db, { 'site.title': 'Trivia Night', 'quiz.longLength': 99 }));
     const app = buildApp(context);
     try {
       const response = await app.inject('/api/settings/public');

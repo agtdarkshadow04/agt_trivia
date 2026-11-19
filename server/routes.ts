@@ -2,6 +2,7 @@ import type { TSchema } from '@sinclair/typebox';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import type { PublicSettings } from '../src/lib/api.js';
 import { settingValues, type AppContext } from './context.js';
+import { backupRoutes } from './backupRoutes.js';
 import { logRoutes } from './logRoutes.js';
 import { readSettings } from './repository/settings.js';
 import * as S from './schemas.js';
@@ -26,7 +27,7 @@ export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 /** One OpenAPI tag per route: `public`, `auth`, `admin`, or a resource name (API-11). */
 export type RouteTag = 'public' | 'auth' | 'admin';
 /** Rate-limit buckets (SEC-7), each counted separately per route and client address; `rateLimits.*` in config.yaml. */
-export type RateLimitName = 'login' | 'setup';
+export type RateLimitName = 'login' | 'setup' | 'adminUploads';
 
 export interface RouteSchemas {
   params?: TSchema;
@@ -45,6 +46,8 @@ export interface RouteDefinition {
   writesData: boolean;
   /** GET routes whose reads are audited, such as downloads and exports (LOG-11, #12). */
   audit?: boolean;
+  /** The body is multipart/form-data that the handler reads itself (BAK-1); the OpenAPI document shows its parts. */
+  multipart?: boolean;
   /** Credential-checking routes are rate limited (SEC-7). */
   rateLimit?: RateLimitName;
   /** Unique camelCase verb + noun (API-11); also the audit `action` (LOG-10). */
@@ -92,7 +95,7 @@ function startSession(context: AppContext, request: FastifyRequest, reply: Fasti
 }
 
 function adminSession(context: AppContext, username: string) {
-  return { username, version: context.version, setupPasswordStillSet: context.setupPassword !== null };
+  return { username, version: context.version, setupPasswordStillSet: context.setupPassword !== null, restoreFailed: context.operations.state === 'restore_failed' };
 }
 
 const coreRoutes: readonly RouteDefinition[] = [
@@ -107,6 +110,8 @@ const coreRoutes: readonly RouteDefinition[] = [
     description: 'Runs a trivial database query (SRV-11). Used by the Docker healthcheck; not rate limited.',
     schema: { response: { 200: S.Health } },
     handler: (context) => {
+      // SRV-11, BAK-8: during a restore the database is not queried, so Docker does not restart the container.
+      if (context.operations.inMaintenance) return { status: 'maintenance' };
       context.db.ping();
       return { status: 'ok' };
     },
@@ -237,4 +242,4 @@ const coreRoutes: readonly RouteDefinition[] = [
   },
 ];
 
-export const apiRoutes: readonly RouteDefinition[] = [...coreRoutes, ...logRoutes];
+export const apiRoutes: readonly RouteDefinition[] = [...coreRoutes, ...logRoutes, ...backupRoutes];

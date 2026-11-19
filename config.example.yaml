@@ -32,6 +32,9 @@
 #   # The log store: the server log and the audit log, relative to dataDir.
 #   # It is never part of a backup.
 #   logDatabaseFile: logs.sqlite
+#   # Pre-restore backups and the temporary files of backups and restores,
+#   # relative to dataDir.
+#   backupsDir: backups
 
 # session:
 #   # How long an Admin sign-in lasts, in hours (1-168).
@@ -46,6 +49,8 @@
 #   login: { max: 10, windowMinutes: 15 }
 #   # First-run setup.
 #   setup: { max: 10, windowMinutes: 15 }
+#   # Backup restore uploads (preview and restore).
+#   adminUploads: { max: 120, windowMinutes: 15 }
 
 # --- Keys that can also be set in the dashboard ----------------------------
 
@@ -60,6 +65,14 @@
 #   shortLength: 10
 #   # Questions in a long quiz (2-500, more than shortLength).
 #   longLength: 30
+
+# backup:
+#   # Largest backup upload in bytes (1024-2147483648).
+#   maxZipBytes: 209715200
+#   # Largest total uncompressed size of an uploaded backup (1024-8589934592).
+#   maxUncompressedBytes: 1073741824
+#   # Most entries an uploaded backup archive may contain (1-100000).
+#   maxEntries: 10000
 
 # logs:
 #   # Days the server log keeps an entry (1-3650).

@@ -64,3 +64,8 @@ img { max-width: 100%; }
   .brand { gap: 0.65rem; }
   .site-footer { padding-block: 2rem; }
 }
+
+/* FE-5: the maintenance notice while the server answers 503 maintenance (BAK-8). */
+.maintenance-region:empty { display: none; }
+.maintenance-region { width: min(100%, 80rem); margin: 1rem auto 0; padding-inline: clamp(1rem, 4vw, 3rem); }
+.maintenance-notice { margin: 0; padding: 0.85rem 1rem; border: 1px solid var(--agt-orange); border-radius: var(--radius-sm); color: var(--text); background: var(--surface); }

@@ -1,4 +1,5 @@
 import { BrandLockup } from './components/BrandLockup';
+import { MaintenanceNotice } from './components/MaintenanceNotice';
 import { COMMON_TRANSLATIONS } from './translations';
 
 /**
@@ -13,6 +14,7 @@ export function App() {
           <BrandLockup />
         </div>
       </header>
+      <MaintenanceNotice />
       <main id="main-content" className="main-content" tabIndex={-1}>
         <h1 className="sr-only">{COMMON_TRANSLATIONS.product}</h1>
       </main>

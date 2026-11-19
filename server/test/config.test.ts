@@ -10,7 +10,9 @@ describe('config.yaml (CFG-3, CFG-5)', () => {
   it('defaults every key when the file is empty', () => {
     const config = parseConfig('');
     assert.deepEqual(config.server, { host: '127.0.0.1', port: 8082, trustProxy: false, logLevel: 'info' });
-    assert.deepEqual(config.storage, { dataDir: 'data', databaseFile: 'agt-trivia.sqlite', logDatabaseFile: 'logs.sqlite' });
+    assert.deepEqual(config.storage, { dataDir: 'data', databaseFile: 'agt-trivia.sqlite', logDatabaseFile: 'logs.sqlite', backupsDir: 'backups' });
+    assert.deepEqual(config.backup, {});
+    assert.deepEqual(config.rateLimits.adminUploads, { max: 120, windowMinutes: 15 });
     assert.deepEqual(config.logs, {});
     assert.deepEqual(config.site, {});
     assert.deepEqual(config.quiz, {});
