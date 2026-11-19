@@ -1,24 +1,45 @@
 {
-  "name": "agt-trivia-webapp",
+  "name": "agt-trivia",
+  "version": "2.0.0",
   "private": true,
-  "version": "1.0.0",
   "type": "module",
+  "engines": {
+    "node": ">=26.0.0 <27",
+    "npm": ">=11.20.0 <12"
+  },
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview",
-    "test": "vitest run",
-    "test:watch": "vitest",
-    "check": "vitest run && vite build"
+    "dev:server": "npm run build:server && node dist-server/index.mjs",
+    "build": "npm run build:client && npm run build:server",
+    "build:client": "tsc -b && vite build",
+    "build:server": "esbuild server/index.ts --bundle --platform=node --target=node26 --format=esm --packages=external --loader:.sql=text --outfile=dist-server/index.mjs",
+    "start": "node dist-server/index.mjs",
+    "lint": "tsc -b --pretty false",
+    "test": "npm run test:client && npm run test:server",
+    "test:client": "node -e \"fs.rmSync('.test-build/client',{recursive:true,force:true})\" && esbuild src/lib/*.test.ts --bundle --platform=node --target=node26 --format=esm --packages=external --outdir=.test-build/client --out-extension:.js=.mjs && node --test .test-build/client/*.test.mjs",
+    "test:server": "node -e \"fs.rmSync('.test-build/server',{recursive:true,force:true})\" && esbuild server/test/*.test.ts --bundle --platform=node --target=node26 --format=esm --packages=external --loader:.sql=text --outdir=.test-build/server --out-extension:.js=.mjs && node --test --test-concurrency=1 .test-build/server/*.test.mjs",
+    "test:e2e": "npm run build && playwright test",
+    "check": "npm run lint && npm test && npm run build"
   },
   "dependencies": {
-    "papaparse": "5.5.4"
+    "@fastify/static": "^10.1.11",
+    "fastify": "^5.12.8",
+    "pino": "^10.4.0",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1"
   },
   "devDependencies": {
-    "vite": "8.2.0",
-    "vitest": "4.1.10"
+    "@axe-core/playwright": "^4.14.0",
+    "@playwright/test": "^1.65.1",
+    "@types/node": "^26.6.6",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.3.0",
+    "esbuild": "^0.28.2",
+    "typescript": "~7.0.2",
+    "vite": "^8.3.8"
   },
-  "engines": {
-    "node": "^20.19.0 || >=22.12.0"
+  "allowScripts": {
+    "esbuild@0.28.2": true
   }
 }

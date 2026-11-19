@@ -1,0 +1,9 @@
+/*
+ * Admin-only styles, imported after `src/styles.css` (UI-1). Same rules: add
+ * to the base stylesheet, never redefine its tokens or restyle a UI-9 class.
+ */
+
+.admin-shell { display: flex; min-height: 100vh; flex-direction: column; }
+.admin-header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 1rem; padding: 0.9rem clamp(1rem, 4vw, 3rem); border-bottom: 1px solid var(--agt-red); background: var(--surface-raised); }
+.admin-main { display: grid; grid-template-columns: minmax(0, 1fr); width: min(100%, 80rem); margin-inline: auto; padding: 2rem clamp(1rem, 4vw, 3rem) 4rem; gap: 1.25rem; align-content: start; flex: 1; }
+.admin-main:focus { outline: none; }
