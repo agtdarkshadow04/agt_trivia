@@ -46,6 +46,8 @@ export interface AdminMember extends MemberSession {
   iamPermission: string | null;
   createdAt: string;
   updatedAt: string;
+  /** The member's last successful sign-in (#48), or null when they never signed in. */
+  lastSignInAt: string | null;
 }
 
 /** `GET /api/categories` (#15): a category as visitors see it. */

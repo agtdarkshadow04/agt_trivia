@@ -210,8 +210,9 @@ export interface MemberPage {
   nextCursor: string | null;
 }
 
-export function listMembers(search: string, cursor: string | null) {
-  const query = new URLSearchParams(Object.entries({ q: search.trim(), cursor: cursor ?? '' }).filter(([, value]) => value));
+/** `idleDays` (#48): only members who never signed in or not for that many days; 0 for everyone. */
+export function listMembers(search: string, cursor: string | null, idleDays = 0) {
+  const query = new URLSearchParams(Object.entries({ q: search.trim(), cursor: cursor ?? '', idleDays: idleDays ? String(idleDays) : '' }).filter(([, value]) => value));
   return adminRequest<MemberPage>(`/api/admin/members${query.size ? `?${query}` : ''}`);
 }
 

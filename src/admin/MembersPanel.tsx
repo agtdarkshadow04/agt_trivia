@@ -158,8 +158,12 @@ function EditMember({ member, onClose, onSaved, returnFocusRef }: {
 }
 
 /** UI-8 Members (#17): the Admin creates, edits, deactivates and deletes member accounts. */
+/** The "Signed in" filter (#48): everyone, or members idle for that many days. */
+const idleChoices = [0, 30, 90, 365] as const;
+
 export function MembersPanel() {
-  const { t, a, error: describe } = useAdminI18n();
+  const { t, a, number, dateTime, error: describe } = useAdminI18n();
+  const [idleDays, setIdleDays] = useState(0);
   const [members, setMembers] = useState<AdminMember[] | null>(null);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [search, setSearch] = useState('');
@@ -170,10 +174,10 @@ export function MembersPanel() {
   const [busy, setBusy] = useState(false);
   const opener = useRef<HTMLElement | null>(null);
 
-  const load = useCallback(async (query: string, cursor: string | null = null) => {
+  const load = useCallback(async (query: string, cursor: string | null = null, idle = 0) => {
     setLoadError(null);
     try {
-      const page = await listMembers(query, cursor);
+      const page = await listMembers(query, cursor, idle);
       setMembers((current) => (cursor && current ? [...current, ...page.items] : page.items));
       setNextCursor(page.nextCursor);
     } catch (cause) {
@@ -192,7 +196,7 @@ export function MembersPanel() {
       await deleteMember(deleting.id);
       setStatus(formatTranslation(a.members.deleted, { username: label(deleting) }));
       setDeleting(null);
-      await load(search);
+      await load(search, null, idleDays);
     } catch (cause) {
       setStatus(describe(cause));
       setDeleting(null);
@@ -204,17 +208,27 @@ export function MembersPanel() {
   return (
     <div className="members-sections">
       <div role="status" aria-live="polite">{status && <p className="success-note">{status}</p>}</div>
-      <CreateMember onCreated={(member) => { setStatus(formatTranslation(a.members.created, { username: label(member) })); void load(search); }} />
+      <CreateMember onCreated={(member) => { setStatus(formatTranslation(a.members.created, { username: label(member) })); void load(search, null, idleDays); }} />
       <section className="admin-panel log-panel" aria-labelledby="member-list-title">
         <h2 id="member-list-title">{a.tabs.members}</h2>
-        <form className="log-filters" role="search" onSubmit={(event) => { event.preventDefault(); void load(search); }}>
+        <form className="log-filters" role="search" onSubmit={(event) => { event.preventDefault(); void load(search, null, idleDays); }}>
           <TextField label={a.members.search} name="q" type="search" value={search} onChange={(event) => setSearch(event.target.value)} />
+          <SelectField
+            label={a.members.signedIn}
+            name="idleDays"
+            value={String(idleDays)}
+            onChange={(event) => { const days = Number(event.target.value); setIdleDays(days); void load(search, null, days); }}
+          >
+            {idleChoices.map((days) => (
+              <option key={days} value={days}>{days ? formatTranslation(a.members.idleFor, { count: number(days) }) : a.members.signedInAny}</option>
+            ))}
+          </SelectField>
           <div className="form-actions"><button className="button button-secondary" type="submit">{a.members.searchSubmit}</button></div>
         </form>
         {loadError !== null && (
           <div role="alert">
             <p className="error-note">{describe(loadError)}</p>
-            <button className="button button-secondary" type="button" onClick={() => void load(search)}>{t.common.retry}</button>
+            <button className="button button-secondary" type="button" onClick={() => void load(search, null, idleDays)}>{t.common.retry}</button>
           </div>
         )}
         {members === null && loadError === null && <p role="status">{a.members.loading}</p>}
@@ -228,6 +242,7 @@ export function MembersPanel() {
                   <th scope="col">{a.members.displayName}</th>
                   <th scope="col">{a.members.role}</th>
                   <th scope="col">{a.members.status}</th>
+                  <th scope="col">{a.members.lastSignIn}</th>
                   <th scope="col"><span className="sr-only">{a.members.actions}</span></th>
                 </tr>
               </thead>
@@ -238,6 +253,7 @@ export function MembersPanel() {
                     <td>{member.displayName}</td>
                     <td>{a.roles[member.role]}</td>
                     <td>{member.isActive ? a.members.active : a.members.inactive}</td>
+                    <td>{member.lastSignInAt ? <time dateTime={member.lastSignInAt}>{dateTime(member.lastSignInAt)}</time> : <span className="log-muted">{a.members.never}</span>}</td>
                     <td>
                       <div className="form-actions">
                         <button
@@ -272,7 +288,7 @@ export function MembersPanel() {
         )}
         {nextCursor && (
           <div className="form-actions log-more">
-            <button className="button button-secondary" type="button" onClick={() => void load(search, nextCursor)}>{a.members.loadMore}</button>
+            <button className="button button-secondary" type="button" onClick={() => void load(search, nextCursor, idleDays)}>{a.members.loadMore}</button>
           </div>
         )}
       </section>
@@ -281,7 +297,7 @@ export function MembersPanel() {
           member={editing}
           returnFocusRef={opener}
           onClose={() => setEditing(null)}
-          onSaved={(_member, notice) => { setEditing(null); setStatus(notice); void load(search); }}
+          onSaved={(_member, notice) => { setEditing(null); setStatus(notice); void load(search, null, idleDays); }}
         />
       )}
       {deleting && (

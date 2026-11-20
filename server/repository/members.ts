@@ -20,6 +20,7 @@ interface MemberRow {
   updated_at: string;
   iam_traveller_id: string | null;
   iam_permission: string | null;
+  last_sign_in_at: string | null;
 }
 
 export interface MemberCredentials {
@@ -39,6 +40,7 @@ function toMember(row: MemberRow): AdminMember {
     iamPermission: row.iam_permission,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
+    lastSignInAt: row.last_sign_in_at,
   };
 }
 
@@ -78,9 +80,14 @@ export interface MemberPagePosition {
  * the last member of the previous page. `search` matches the username or the
  * display name, ignoring ASCII case.
  */
-export function listMembers(db: Database, options: { limit: number; after: MemberPagePosition | null; search: string }) {
+export function listMembers(db: Database, options: { limit: number; after: MemberPagePosition | null; search: string; signedInBefore?: string | null }) {
   const conditions: string[] = [];
   const values: (string | number)[] = [];
+  if (options.signedInBefore) {
+    // #48: never signed in, or not since then.
+    conditions.push('(last_sign_in_at IS NULL OR last_sign_in_at < ?)');
+    values.push(options.signedInBefore);
+  }
   if (options.after) {
     conditions.push('(created_at < ? OR (created_at = ? AND id < ?))');
     values.push(options.after.createdAt, options.after.createdAt, options.after.id);
@@ -145,6 +152,15 @@ export function deleteMember(db: Database, id: string) {
 }
 
 // --- Sessions (AUTH-8) ------------------------------------------------------------
+
+/**
+ * Records a successful sign-in (#48). A data write (BAK-8), unlike the session
+ * row; `updated_at` stays, since the account itself did not change.
+ */
+export function recordMemberSignIn(db: Database, id: string, now = new Date()) {
+  assertDataWrite();
+  db.connection.prepare('UPDATE members SET last_sign_in_at = ? WHERE id = ?').run(now.toISOString(), id);
+}
 
 /** Stores a member session and purges the expired ones. */
 export function insertMemberSession(sqlite: Sqlite, tokenHash: string, memberId: string, expiresAt: Date, now = new Date()) {

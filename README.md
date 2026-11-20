@@ -427,6 +427,11 @@ Members sign in with the **Sign in** button in the game's header (`/?page=login`
 display name and role, and an **Account** button that shows their account, changes their password and signs them
 out. Member sessions use their own cookie, which the admin dashboard never accepts, and last `session.ttlHours`.
 
+The **Members** tab shows when each member last signed in (local or with their AGT account), or "Never", and its
+**Signed in** filter lists the members who have not signed in for 30, 90 or 365 days, so stale accounts are easy to
+find and deactivate. Recording the time makes a sign-in a change to the data: like every other change, it is refused
+with a maintenance message while a backup is being restored.
+
 A member is signed out everywhere when they change their password, and when the Admin changes their role,
 deactivates them (an inactive member cannot sign in), sets a new password for them or deletes them. Deleting a
 member keeps the questions they wrote, without their name.

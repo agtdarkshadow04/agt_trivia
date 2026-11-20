@@ -44,6 +44,22 @@ test.describe('the Admin', () => {
     await expect(row).toContainText('Active');
     await expectAccessible(page, 'members tab');
 
+    // #48: the last sign-in, "Never" until the member signs in, and the filter of idle members.
+    await expect(row).toContainText('Never');
+    const memberPage = await page.context().browser()!.newPage();
+    await memberPage.goto('/?page=login');
+    await memberPage.getByLabel('Username').fill('e2e.manage');
+    await memberPage.getByLabel('Password').fill(password);
+    await memberPage.getByRole('button', { name: 'Sign in' }).click();
+    await expect(memberPage.getByRole('heading', { name: 'Choose a category' })).toBeVisible();
+    await memberPage.close();
+    const idle = page.getByLabel('Signed in');
+    await idle.selectOption({ label: 'Not in the last 30 days' });
+    await expect(row).toHaveCount(0);
+    await idle.selectOption({ label: 'At any time' });
+    await expect(row).not.toContainText('Never');
+    await expect(row.locator('time')).toHaveCount(1);
+
     // A duplicate username is the server's to refuse, translated.
     await page.getByLabel('Username').fill('e2e.manage');
     await page.getByLabel('Display name').fill('Another');

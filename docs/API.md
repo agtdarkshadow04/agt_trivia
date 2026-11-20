@@ -138,7 +138,7 @@ twice adds nothing. The audit log records the action, the files and the counts, 
 | `POST /api/admin/logout` | Ends the session; `204` |
 | `GET /api/admin/session` | `{ username, version, setupPasswordStillSet }` |
 | `POST /api/admin/password` | `{ currentPassword, password }`: changes the password, ends every other session; `200 { username }` |
-| `POST /api/member/login` | `{ username, password }`: signs a member in (the username ignoring case); `200` the member: `{ id, username, displayName, role, authSource }` |
+| `POST /api/member/login` | `{ username, password }`: signs a member in (the username ignoring case) and records the time (#48), so it is a data write: `503 maintenance` during a restore; `200` the member: `{ id, username, displayName, role, authSource }` |
 | `POST /api/member/iam/login` | `{ travellerName, password }`: signs a member in with their AGT account through AGT IAM (#18); the first sign-in creates the member, every sign-in sets the role from the AGT tier. The password goes only to AGT IAM; `200` the member |
 | `POST /api/member/logout` | Ends the member session; `204` |
 | `GET /api/member/session` | The signed-in member |
@@ -165,7 +165,7 @@ twice adds nothing. The audit log records the action, the files and the counts, 
 | `GET /api/member/results` | The member's own results, newest first: `{ items, nextCursor }` (API-8; `limit`, `cursor`, `categoryId`) |
 | `DELETE /api/member/results` | Clears the member's own history; `204` |
 | `GET /api/member/stats` | Per category that still exists: `[{ categoryId, categoryName, plays, bestPercent, averagePercent, lastPlayedAt }]`, the most recently played first; percentages are rounded like `percent` |
-| `GET /api/admin/members` | Member accounts, newest first: `{ items, nextCursor }` (API-8; `limit`, `cursor`, and `q` to search usernames and display names) |
+| `GET /api/admin/members` | Member accounts, newest first: `{ items, nextCursor }` (API-8; `limit`, `cursor`, `q` to search usernames and display names, and `idleDays` for the members who never signed in or not for that many days, #48). Each has `lastSignInAt`, null until the first sign-in |
 | `POST /api/admin/members` | `{ username, displayName, role, password }`: creates a local member; `201 { member, notices }` |
 | `PUT /api/admin/members/{id}` | `{ displayName, role, isActive }`; a role change or deactivation signs the member out; for an AGT member only `isActive` may change (`409 managed_by_iam`); `200 { member, notices }` |
 | `POST /api/admin/members/{id}/password` | `{ password }`: sets a local member's password and signs them out; `200` the member |

@@ -1,4 +1,5 @@
 import type { FastifyReply, FastifyRequest } from 'fastify';
+import type { AdminMember } from '../src/lib/api.js';
 import type { AppContext } from './context.js';
 import { HttpError } from './http.js';
 import { IamClient, type IamTraveller } from './iam.js';
@@ -40,17 +41,21 @@ export const memberRoutes: readonly RouteDefinition[] = [
     method: 'POST',
     url: '/api/member/login',
     auth: 'csrf',
-    // Only the session row is written (BAK-8).
-    writesData: false,
+    // The member's last sign-in is recorded (#48).
+    writesData: true,
     rateLimit: 'login',
     operationId: 'createMemberSession',
     tag: 'auth',
     summary: 'Sign a member in and set the member session cookie.',
     schema: { body: S.Credentials, response: { 200: S.MemberSession } },
-    handler: async (context, request, reply) => {
+    // The password is checked before the data write, so scrypt never holds the write lock (BAK-8).
+    prepare: async (context, request) => {
       const { username, password } = request.body as { username: string; password: string };
-      return startMemberSession(context, request, reply, await new MemberAuthService(context).login(username, password, authLog(request)));
+      return new MemberAuthService(context).verifyLogin(username, password, authLog(request));
     },
+    handler: (context, request, reply) => (
+      startMemberSession(context, request, reply, new MemberAuthService(context).completeLogin(request.prepared as AdminMember))
+    ),
   },
   {
     method: 'POST',
@@ -131,8 +136,10 @@ export const memberRoutes: readonly RouteDefinition[] = [
     summary: 'List member accounts, newest first, one page at a time.',
     schema: { querystring: S.MemberListQuery, response: { 200: S.MemberPage } },
     handler: (context, request) => {
-      const query = request.query as { limit?: string; cursor?: string; q?: string };
-      return new AdminMemberService(context).list({ ...query, limit: pageLimit(query.limit) });
+      const query = request.query as { limit?: string; cursor?: string; q?: string; idleDays?: string };
+      const idleDays = query.idleDays === undefined ? undefined : Number(query.idleDays);
+      if (idleDays !== undefined && idleDays > 3650) throw new HttpError(400, 'invalid_request', 'idleDays must be 1 to 3650.');
+      return new AdminMemberService(context).list({ ...query, limit: pageLimit(query.limit), idleDays });
     },
   },
   {

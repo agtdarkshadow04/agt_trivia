@@ -196,8 +196,14 @@ describe('AGT sign-in through the app (#18)', () => {
       assert.deepEqual(members().map((row) => ({ ...row as object })), [{
         username: null, password_hash: null, role: 'Player', iam_traveller_id: 'AGT-1001', iam_permission: 'Traveller', display_name: 'Atlas Walker',
       }]);
+      // #48: the sign-in is recorded.
+      const lastSignIn = () => (context.db.connection.prepare("SELECT last_sign_in_at FROM members WHERE iam_traveller_id = 'AGT-1001'").get() as { last_sign_in_at: string | null }).last_sign_in_at;
+      const first = lastSignIn();
+      assert.ok(first);
       // The second sign-in finds the same member.
+      await new Promise((resolve) => setTimeout(resolve, 5));
       assert.equal((await signIn('Atlas Walker')).json().id, response.json().id);
+      assert.ok(lastSignIn()! > first);
       assert.equal(members().length, 1);
       // Neither the password nor IAM's token is kept anywhere (logs included).
       const everything = JSON.stringify([members(), context.logs.listAudit({}, null, 100), context.logs.listServer?.({}, null, 100)]);

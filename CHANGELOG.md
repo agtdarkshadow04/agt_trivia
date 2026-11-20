@@ -18,6 +18,9 @@ All notable changes to AGT Galactic Trivia are documented in this file. The form
   Review queue page, counted in the header, and mark them resolved or dismiss them (#46).
 - **Move questions** on the Categories page: Moderators move every question of a category, whatever its status, to
   another category in one step, from the category's card or from a refused delete, and can then delete it (#47).
+- The **Members** tab shows each member's last sign-in, or "Never", and filters the members who have not signed in
+  for 30, 90 or 365 days. A member sign-in now records the time, so like every other change it is refused during a
+  restore (#48).
 
 ### Changed
 
