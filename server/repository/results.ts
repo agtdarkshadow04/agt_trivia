@@ -132,15 +132,15 @@ export interface LeaderboardRow {
 /**
  * A category's leaderboard (#49): active members who opted in, by their best
  * result, then by more plays, then by who reached it first. Only results
- * saved from a signed quiz attempt (#45) count, of a long or full quiz with
- * at least `minimumAnswers` answers, so a short or hand-made result never
- * places anyone.
+ * saved from a signed quiz attempt (#45) with at least `minimumAnswers`
+ * answers count, whatever the quiz length (#60), so a hand-made result or a
+ * very small draw never places anyone.
  */
 export function leaderboard(db: Database, options: { categoryId: string; minimumAnswers: number; limit: number }): LeaderboardRow[] {
   return db.connection.prepare(`WITH eligible AS (
       SELECT quiz_results.member_id, 100.0 * quiz_results.score / quiz_results.total AS percent, quiz_results.finished_at
       FROM quiz_results JOIN members ON members.id = quiz_results.member_id
-      WHERE quiz_results.category_id = ? AND quiz_results.attempt_id IS NOT NULL AND quiz_results.length IN ('long', 'all')
+      WHERE quiz_results.category_id = ? AND quiz_results.attempt_id IS NOT NULL
         AND quiz_results.total >= ? AND members.is_active = 1 AND members.leaderboard_opt_in = 1
     ), best AS (
       SELECT member_id, max(percent) AS best_percent, count(*) AS plays FROM eligible GROUP BY member_id

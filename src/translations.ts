@@ -375,7 +375,7 @@ const en = {
   leaderboard: {
     link: "Leaderboard",
     title: "Leaderboard",
-    intro: "Members who chose to appear here, by their best long or full quiz of at least {{count}} questions. Only display names are shown.",
+    intro: "Members who chose to appear here, by their best quiz of at least {{count}} questions, whatever its length. Only display names are shown.",
     rank: "Rank",
     traveller: "Traveller",
     best: "Best",
@@ -769,7 +769,7 @@ const fr: Translations = {
   leaderboard: {
     link: "Classement",
     title: "Classement",
-    intro: "Les membres qui ont choisi d'apparaître ici, selon leur meilleur quiz long ou complet d'au moins {{count}} questions. Seuls les noms affichés sont visibles.",
+    intro: "Les membres qui ont choisi d'apparaître ici, selon leur meilleur quiz d'au moins {{count}} questions, quelle que soit sa longueur. Seuls les noms affichés sont visibles.",
     rank: "Rang",
     traveller: "Voyageur",
     best: "Meilleur",
@@ -1161,7 +1161,7 @@ const de: Translations = {
   leaderboard: {
     link: "Bestenliste",
     title: "Bestenliste",
-    intro: "Mitglieder, die hier erscheinen möchten, nach ihrem besten langen oder vollständigen Quiz mit mindestens {{count}} Fragen. Nur Anzeigenamen werden gezeigt.",
+    intro: "Mitglieder, die hier erscheinen möchten, nach ihrem besten Quiz mit mindestens {{count}} Fragen, egal welcher Länge. Nur Anzeigenamen werden gezeigt.",
     rank: "Rang",
     traveller: "Reisender",
     best: "Bestes",
@@ -1553,7 +1553,7 @@ const es: Translations = {
   leaderboard: {
     link: "Clasificación",
     title: "Clasificación",
-    intro: "Miembros que eligieron aparecer aquí, según su mejor cuestionario largo o completo de al menos {{count}} preguntas. Solo se muestran los nombres visibles.",
+    intro: "Miembros que eligieron aparecer aquí, según su mejor cuestionario de al menos {{count}} preguntas, sea cual sea su duración. Solo se muestran los nombres visibles.",
     rank: "Puesto",
     traveller: "Viajero",
     best: "Mejor",
@@ -1945,7 +1945,7 @@ const pt: Translations = {
   leaderboard: {
     link: "Ranking",
     title: "Ranking",
-    intro: "Membros que escolheram aparecer aqui, pelo seu melhor quiz longo ou completo de pelo menos {{count}} perguntas. Apenas os nomes de exibição são mostrados.",
+    intro: "Membros que escolheram aparecer aqui, pelo seu melhor quiz de pelo menos {{count}} perguntas, qualquer que seja a duração. Apenas os nomes de exibição são mostrados.",
     rank: "Posição",
     traveller: "Viajante",
     best: "Melhor",
@@ -2337,7 +2337,7 @@ const it: Translations = {
   leaderboard: {
     link: "Classifica",
     title: "Classifica",
-    intro: "I membri che hanno scelto di comparire qui, in base al loro miglior quiz lungo o completo di almeno {{count}} domande. Sono mostrati solo i nomi visualizzati.",
+    intro: "I membri che hanno scelto di comparire qui, in base al loro miglior quiz di almeno {{count}} domande, di qualsiasi lunghezza. Sono mostrati solo i nomi visualizzati.",
     rank: "Posizione",
     traveller: "Viaggiatore",
     best: "Migliore",
@@ -2729,7 +2729,7 @@ const th: Translations = {
   leaderboard: {
     link: "ตารางอันดับ",
     title: "ตารางอันดับ",
-    intro: "สมาชิกที่เลือกให้แสดงที่นี่ เรียงตามแบบทดสอบแบบยาวหรือแบบเต็มที่ดีที่สุดซึ่งมีอย่างน้อย {{count}} ข้อ แสดงเฉพาะชื่อที่แสดงเท่านั้น",
+    intro: "สมาชิกที่เลือกให้แสดงที่นี่ เรียงตามแบบทดสอบที่ดีที่สุดซึ่งมีอย่างน้อย {{count}} ข้อ ไม่ว่าจะยาวแค่ไหน แสดงเฉพาะชื่อที่แสดงเท่านั้น",
     rank: "อันดับ",
     traveller: "นักเดินทาง",
     best: "ดีที่สุด",
@@ -3121,7 +3121,7 @@ const zh: Translations = {
   leaderboard: {
     link: "排行榜",
     title: "排行榜",
-    intro: "选择在此显示的成员，按其至少 {{count}} 道题的最佳长测验或完整测验排名。仅显示显示名称。",
+    intro: "选择在此显示的成员，按其至少 {{count}} 道题的最佳测验排名，不论测验长短。仅显示显示名称。",
     rank: "名次",
     traveller: "旅行者",
     best: "最佳",
@@ -3513,7 +3513,7 @@ const hi: Translations = {
   leaderboard: {
     link: "लीडरबोर्ड",
     title: "लीडरबोर्ड",
-    intro: "वे सदस्य जिन्होंने यहाँ दिखना चुना, कम से कम {{count}} प्रश्नों वाली उनकी सर्वश्रेष्ठ लंबी या पूरी क्विज़ के अनुसार। केवल प्रदर्शित नाम दिखाए जाते हैं।",
+    intro: "वे सदस्य जिन्होंने यहाँ दिखना चुना, कम से कम {{count}} प्रश्नों वाली उनकी सर्वश्रेष्ठ क्विज़ के अनुसार, चाहे वह कितनी भी लंबी हो। केवल प्रदर्शित नाम दिखाए जाते हैं।",
     rank: "स्थान",
     traveller: "यात्री",
     best: "सर्वश्रेष्ठ",
@@ -3905,7 +3905,7 @@ const ja: Translations = {
   leaderboard: {
     link: "ランキング",
     title: "ランキング",
-    intro: "ここに表示されることを選んだメンバーを、{{count}} 問以上のロングまたはフルクイズの最高成績で並べています。表示名のみが表示されます。",
+    intro: "ここに表示されることを選んだメンバーを、長さを問わず {{count}} 問以上のクイズの最高成績で並べています。表示名のみが表示されます。",
     rank: "順位",
     traveller: "トラベラー",
     best: "最高",

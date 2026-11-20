@@ -130,7 +130,7 @@ export const PublicQuiz = object({
 
 export const PublicLeaderboard = object({
   category: PublicCategory,
-  minimumAnswers: Type.Integer({ description: 'Results count from a long or full quiz with at least this many answers: `quiz.shortLength`, or every question of a smaller category.' }),
+  minimumAnswers: Type.Integer({ description: 'Results count from a quiz of any length with at least this many answers: `quiz.shortLength`, or every question of a smaller category.' }),
   entries: Type.Array(object({
     rank: Type.Integer({ minimum: 1 }),
     displayName: Type.String({ description: "The member's display name; nothing else about them." }),

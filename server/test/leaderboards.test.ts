@@ -8,7 +8,7 @@ import { withDataWrite } from '../dataWrite.js';
 import { insertResult } from '../repository/results.js';
 import { adminCookie, createMember, memberCookie, seedQuiz, testContext } from './helpers.js';
 
-/** Opt-in leaderboards (#49): closed by default, opt-in only, display names only, and only signed, long or full results. */
+/** Opt-in leaderboards (#49): closed by default, opt-in only, display names only, and only signed results of at least minimumAnswers answers (#60). */
 
 const csrf = { 'x-agt-request': '1' };
 
@@ -95,8 +95,8 @@ describe('leaderboards', () => {
     // None of these count.
     await result('hidden', 10, 10);                      // never opted in
     await result('finn', 10, 10, { attempt: false });    // no signed attempt (#45)
-    await result('finn', 10, 10, { length: 'short' });   // a short quiz
     await result('finn', 9, 9);                          // fewer answers than quiz.shortLength
+    await result('finn', 9, 9, { length: 'short' });     // a short quiz with fewer, too
     await result('finn', 10, 10, { categoryId: other.category.id });
     await result('gone', 10, 10);
     await withDataWrite(context.operations, () => context.db.connection.prepare('UPDATE members SET is_active = 0 WHERE id = ?').run(members.gone.id));
@@ -135,5 +135,17 @@ describe('leaderboards', () => {
       assert.equal(response.statusCode, 404, id);
     }
     assert.equal((await app.inject('/api/settings/public')).json().leaderboards, true);
+  });
+
+  it('counts a short quiz with enough answers, as the board says (#60)', async () => {
+    const shorty = await createMember(context, 'lb.shorty');
+    cookies.shorty = await memberCookie(context, 'lb.shorty');
+    members.shorty = shorty;
+    await preferences('shorty', true);
+    // A short quiz of quiz.shortLength (10) answers, all right: the length players most often choose.
+    await result('shorty', 10, 10, { length: 'short', minute: 30 });
+    const { minimumAnswers, entries } = await board();
+    assert.equal(minimumAnswers, 10);
+    assert.deepEqual(entries.find((entry) => entry.displayName === 'Display lb.shorty'), { rank: entries.findIndex((entry) => entry.displayName === 'Display lb.shorty') + 1, displayName: 'Display lb.shorty', bestPercent: 100, plays: 1 });
   });
 });
