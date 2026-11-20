@@ -75,6 +75,11 @@ describe('a quiz session (#16)', () => {
     assert.deepEqual(quizResult(perfect), { score: 1, total: 1, percent: 100, rank: 'atlasArchivist' });
     assert.deepEqual(quizResult(startSession([])), { score: 0, total: 0, percent: 0, rank: 'pathfinder' });
   });
+
+  it('never rounds a near-perfect score up to a perfect one (#42)', () => {
+    const played = { ...startSession(Array.from({ length: 200 }, () => single)), index: 200, score: 199 };
+    assert.deepEqual(quizResult(played), { score: 199, total: 200, percent: 99, rank: 'galacticCartographer' });
+  });
 });
 
 describe('the answers a member result sends (#21)', () => {

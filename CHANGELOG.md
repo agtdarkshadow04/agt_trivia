@@ -14,6 +14,9 @@ All notable changes to AGT Galactic Trivia are documented in this file. The form
 - A quiz showed every question's answers in the order they were written, and the 1.x sheet often lists the correct
   answer first, so "A" was right far more often than chance. The answers are now shuffled each time a quiz is drawn
   (#41).
+- A rounded percentage chose the rank, so 199 of 200 showed 100 % and earned Atlas Archivist, and 149 of 200 counted
+  as 75 %. The rank now comes from the exact score, and a percentage (on the results screen and in **My scores**)
+  shows 100 % only for a perfect score and 0 % only when no answer was right (#42).
 
 ## [2.0.0] - 2026-11-20
 

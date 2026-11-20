@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { isCorrectSelection, questionsForQuiz, rankForPercent, shuffle, sortCategories } from './quiz.js';
+import { displayPercent, isCorrectSelection, questionsForQuiz, rankFor, scorePercent, shuffle, sortCategories } from './quiz.js';
 
 describe('quiz helpers', () => {
   it('sorts by ascending priority and then by name', () => {
@@ -40,12 +40,36 @@ describe('quiz helpers', () => {
   });
 
   it('ranks scores as the 1.x app did', () => {
-    assert.equal(rankForPercent(100), 'atlasArchivist');
-    assert.equal(rankForPercent(99), 'galacticCartographer');
-    assert.equal(rankForPercent(75), 'galacticCartographer');
-    assert.equal(rankForPercent(74), 'seasonedTraveller');
-    assert.equal(rankForPercent(50), 'seasonedTraveller');
-    assert.equal(rankForPercent(49), 'pathfinder');
-    assert.equal(rankForPercent(0), 'pathfinder');
+    assert.equal(rankFor(10, 10), 'atlasArchivist');
+    assert.equal(rankFor(99, 100), 'galacticCartographer');
+    assert.equal(rankFor(3, 4), 'galacticCartographer');
+    assert.equal(rankFor(74, 100), 'seasonedTraveller');
+    assert.equal(rankFor(1, 2), 'seasonedTraveller');
+    assert.equal(rankFor(49, 100), 'pathfinder');
+    assert.equal(rankFor(0, 10), 'pathfinder');
+    assert.equal(rankFor(0, 0), 'pathfinder');
+  });
+
+  it('ranks by the exact score, never a rounded percentage (#42)', () => {
+    assert.equal(rankFor(199, 200), 'galacticCartographer', '99.5 % is not perfect');
+    assert.equal(rankFor(149, 200), 'seasonedTraveller', '74.5 % is below 75 %');
+    assert.equal(rankFor(99, 200), 'pathfinder', '49.5 % is below 50 %');
+    assert.equal(rankFor(150, 200), 'galacticCartographer');
+    assert.equal(rankFor(100, 200), 'seasonedTraveller');
+  });
+
+  it('shows 100 % only for a perfect score and 0 % only for none right (#42)', () => {
+    assert.equal(scorePercent(200, 200), 100);
+    assert.equal(scorePercent(199, 200), 99);
+    assert.equal(scorePercent(1, 300), 1);
+    assert.equal(scorePercent(0, 300), 0);
+    assert.equal(scorePercent(1, 3), 33);
+    assert.equal(scorePercent(2, 3), 67);
+    assert.equal(scorePercent(0, 0), 0);
+    assert.equal(displayPercent(99.995), 99);
+    assert.equal(displayPercent(0.2), 1);
+    assert.equal(displayPercent(100), 100);
+    assert.equal(displayPercent(0), 0);
+    assert.equal(displayPercent(74.5), 75);
   });
 });

@@ -491,7 +491,7 @@ export const QuizResult = object({
   length: QuizLength,
   score: Type.Integer({ description: 'Correct answers, as graded by the server.' }),
   total: Type.Integer({ description: 'Graded answers.' }),
-  percent: Type.Integer({ description: '0 to 100, rounded.' }),
+  percent: Type.Integer({ description: '0 to 100, rounded; 100 only for a perfect score and 0 only for none right.' }),
   finishedAt: Type.String({ format: 'date-time' }),
 }, "A finished quiz in the member's history.");
 
@@ -525,8 +525,8 @@ export const MemberStats = Type.Array(object({
   categoryId: Type.String({ format: 'uuid' }),
   categoryName: Type.String(),
   plays: Type.Integer(),
-  bestPercent: Type.Integer({ description: '0 to 100, rounded.' }),
-  averagePercent: Type.Integer({ description: 'The mean of the percentages, 0 to 100, rounded.' }),
+  bestPercent: Type.Integer({ description: '0 to 100, rounded; 100 only for a perfect score and 0 only for none right.' }),
+  averagePercent: Type.Integer({ description: 'The mean of the exact percentages, 0 to 100, rounded; 100 only when every play was perfect and 0 only when none had a right answer.' }),
   lastPlayedAt: Type.String({ format: 'date-time' }),
 }), { description: 'Per category that still exists, the most recently played first (a plain array, bounded by the number of categories, API-8).' });
 

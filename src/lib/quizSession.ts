@@ -1,5 +1,5 @@
 import type { PublicQuestion } from './api.js';
-import { isCorrectSelection, rankForPercent, type Rank } from './quiz.js';
+import { isCorrectSelection, rankFor, scorePercent, type Rank } from './quiz.js';
 
 /**
  * One quiz being played (#16), without a DOM (FE-8): the questions, the
@@ -86,13 +86,12 @@ export function choiceState(session: QuizSession, choiceId: string): ChoiceState
 export interface QuizResult {
   score: number;
   total: number;
-  /** 0 to 100, rounded. */
+  /** 0 to 100, rounded; 100 only for a perfect score and 0 only for none right (#42). */
   percent: number;
   rank: Rank;
 }
 
 export function quizResult(session: QuizSession): QuizResult {
   const total = session.questions.length;
-  const percent = total ? Math.round((session.score / total) * 100) : 0;
-  return { score: session.score, total, percent, rank: rankForPercent(percent) };
+  return { score: session.score, total, percent: scorePercent(session.score, total), rank: rankFor(session.score, total) };
 }
