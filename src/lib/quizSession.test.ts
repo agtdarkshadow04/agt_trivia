@@ -76,3 +76,13 @@ describe('a quiz session (#16)', () => {
     assert.deepEqual(quizResult(startSession([])), { score: 0, total: 0, percent: 0, rank: 'pathfinder' });
   });
 });
+
+describe('the answers a member result sends (#21)', () => {
+  it('records each locked answer in order, and nothing before locking', () => {
+    let session = choose(startSession([single, multi]), 'b');
+    assert.deepEqual(session.answers, []);
+    session = nextQuestion(lockAnswer(session));
+    session = lockAnswer(choose(choose(session, 'e'), 'c'));
+    assert.deepEqual(session.answers, [{ questionId: 'q1', choiceIds: ['b'] }, { questionId: 'q2', choiceIds: ['e', 'c'] }]);
+  });
+});

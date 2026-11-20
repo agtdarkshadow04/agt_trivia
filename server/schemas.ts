@@ -481,3 +481,51 @@ const categoryFields = {
 export const CategoryCreateBody = object(categoryFields);
 export const CategoryReplaceBody = object({ ...categoryFields, version: Type.Integer({ minimum: 1, description: 'The category version that was read; `409 conflict` when it has changed since.' }) });
 export const CategoryDeleteQuery = object({ version: Type.String({ pattern: '^[1-9][0-9]{0,9}$', description: 'The category version that was read; `409 conflict` when it has changed since.' }) });
+
+// --- Member score history (#21) ------------------------------------------------
+
+export const QuizResult = object({
+  id: Type.String({ format: 'uuid' }),
+  categoryId: Type.Union([Type.String({ format: 'uuid' }), Type.Null()], { description: 'Null once the category has been deleted.' }),
+  categoryName: Type.String({ description: "The category's name when the quiz was played." }),
+  length: QuizLength,
+  score: Type.Integer({ description: 'Correct answers, as graded by the server.' }),
+  total: Type.Integer({ description: 'Graded answers.' }),
+  percent: Type.Integer({ description: '0 to 100, rounded.' }),
+  finishedAt: Type.String({ format: 'date-time' }),
+}, "A finished quiz in the member's history.");
+
+export const ResultCreateBody = object({
+  categoryId: Type.String({ maxLength: 64 }),
+  length: QuizLength,
+  answers: Type.Array(object({
+    questionId: Type.String({ maxLength: 64 }),
+    choiceIds: Type.Array(Type.String({ maxLength: 64 }), { maxItems: 4, description: 'The chosen answers; empty counts as wrong.' }),
+  }), { maxItems: 1000, description: 'One per question played, each question once, at most as many as the category has approved questions.' }),
+});
+
+export const ResultCreated = object({
+  result: QuizResult,
+  skippedQuestionIds: Type.Array(Type.String({ format: 'uuid' }), { description: 'Questions that are no longer approved: their answers were left out of the score.' }),
+  notices: Type.Array(Type.Ref('FieldError'), { description: 'Non-blocking warnings (API-2); always empty for results.' }),
+});
+
+export const ResultPage = object({
+  items: Type.Array(QuizResult),
+  nextCursor: Type.Union([Type.String(), Type.Null()]),
+}, 'Newest first (API-8).');
+
+export const ResultListQuery = object({
+  limit: Type.Optional(Type.String({ pattern: '^[1-9][0-9]{0,2}$', description: '1 to 200; 50 by default (API-8).' })),
+  cursor: Type.Optional(Type.String({ maxLength: 512, description: 'The `nextCursor` of the previous page (API-8).' })),
+  categoryId: Type.Optional(Type.String({ maxLength: 64, description: 'Only the results of this category.' })),
+});
+
+export const MemberStats = Type.Array(object({
+  categoryId: Type.String({ format: 'uuid' }),
+  categoryName: Type.String(),
+  plays: Type.Integer(),
+  bestPercent: Type.Integer({ description: '0 to 100, rounded.' }),
+  averagePercent: Type.Integer({ description: 'The mean of the percentages, 0 to 100, rounded.' }),
+  lastPlayedAt: Type.String({ format: 'date-time' }),
+}), { description: 'Per category that still exists, the most recently played first (a plain array, bounded by the number of categories, API-8).' });

@@ -6,17 +6,17 @@ import { COMMON_TRANSLATIONS, formatTranslation } from '../translations';
 import { Dialog } from './Dialog';
 import { DisplaySettings } from './DisplaySettings';
 import { useI18n } from './I18n';
-import { ClipboardCheckIcon, FolderIcon, LogInIcon, PencilIcon, SettingsIcon, UserRoundIcon } from './Icons';
+import { ClipboardCheckIcon, FolderIcon, LogInIcon, PencilIcon, SettingsIcon, TrophyIcon, UserRoundIcon } from './Icons';
 import { AccountDialog } from './MemberAccount';
 import { MaintenanceNotice } from './MaintenanceNotice';
 
-/** I18N-4: the reader's language and text size; the player UI shows no times yet, so no time zone. */
+/** I18N-4: the reader's language, time zone (for the score history's dates, #21) and text size. */
 function SettingsDialog({ onClose, returnFocusRef }: { onClose(): void; returnFocusRef: React.RefObject<HTMLButtonElement | null> }) {
   const { t } = useI18n();
   return (
     <Dialog title={t.settings.title} eyebrow={t.settings.eyebrow} onClose={onClose} closeLabel={t.settings.close} returnFocusRef={returnFocusRef}>
       <h3 className="settings-heading">{t.settings.display}</h3>
-      <DisplaySettings timeZone={false} />
+      <DisplaySettings />
     </Dialog>
   );
 }
@@ -68,6 +68,11 @@ export function Layout({ siteTitle, supportUrl, member, status, reviewCount, onH
           </a>
           <nav className="header-actions" aria-label={t.layout.mainNavigation}>
             {member && <span className="identity-badge">{member.displayName} · {t.roles[member.role]}</span>}
+            {member && (
+              <a className="button button-icon" href="/?page=scores" onClick={follow(() => onOpenPage('scores'))} aria-label={t.layout.myScores} title={t.layout.myScores}>
+                <TrophyIcon />
+              </a>
+            )}
             {member && canAuthor(member.role) && (
               <a className="button button-icon" href="/?page=questions" onClick={follow(() => onOpenPage('questions'))} aria-label={t.layout.myQuestions} title={t.layout.myQuestions}>
                 <PencilIcon />

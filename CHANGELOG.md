@@ -77,6 +77,10 @@ All notable changes to AGT Galactic Trivia are documented in this file. The form
 - **Category management**: Moderators create, edit and delete categories on the **Categories** page
   (`/?page=categories`), which lists them in display order with their questions counted by status. Changing a short
   name warns that old links break; a category with questions cannot be deleted until they are moved or deleted (#20).
+- **Score history**: a signed-in member's finished quiz is saved to their history automatically, graded by the
+  server. **My scores** (`/?page=scores`) shows their plays, best and average percentage per category and their
+  results, newest first; only they can see it, and **Clear history** deletes it. The Settings dialog now also sets
+  the time zone for these dates (#21).
 
 ### Changed
 

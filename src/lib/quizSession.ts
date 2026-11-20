@@ -18,10 +18,12 @@ export interface QuizSession {
   /** Whether the locked answer was right. */
   lastCorrect: boolean;
   score: number;
+  /** The locked answers so far, in order: what a member's result sends for grading on the server (#21). */
+  answers: readonly { questionId: string; choiceIds: readonly string[] }[];
 }
 
 export function startSession(questions: readonly PublicQuestion[]): QuizSession {
-  return { questions, index: 0, selected: [], locked: false, lastCorrect: false, score: 0 };
+  return { questions, index: 0, selected: [], locked: false, lastCorrect: false, score: 0, answers: [] };
 }
 
 /** More than one correct choice: players pick every correct answer (checkboxes). */
@@ -54,7 +56,13 @@ export function lockAnswer(session: QuizSession): QuizSession {
   const question = currentQuestion(session);
   if (!question || session.locked || !session.selected.length) return session;
   const correct = isCorrectSelection(session.selected, question.correctChoiceIds);
-  return { ...session, locked: true, lastCorrect: correct, score: session.score + (correct ? 1 : 0) };
+  return {
+    ...session,
+    locked: true,
+    lastCorrect: correct,
+    score: session.score + (correct ? 1 : 0),
+    answers: [...session.answers, { questionId: question.id, choiceIds: [...session.selected] }],
+  };
 }
 
 /** Moves on after the feedback: the next question, or the results after the last one. */

@@ -154,3 +154,26 @@ export interface CategoryBody {
   description: string;
   priority: number;
 }
+
+// --- Member score history (#21) ---------------------------------------------------
+
+export interface QuizResultRecord {
+  id: string;
+  /** Null once the category has been deleted. */
+  categoryId: string | null;
+  categoryName: string;
+  length: QuizLength;
+  score: number;
+  total: number;
+  percent: number;
+  finishedAt: string;
+}
+
+export interface CategoryStats {
+  categoryId: string;
+  categoryName: string;
+  plays: number;
+  bestPercent: number;
+  averagePercent: number;
+  lastPlayedAt: string;
+}

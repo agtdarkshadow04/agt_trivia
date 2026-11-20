@@ -202,11 +202,13 @@ function ScoreRing({ score, total, percent }: { score: number; total: number; pe
 }
 
 /** The results (#16): score, percentage and rank, then replay or choose another category. */
-export function Results({ category, session, onReplay, onAnother }: {
+export function Results({ category, session, onReplay, onAnother, children }: {
   category: PublicCategory;
   session: QuizSession;
   onReplay(): void;
   onAnother(): void;
+  /** Whether the result is saved to a member's history (#21). */
+  children?: React.ReactNode;
 }) {
   const { t, percent: formatPercent } = useI18n();
   const heading = useViewHeading('results');
@@ -218,6 +220,7 @@ export function Results({ category, session, onReplay, onAnother }: {
         <p className="eyebrow">{t.quiz.resultsEyebrow}</p>
         <h1 id="results-heading" ref={heading} tabIndex={-1}>{t.ranks[result.rank]}</h1>
         <p>{formatTranslation(t.quiz.resultText, { category: category.name, percent: formatPercent(result.percent) })}</p>
+        {children}
         <div className="form-actions">
           <button className="button button-primary button-with-icon" type="button" onClick={onReplay}><RotateCcwIcon />{t.quiz.replay}</button>
           <button className="button button-secondary" type="button" onClick={onAnother}>{t.quiz.chooseAnother}</button>
