@@ -259,8 +259,8 @@ describe('question authoring and review', () => {
     assert.equal(bad.statusCode, 400);
     assert.equal(bad.json().error, 'invalid_request');
 
-    assert.deepEqual((await as('author', 'GET', '/api/member/question-counts')).json(), { mine: { draft: 1, pending: 1, approved: 0, rejected: 0 }, reviewQueue: null });
-    assert.deepEqual((await as('moderator', 'GET', '/api/member/question-counts')).json(), { mine: { draft: 0, pending: 0, approved: 0, rejected: 0 }, reviewQueue: 1 });
+    assert.deepEqual((await as('author', 'GET', '/api/member/question-counts')).json(), { mine: { draft: 1, pending: 1, approved: 0, rejected: 0 }, reviewQueue: null, openReports: null });
+    assert.deepEqual((await as('moderator', 'GET', '/api/member/question-counts')).json(), { mine: { draft: 0, pending: 0, approved: 0, rejected: 0 }, reviewQueue: 1, openReports: 0 });
   });
 
   it('audits every change by question ID, status and changed field names, never the text (LOG-14)', async () => {

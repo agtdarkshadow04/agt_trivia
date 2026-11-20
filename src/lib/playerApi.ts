@@ -1,4 +1,4 @@
-import type { CategoryBody, CategoryStats, ManagedCategory, QuizResultRecord, MemberQuestion, MemberQuestionStatus, MemberSession, PublicCategory, PublicQuiz, PublicSettings, QuestionBody, QuestionCounts, QuestionPage, QuizLength } from './api.js';
+import type { CategoryBody, CategoryStats, ManagedCategory, QuizResultRecord, MemberQuestion, MemberQuestionStatus, MemberSession, PublicCategory, PublicQuiz, PublicSettings, QuestionBody, QuestionCounts, QuestionPage, QuestionReport, QuizLength } from './api.js';
 import type { FieldError } from './errors.js';
 import { ApiError, apiRequest } from './client.js';
 
@@ -124,3 +124,19 @@ export function listResults(query: { categoryId?: string; cursor?: string | null
 export const getMemberStats = () => apiRequest<CategoryStats[]>('/api/member/stats');
 
 export const clearResults = () => apiRequest<void>('/api/member/results', { method: 'DELETE' });
+
+// --- Question reports (#46) ----------------------------------------------------------
+
+export const reportQuestion = (questionId: string, reason: string, note: string) => (
+  apiRequest<QuestionReport>(`/api/member/questions/${encodeURIComponent(questionId)}/reports`, { method: 'POST', body: { reason, note } })
+);
+
+/** Moderators: the open reports, oldest first. */
+export function listReports(cursor: string | null = null) {
+  const search = cursor ? `?cursor=${encodeURIComponent(cursor)}` : '';
+  return apiRequest<{ items: QuestionReport[]; nextCursor: string | null }>(`/api/member/reports${search}`);
+}
+
+export const closeReport = (id: string, version: number, verb: 'resolve' | 'dismiss', resolutionNote: string) => (
+  apiRequest<QuestionReport>(`/api/member/reports/${encodeURIComponent(id)}/${verb}`, { method: 'POST', body: { version, resolutionNote } })
+);

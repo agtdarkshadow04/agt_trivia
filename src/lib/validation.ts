@@ -249,3 +249,40 @@ export function displayNameError(displayName: string, field = 'displayName'): Fi
   }
   return null;
 }
+
+// --- Question reports (#46) ---------------------------------------------------------
+
+/** Why a member reports a question. */
+export const REPORT_REASONS = ['wrong_answer', 'unclear', 'typo', 'outdated', 'other'] as const;
+export type ReportReason = typeof REPORT_REASONS[number];
+export type ReportStatus = 'open' | 'resolved' | 'dismissed';
+
+/** The limits of a report and of a Moderator's note on it, in Unicode code points. */
+export const reportLimits = {
+  note: { max: 500 },
+  resolutionNote: { max: 500 },
+} as const;
+
+export interface ReportInput {
+  reason: string;
+  note: string;
+}
+
+/** A report as stored: the note trimmed. */
+export function normalizeReport(input: ReportInput): ReportInput {
+  return { reason: input.reason, note: input.note.trim() };
+}
+
+/** A known reason, and a note of at most 500 characters, which "Something else" needs. */
+export function reportInputErrors(input: ReportInput): FieldError[] {
+  const reasonKnown = (REPORT_REASONS as readonly string[]).includes(input.reason);
+  return errorsOf(
+    input.reason ? (reasonKnown ? null : fieldError('reason', 'not_allowed', 'Choose one of the reasons.')) : fieldError('reason', 'required', 'Choose a reason.'),
+    input.reason === 'other' ? textError('note', input.note, reportLimits.note.max, 'The details') : optionalTextError('note', input.note, reportLimits.note.max, 'The details'),
+  );
+}
+
+/** A Moderator's optional note when resolving or dismissing a report. */
+export function resolutionNoteError(note: string): FieldError | null {
+  return optionalTextError('resolutionNote', note, reportLimits.resolutionNote.max, 'The note');
+}

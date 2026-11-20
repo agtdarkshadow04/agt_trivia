@@ -6,6 +6,7 @@ import { errorsOf, normalizeQuestion, questionErrors, questionLimits, questionNo
 import type { AppContext } from './context.js';
 import { HttpError } from './http.js';
 import { getCategory } from './repository/categories.js';
+import { openReportCount } from './repository/reports.js';
 import * as repo from './repository/questions.js';
 
 /**
@@ -137,7 +138,11 @@ export class QuestionService {
 
   counts(): QuestionCounts {
     this.requireAuthor();
-    return { mine: repo.questionCounts(this.db, this.member.id), reviewQueue: this.moderator ? repo.questionCounts(this.db, null).pending : null };
+    return {
+      mine: repo.questionCounts(this.db, this.member.id),
+      reviewQueue: this.moderator ? repo.questionCounts(this.db, null).pending : null,
+      openReports: this.moderator ? openReportCount(this.db) : null,
+    };
   }
 
   get(id: string): MemberQuestion {

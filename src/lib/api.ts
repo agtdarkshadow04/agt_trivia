@@ -1,3 +1,5 @@
+import type { ReportReason, ReportStatus } from './validation.js';
+
 /**
  * API types and helpers shared by the server and the browser (REPO-3, FE-2).
  */
@@ -134,6 +136,30 @@ export interface QuestionCounts {
   mine: Record<MemberQuestionStatus, number>;
   /** Every pending question, for Moderators; null for Editors. */
   reviewQueue: number | null;
+  /** Every open question report, for Moderators; null for Editors (#46). */
+  openReports: number | null;
+}
+
+/** A member's report of a problem with an approved question (#46), as Moderators see it. */
+export interface QuestionReport {
+  id: string;
+  questionId: string;
+  questionPrompt: string;
+  questionStatus: MemberQuestionStatus;
+  categoryId: string;
+  categoryName: string;
+  reason: ReportReason;
+  note: string;
+  status: ReportStatus;
+  /** The reporting member, or null once deleted. */
+  reportedBy: string | null;
+  reportedByName: string | null;
+  resolvedByName: string | null;
+  resolvedAt: string | null;
+  resolutionNote: string;
+  version: number;
+  createdAt: string;
+  updatedAt: string;
 }
 
 /** The body of a new or changed question. */

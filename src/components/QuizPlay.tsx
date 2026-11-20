@@ -5,6 +5,7 @@ import { choiceState, currentQuestion, isMultiAnswer, quizResult, reviewAnswers,
 import { formatTranslation } from '../translations';
 import { useI18n } from './I18n';
 import { ArrowLeftIcon, ArrowRightIcon, CheckCircleIcon, RotateCcwIcon, XCircleIcon } from './Icons';
+import { ReportButton } from './QuestionReports';
 import { useViewHeading } from './useViewHeading';
 
 /** The way back to the categories, above every view of a category. */
@@ -87,9 +88,11 @@ const answerClass: Record<ChoiceState, string> = {
  * for a multi-answer one; Lock answer grades it and shows the feedback, then
  * Next question (or View results) moves on.
  */
-export function QuestionView({ category, session, onChoose, onLock, onNext }: {
+export function QuestionView({ category, session, reportable = false, onChoose, onLock, onNext }: {
   category: PublicCategory;
   session: QuizSession;
+  /** A signed-in member can report a problem with the question (#46). */
+  reportable?: boolean;
   onChoose(choiceId: string, checked: boolean): void;
   onLock(): void;
   onNext(): void;
@@ -174,6 +177,7 @@ export function QuestionView({ category, session, onChoose, onLock, onNext }: {
           </button>
         </div>
       </form>
+      {reportable && <div className="quiz-report"><ReportButton questionId={question.id} prompt={question.prompt} /></div>}
     </section>
   );
 }
@@ -210,7 +214,7 @@ function ScoreRing({ score, total, percent }: { score: number; total: number; pe
  * words (A11Y-1). Closed until opened; a native disclosure, so the keyboard
  * and screen readers work without extra code.
  */
-function AnswerReview({ session }: { session: QuizSession }) {
+function AnswerReview({ session, reportable }: { session: QuizSession; reportable: boolean }) {
   const { t, number } = useI18n();
   const items = reviewAnswers(session);
   if (!items.length) return null;
@@ -227,6 +231,7 @@ function AnswerReview({ session }: { session: QuizSession }) {
             </span>
             <p>{formatTranslation(t.quiz.reviewChosen, { answers: item.chosen.join(', ') })}</p>
             {!item.right && <p>{formatTranslation(item.correct.length > 1 ? t.quiz.correctAnswers : t.quiz.correctAnswer, { answers: item.correct.join(', ') })}</p>}
+            {reportable && <div><ReportButton questionId={item.questionId} prompt={item.prompt} /></div>}
           </li>
         ))}
       </ol>
@@ -235,9 +240,11 @@ function AnswerReview({ session }: { session: QuizSession }) {
 }
 
 /** The results (#16): score, percentage and rank, then replay or choose another category, and the review (#44). */
-export function Results({ category, session, onReplay, onAnother, children }: {
+export function Results({ category, session, reportable = false, onReplay, onAnother, children }: {
   category: PublicCategory;
   session: QuizSession;
+  /** A signed-in member can report a problem with each question (#46). */
+  reportable?: boolean;
   onReplay(): void;
   onAnother(): void;
   /** Whether the result is saved to a member's history (#21). */
@@ -259,7 +266,7 @@ export function Results({ category, session, onReplay, onAnother, children }: {
           <button className="button button-secondary" type="button" onClick={onAnother}>{t.quiz.chooseAnother}</button>
         </div>
       </div>
-      <AnswerReview session={session} />
+      <AnswerReview session={session} reportable={reportable} />
     </section>
   );
 }

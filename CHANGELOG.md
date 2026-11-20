@@ -13,6 +13,9 @@ All notable changes to AGT Galactic Trivia are documented in this file. The form
 - `GET /api/categories/{id}/quiz` returns the quiz's signed `attempt`, and `POST /api/member/results` takes its token
   as `attemptToken` (error `attempt_invalid` when it does not fit). The key that signs attempts is generated at
   startup and kept in the database, so backups carry it (#45).
+- **Report a problem** with a question: signed-in members report a question while they play it or from the answer
+  review, with a reason and optional details. Moderators see the open reports under **Reported questions** on the
+  Review queue page, counted in the header, and mark them resolved or dismiss them (#46).
 
 ### Changed
 

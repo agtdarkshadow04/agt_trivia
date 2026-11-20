@@ -221,6 +221,12 @@ img { max-width: 100%; }
 .question-status-rejected { border-color: var(--agt-red); }
 .question-note { padding: 0.75rem 1rem; border-left: 3px solid var(--agt-orange); border-radius: var(--radius-sm); background: var(--surface-soft); }
 .question-note p { margin: 0.35rem 0 0; line-height: 1.5; white-space: pre-line; }
+.reports-panel { display: grid; gap: 1rem; margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--line); }
+.player .reports-panel > h2 { margin: 0; }
+.player .report-card h3.question-card-prompt { margin: 0; color: #fff; font-size: 1.05rem; line-height: 1.4; letter-spacing: 0.02em; text-transform: none; }
+.quiz-report { margin-top: 0.5rem; }
+.report-action { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; }
+.report-sent { color: var(--muted); font-size: 0.85rem; }
 .question-workspace { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); align-items: start; gap: 1.5rem; }
 .question-form-column, .question-side-column { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1.25rem; min-width: 0; }
 .question-form { margin-top: 0; }

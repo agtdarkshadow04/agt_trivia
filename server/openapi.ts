@@ -62,6 +62,7 @@ export function registerOpenApi(app: FastifyInstance, version: string) {
         { name: 'admin', description: 'The admin dashboard.' },
         { name: 'members', description: "The Admin's management of member accounts (#17)." },
         { name: 'questions', description: 'Question authoring and review by Editors and Moderators (#19).' },
+        { name: 'reports', description: "Members' reports of problems with questions, handled by Moderators (#46)." },
         { name: 'categories', description: "The Moderators' category management (#20)." },
         { name: 'results', description: "Each member's own score history (#21)." },
       ],

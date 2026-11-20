@@ -85,6 +85,10 @@ export function CheckCircleIcon(props: IconProps) {
   return <Icon name="circle-check" {...props}><circle cx="12" cy="12" r="10" /><path d="m9 12 2 2 4-4" /></Icon>;
 }
 
+export function FlagIcon(props: IconProps) {
+  return <Icon name="flag" {...props}><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" /><line x1="4" x2="4" y1="22" y2="15" /></Icon>;
+}
+
 export function XCircleIcon(props: IconProps) {
   return <Icon name="circle-x" {...props}><circle cx="12" cy="12" r="10" /><path d="m15 9-6 6" /><path d="m9 9 6 6" /></Icon>;
 }
