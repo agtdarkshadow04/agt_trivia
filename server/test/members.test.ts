@@ -342,6 +342,73 @@ describe("the Admin's Members tab (#17)", () => {
   });
 });
 
+describe('the last sign-in on the Members tab (#48)', () => {
+  it('records each successful sign-in, never a failed one, without changing updatedAt', async () => {
+    const { app, context, close } = server();
+    try {
+      const cookie = await adminCookie(context);
+      const created = await createMember(context, 'last.seen');
+      assert.equal(created.lastSignInAt, null);
+      const read = async () => (await app.inject({ url: '/api/admin/members?q=last.seen', headers: { cookie } })).json().items[0] as { lastSignInAt: string | null; updatedAt: string };
+      assert.equal((await memberLogin(app, 'last.seen', 'wrong-password-123')).statusCode, 401);
+      assert.equal((await read()).lastSignInAt, null, 'a failed sign-in records nothing');
+      const before = Date.now();
+      assert.equal((await memberLogin(app, 'LAST.SEEN')).statusCode, 200);
+      const first = await read();
+      assert.ok(first.lastSignInAt && Date.parse(first.lastSignInAt) >= before - 1000);
+      assert.equal(first.updatedAt, created.updatedAt, 'the account itself did not change');
+      await new Promise((resolve) => setTimeout(resolve, 5));
+      await memberLogin(app, 'last.seen');
+      assert.ok(Date.parse((await read()).lastSignInAt!) > Date.parse(first.lastSignInAt));
+      // An inactive member's refused sign-in records nothing either.
+      const id = created.id;
+      await app.inject({ method: 'PUT', url: `/api/admin/members/${id}`, headers: { cookie, ...csrf }, payload: { displayName: created.displayName, role: 'Player', isActive: false } });
+      const stamp = (await read()).lastSignInAt;
+      assert.equal((await memberLogin(app, 'last.seen')).statusCode, 401);
+      assert.equal((await read()).lastSignInAt, stamp);
+    } finally {
+      await close();
+    }
+  });
+
+  it('refuses a member sign-in during a restore, as every data write (BAK-8)', async () => {
+    const { app, context, close } = server();
+    try {
+      await createMember(context, 'in.restore');
+      await context.operations.begin('restore');
+      const response = await memberLogin(app, 'in.restore');
+      assert.equal(response.statusCode, 503);
+      assert.equal(response.json().error, 'maintenance');
+      context.operations.end('idle');
+      assert.equal((await memberLogin(app, 'in.restore')).statusCode, 200);
+    } finally {
+      await close();
+    }
+  });
+
+  it('lists the members who never signed in or not for idleDays', async () => {
+    const { app, context, close } = server();
+    try {
+      const cookie = await adminCookie(context);
+      for (const name of ['idle.never', 'idle.recent', 'idle.old']) await createMember(context, name);
+      await memberLogin(app, 'idle.recent');
+      await memberLogin(app, 'idle.old');
+      const longAgo = new Date(Date.now() - 100 * 24 * 60 * 60 * 1000).toISOString();
+      context.db.connection.prepare("UPDATE members SET last_sign_in_at = ? WHERE username = 'idle.old'").run(longAgo);
+      const names = async (query: string) => ((await app.inject({ url: `/api/admin/members?q=idle.${query}`, headers: { cookie } })).json().items as { username: string }[])
+        .map((member) => member.username).sort();
+      assert.deepEqual(await names(''), ['idle.never', 'idle.old', 'idle.recent']);
+      assert.deepEqual(await names('&idleDays=30'), ['idle.never', 'idle.old']);
+      assert.deepEqual(await names('&idleDays=365'), ['idle.never']);
+      for (const query of ['?idleDays=0', '?idleDays=3651', '?idleDays=abc', '?idleDays=-1']) {
+        assert.equal((await app.inject({ url: `/api/admin/members${query}`, headers: { cookie } })).statusCode, 400, query);
+      }
+    } finally {
+      await close();
+    }
+  });
+});
+
 describe('member sessions in backups (BAK-2, BAK-4)', () => {
   it('backs members up without their sessions, and a restore signs them out', async () => {
     const { app, context, close } = server('', { file: true });

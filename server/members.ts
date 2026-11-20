@@ -59,12 +59,12 @@ export class MemberAuthService {
   }
 
   /**
-   * Signs a local member in by username, compared lowercase (AUTH-3). An
-   * unknown username still checks a dummy hash, so timing does not tell; an
-   * inactive member cannot sign in. Only session rows are written, which are
-   * not data writes (BAK-8).
+   * Step 1 of a local sign-in, before the data write, so scrypt never holds
+   * the write lock (BAK-8): the member whose username, compared lowercase,
+   * and password match (AUTH-3). An unknown username still checks a dummy
+   * hash, so timing does not tell; an inactive member cannot sign in.
    */
-  async login(username: string, password: string, log: AuthLog): Promise<MemberSessionResult> {
+  async verifyLogin(username: string, password: string, log: AuthLog): Promise<AdminMember> {
     const normalized = normalizeMemberUsername(username);
     const found = normalized.length <= 64 ? repo.localMemberByUsername(this.context.db, normalized) : null;
     if (!found) {
@@ -77,7 +77,21 @@ export class MemberAuthService {
       invalidCredentials();
     }
     if (!found.member.isActive) invalidCredentials();
-    return this.newSession(found.member);
+    return found.member;
+  }
+
+  /**
+   * Step 2, inside the data write: the member must still be active (the Admin
+   * may have changed them meanwhile); records the sign-in (#48) and starts a
+   * session, in one transaction.
+   */
+  completeLogin(verified: AdminMember): MemberSessionResult {
+    return this.context.db.transaction((sqlite) => {
+      const member = repo.getMember(this.context.db, verified.id);
+      if (!member || !member.isActive || member.authSource !== 'local') invalidCredentials();
+      repo.recordMemberSignIn(this.context.db, member.id);
+      return this.newSession(member, sqlite);
+    });
   }
 
   /** The active member of a session token, or null; an AGT member's session counts only while AGT sign-in is available. */
@@ -120,6 +134,7 @@ export class MemberAuthService {
       } else {
         member = repo.insertIamMember(this.context.db, randomUUID(), input);
       }
+      repo.recordMemberSignIn(this.context.db, member.id);
       return this.newSession(member, sqlite, traveller.expiresInSeconds);
     });
   }
@@ -180,10 +195,12 @@ export interface MemberUpdate {
 export class AdminMemberService {
   constructor(private readonly context: Pick<AppContext, 'db'>) {}
 
-  list(query: { limit?: number; cursor?: string; q?: string }) {
+  /** `idleDays` (#48) keeps the members who never signed in or not for that many days. */
+  list(query: { limit?: number; cursor?: string; q?: string; idleDays?: number }, now = new Date()) {
     const after = query.cursor ? decodeMemberCursor(query.cursor) : null;
     if (query.cursor && !after) throw new HttpError(400, 'invalid_request', 'The cursor is not valid.');
-    const page = repo.listMembers(this.context.db, { limit: query.limit ?? 50, after, search: (query.q ?? '').trim() });
+    const signedInBefore = query.idleDays ? new Date(now.getTime() - query.idleDays * 24 * 60 * 60 * 1000).toISOString() : null;
+    const page = repo.listMembers(this.context.db, { limit: query.limit ?? 50, after, search: (query.q ?? '').trim(), signedInBefore });
     const last = page.members.at(-1);
     return { items: page.members, nextCursor: page.more && last ? encodeMemberCursor({ createdAt: last.createdAt, id: last.id }) : null };
   }

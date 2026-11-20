@@ -10,6 +10,7 @@ import questionAuthoringMigration from './migrations/0006_question_authoring.sql
 import quizResultsMigration from './migrations/0007_quiz_results.sql';
 import quizAttemptsMigration from './migrations/0008_quiz_attempts.sql';
 import questionReportsMigration from './migrations/0009_question_reports.sql';
+import memberLastSignInMigration from './migrations/0010_member_last_sign_in.sql';
 
 /**
  * The SQLite database (DATA-1, DATA-5): one file in `storage.dataDir`, opened
@@ -40,6 +41,7 @@ export const MIGRATIONS: readonly Migration[] = [
   { version: 7, name: '0007_quiz_results', sql: quizResultsMigration },
   { version: 8, name: '0008_quiz_attempts', sql: quizAttemptsMigration },
   { version: 9, name: '0009_question_reports', sql: questionReportsMigration },
+  { version: 10, name: '0010_member_last_sign_in', sql: memberLastSignInMigration },
 ];
 
 /** The schema version this build creates and supports. */

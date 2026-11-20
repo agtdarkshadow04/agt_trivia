@@ -133,6 +133,9 @@ export async function createMember(context: AppContext, username: string, role: 
 
 /** Signs a member in and returns a `cookie` header value with the member session. */
 export async function memberCookie(context: AppContext, username: string) {
-  const session = await new MemberAuthService(context).login(username, testMemberPassword, silentLog);
+  const service = new MemberAuthService(context);
+  const member = await service.verifyLogin(username, testMemberPassword, silentLog);
+  // Recording the sign-in is a data write (#48, BAK-8).
+  const session = await withDataWrite(context.operations, () => service.completeLogin(member));
   return `${memberSessionCookie}=${session.token}`;
 }

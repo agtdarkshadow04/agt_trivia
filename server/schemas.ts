@@ -352,6 +352,7 @@ export const AdminMember = object({
   iamPermission: Type.Union([Type.String(), Type.Null()], { description: "An AGT member's AGT IAM tier at their last sign-in; null for a local member." }),
   createdAt: Type.String({ format: 'date-time' }),
   updatedAt: Type.String({ format: 'date-time' }),
+  lastSignInAt: Type.Union([Type.String({ format: 'date-time' }), Type.Null()], { description: 'The last successful sign-in, local or with an AGT account (#48); null when the member never signed in.' }),
 }, 'A member account as the Admin sees it.');
 
 export const MemberResult = object({
@@ -368,6 +369,7 @@ export const MemberListQuery = object({
   limit: Type.Optional(Type.String({ pattern: '^[1-9][0-9]{0,2}$', description: '1 to 200; 50 by default (API-8).' })),
   cursor: Type.Optional(Type.String({ maxLength: 512, description: 'The `nextCursor` of the previous page (API-8).' })),
   q: Type.Optional(Type.String({ maxLength: 120, description: 'Part of a username or display name, ignoring ASCII case.' })),
+  idleDays: Type.Optional(Type.String({ pattern: '^[1-9][0-9]{0,3}$', description: 'Only members who never signed in or not in this many days (1 to 3650, #48).' })),
 });
 
 export const MemberIdParams = object({ id: Type.String({ description: 'The member ID (a UUIDv4); anything else answers 404.' }) });
