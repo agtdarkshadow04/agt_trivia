@@ -210,6 +210,11 @@ export function questionNotices(input: Pick<QuestionInput, 'prompt'>): FieldErro
     : [];
 }
 
+/** A Moderator's reason for rejecting a question (#19): required, at most 1000 characters. */
+export function reviewNoteError(note: string): FieldError | null {
+  return textError('reviewNote', note, questionLimits.reviewNote.max, 'The review note');
+}
+
 // --- Member accounts (#17) ----------------------------------------------------------
 
 /** A member's username: 3–64 lowercase letters, digits, dots, underscores or hyphens (stored lowercase). */

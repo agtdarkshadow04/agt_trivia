@@ -23,6 +23,7 @@ secrets in `.env`.
 - [Configuration reference](#configuration-reference)
 - [Admin dashboard](#admin-dashboard)
 - [Playing](#playing)
+- [Writing and reviewing questions](#writing-and-reviewing-questions)
 - [Members and roles](#members-and-roles)
 - [AGT sign-in](#agt-sign-in)
 - [Backup & restore](#backup--restore)
@@ -292,7 +293,36 @@ Anonymous play happens entirely in the browser and saves nothing. The **Settings
 language and the text size (1× to 2×); they are stored in this browser and shared with the admin dashboard. The
 questions and categories themselves stay in English, in every language.
 
-Writing and reviewing questions, and score history arrive in #19 to #21.
+Score history arrives in #21.
+
+## Writing and reviewing questions
+
+Editors and Moderators write questions; Moderators review them. A question goes through these statuses:
+
+| Status | Meaning |
+| --- | --- |
+| **Draft** | Being written. New questions start here; so does a rejected question once it is changed, and an approved one a Moderator unpublishes |
+| **Waiting for review** | Submitted. Its author can still change it |
+| **Approved** | In the public quiz. Locked for Editors; a Moderator's change keeps it approved |
+| **Rejected** | Sent back with a Moderator's note, which only the author and Moderators see. The author changes it and submits it again |
+
+**My questions** (the pencil button in the header, `/?page=questions`) lists the member's own questions with their
+status and any review note; Moderators can show every member's questions. **New question** opens the form: a
+category, the question (questions over 15 words get a notice), 2 to 4 answers with every correct one marked, and a
+live preview as players see it, next to the writing guidelines (ask about things that do not change over time,
+credit the author, change only your own questions, write in English). **Save draft** keeps it; **Save and submit**
+sends it for review. Players see the question credited to the author's display name ("Submitted by …"); only
+Moderators can change or remove the credit. A question whose text another question of the category already has
+gets a notice, not an error.
+
+The **Review queue** (the clipboard button in the header, with the number of questions waiting, `/?page=review`)
+lists the submitted questions, newest first. Moderators **approve** a question, which adds it to the quiz at once,
+or **reject** it with a required note for its author. Moderators may approve their own questions. They can also
+edit, **unpublish** (back to a draft, out of the quiz) and delete any question; Editors delete their own until they
+are approved.
+
+If two people change the same question at once, the second change is refused with a message to reload, and
+nothing is overwritten. Players and visitors never see drafts, submitted or rejected questions, or review notes.
 
 ## Members and roles
 
@@ -303,8 +333,8 @@ Anonymous visitors can still play without an account.
 | Role | Can |
 | --- | --- |
 | **Player** | Play and keep a score history (#21) |
-| **Editor** | What a Player can, plus write questions and edit or delete their own until they are approved (#19) |
-| **Moderator** | What an Editor can, plus review (approve, reject, edit, unpublish, delete) any question and manage the categories (#19, #20) |
+| **Editor** | What a Player can, plus write questions and submit them, and edit or delete their own until they are approved |
+| **Moderator** | What an Editor can, plus review (approve, reject, edit, unpublish, delete) any question, their own included, and manage the categories (#20) |
 
 There is no self-registration: the Admin creates member accounts in the **Members** tab, with a username (3 to 64
 lowercase letters, digits, dots, underscores or hyphens), a display name, a role and a first password. Members

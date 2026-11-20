@@ -1,4 +1,5 @@
-import type { MemberSession, PublicCategory, PublicQuiz, PublicSettings, QuizLength } from './api.js';
+import type { MemberQuestion, MemberQuestionStatus, MemberSession, PublicCategory, PublicQuiz, PublicSettings, QuestionBody, QuestionCounts, QuestionPage, QuizLength } from './api.js';
+import type { FieldError } from './errors.js';
 import { ApiError, apiRequest } from './client.js';
 
 /** The player UI's API calls, all through `apiRequest()` (FE-2). Nothing is cached in the browser (FE-3). */
@@ -36,4 +37,51 @@ export const changeMemberPassword = (currentPassword: string, password: string) 
 /** AGT sign-in (#18): the password goes only to AGT IAM, through the server. */
 export const memberIamSignIn = (travellerName: string, password: string) => (
   apiRequest<MemberSession>('/api/member/iam/login', { method: 'POST', body: { travellerName, password } })
+);
+
+// --- Question authoring and review (#19) -------------------------------------------
+
+export interface QuestionQuery {
+  status?: MemberQuestionStatus;
+  mine?: boolean;
+  cursor?: string | null;
+  limit?: number;
+}
+
+export interface QuestionResult {
+  question: MemberQuestion;
+  notices: FieldError[];
+}
+
+export function listQuestions(query: QuestionQuery = {}) {
+  const params = new URLSearchParams();
+  if (query.status) params.set('status', query.status);
+  if (query.mine) params.set('mine', 'true');
+  if (query.cursor) params.set('cursor', query.cursor);
+  if (query.limit) params.set('limit', String(query.limit));
+  const search = params.toString();
+  return apiRequest<QuestionPage>(`/api/member/questions${search ? `?${search}` : ''}`);
+}
+
+export const getQuestionCounts = () => apiRequest<QuestionCounts>('/api/member/question-counts');
+
+export const createQuestion = (body: QuestionBody) => (
+  apiRequest<QuestionResult>('/api/member/questions', { method: 'POST', body })
+);
+
+export const replaceQuestion = (id: string, version: number, body: QuestionBody) => (
+  apiRequest<QuestionResult>(`/api/member/questions/${encodeURIComponent(id)}`, { method: 'PUT', body: { ...body, version } })
+);
+
+export const deleteQuestion = (id: string, version: number) => (
+  apiRequest<void>(`/api/member/questions/${encodeURIComponent(id)}?version=${version}`, { method: 'DELETE' })
+);
+
+/** submit, approve or unpublish. */
+export const changeQuestionStatus = (id: string, version: number, verb: 'submit' | 'approve' | 'unpublish') => (
+  apiRequest<MemberQuestion>(`/api/member/questions/${encodeURIComponent(id)}/${verb}`, { method: 'POST', body: { version } })
+);
+
+export const rejectQuestion = (id: string, version: number, reviewNote: string) => (
+  apiRequest<MemberQuestion>(`/api/member/questions/${encodeURIComponent(id)}/reject`, { method: 'POST', body: { version, reviewNote } })
 );

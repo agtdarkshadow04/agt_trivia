@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { MemberSession, PublicCategory, PublicQuiz, PublicSettings, QuizLength } from './lib/api';
-import { getMemberSession, getPublicSettings, getQuiz, listCategories } from './lib/playerApi';
+import { getMemberSession, getPublicSettings, getQuestionCounts, getQuiz, listCategories } from './lib/playerApi';
+import { canAuthor } from './lib/questionRules';
 import { choose, isFinished, lockAnswer, nextQuestion, startSession, type QuizSession } from './lib/quizSession';
 import { categoryParam, findCategory, pageParam, searchForPage, searchWithCategory, type Page } from './lib/routes';
 import { COMMON_TRANSLATIONS, formatTranslation } from './translations';
@@ -10,6 +11,7 @@ import { RefreshIcon } from './components/Icons';
 import { Layout } from './components/Layout';
 import { SignIn } from './components/MemberAccount';
 import { BackToCategories, LengthChoice, QuestionView, Results } from './components/QuizPlay';
+import { QuestionWorkshop } from './components/QuestionWorkshop';
 
 type Data =
   | { status: 'loading' }
@@ -51,6 +53,8 @@ export function App() {
   // #17: the signed-in member; undefined until the session has been read.
   const [member, setMember] = useState<MemberSession | null | undefined>(undefined);
   const [status, setStatus] = useState('');
+  // #19: the questions waiting for review, for a Moderator's header.
+  const [reviewCount, setReviewCount] = useState<number | null>(null);
 
   useEffect(() => {
     getMemberSession().then(setMember, () => setMember(null));
@@ -67,6 +71,24 @@ export function App() {
   }, []);
 
   useEffect(() => { void load(); }, [load]);
+
+  /** After an approval or unpublishing the categories' question counts change; reload them quietly. */
+  const reloadCategories = useCallback(async () => {
+    try {
+      const categories = await listCategories();
+      setData((current) => (current.status === 'ready' ? { ...current, categories } : current));
+    } catch {
+      // The old counts stay until the next load.
+    }
+  }, []);
+
+  const memberId = member?.id ?? null;
+  const memberRole = member?.role ?? null;
+  const refreshCounts = useCallback(() => {
+    if (memberRole !== 'Moderator') { setReviewCount(null); return; }
+    getQuestionCounts().then((counts) => setReviewCount(counts.reviewQueue), () => setReviewCount(null));
+  }, [memberRole]);
+  useEffect(() => { refreshCounts(); }, [refreshCounts, memberId]);
 
   // Back and Forward move between the list and the categories (FE-4).
   useEffect(() => {
@@ -104,13 +126,16 @@ export function App() {
   const navigate = useCallback((shortName: string | null) => { setStatus(''); go(searchWithCategory('', shortName)); }, [go]);
   const openPage = useCallback((target: Page) => { setStatus(''); go(searchForPage(target)); }, [go]);
 
-  // A signed-in member has nothing to do on the sign-in page (FE-4).
+  // A signed-in member has nothing to do on the sign-in page, and only Editors and Moderators have question
+  // pages (Moderators the review queue); anyone else goes back to the game (FE-4).
+  const allowedPage = page === null || member === undefined
+    || (page === 'login' ? member === null : page === 'questions' ? member !== null && canAuthor(member.role) : member?.role === 'Moderator');
   useEffect(() => {
-    if (page === 'login' && member) {
+    if (!allowedPage) {
       window.history.replaceState(window.history.state, '', window.location.pathname);
       setSearch('');
     }
-  }, [page, member]);
+  }, [allowedPage]);
 
   const startQuiz = useCallback(async (target: PublicCategory, length: QuizLength) => {
     setPlay({ status: 'loading', length });
@@ -127,7 +152,13 @@ export function App() {
   ));
 
   let content;
-  if (page === 'login') {
+  if (!allowedPage || (page !== null && page !== 'login' && member === undefined)) {
+    content = <LoadState message={t.common.loading} />;
+  } else if ((page === 'questions' || page === 'review') && member) {
+    content = data.status === 'ready'
+      ? <QuestionWorkshop mode={page} member={member} categories={data.categories} onChanged={() => { refreshCounts(); void reloadCategories(); }} />
+      : data.status === 'error' ? <LoadState message="" cause={data.cause} onRetry={() => void load()} /> : <LoadState message={t.common.loading} />;
+  } else if (page === 'login') {
     content = member === null
       ? <SignIn agtSignIn={data.status === 'ready' && data.settings.agtSignIn} onSignedIn={(signedIn) => { setMember(signedIn); go(''); setStatus(formatTranslation(t.login.signedIn, { name: signedIn.displayName })); }} />
       : <LoadState message={t.quiz.loadingCategories} />;
@@ -188,8 +219,9 @@ export function App() {
       supportUrl={data.status === 'ready' ? data.settings.supportUrl : null}
       member={member}
       status={status}
+      reviewCount={reviewCount}
       onHome={() => navigate(null)}
-      onSignIn={() => openPage('login')}
+      onOpenPage={openPage}
       onMemberChanged={setMember}
       onSignedOut={() => { setMember(null); setStatus(t.login.signedOut); }}
     >

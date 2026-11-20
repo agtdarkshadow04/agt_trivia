@@ -378,3 +378,73 @@ export const MemberReplaceBody = object({
 });
 
 export const MemberPasswordBody = object({ password: Password });
+
+// --- Question authoring and review (#19) ----------------------------------------
+
+const QuestionStatusSchema = Type.Union([Type.Literal('draft'), Type.Literal('pending'), Type.Literal('approved'), Type.Literal('rejected')], {
+  description: 'draft → pending (submitted) → approved (in the public quiz) or rejected (with a review note); a changed rejected question is a draft again, and an unpublished one too.',
+});
+
+const Version = Type.Integer({ minimum: 1, description: 'The question version that was read; `409 conflict` when it has changed since.' });
+
+export const MemberQuestion = object({
+  id: Type.String({ format: 'uuid' }),
+  categoryId: Type.String({ format: 'uuid' }),
+  prompt: Type.String(),
+  status: QuestionStatusSchema,
+  choices: Type.Array(object({ id: Type.String({ format: 'uuid' }), text: Type.String(), isCorrect: Type.Boolean() }), { description: "2 to 4 answers, in the author's order." }),
+  authorCredit: Type.Union([Type.String(), Type.Null()], { description: 'The "Submitted by" credit players see, or null.' }),
+  reviewNote: Type.String({ description: "A Moderator's reason for rejecting it; empty when there is none. Never public." }),
+  createdBy: Type.Union([Type.String({ format: 'uuid' }), Type.Null()], { description: 'The member who wrote it; null when they were deleted or it was imported.' }),
+  createdByName: Type.Union([Type.String(), Type.Null()], { description: "The author's display name, or null." }),
+  approvedAt: Type.Union([Type.String({ format: 'date-time' }), Type.Null()]),
+  version: Type.Integer({ minimum: 1 }),
+  createdAt: Type.String({ format: 'date-time' }),
+  updatedAt: Type.String({ format: 'date-time' }),
+}, 'A question as its author or a Moderator sees it.');
+
+export const QuestionResult = object({
+  question: MemberQuestion,
+  notices: Type.Array(Type.Ref('FieldError'), { description: 'Non-blocking warnings (API-2): `prompt` `too_many_words` (more than 15 words) and `prompt` `duplicate` (the category has a question with the same text).' }),
+});
+
+export const QuestionPage = object({
+  items: Type.Array(MemberQuestion),
+  nextCursor: Type.Union([Type.String(), Type.Null()]),
+}, 'Newest first (API-8).');
+
+export const QuestionListQuery = object({
+  limit: Type.Optional(Type.String({ pattern: '^[1-9][0-9]{0,2}$', description: '1 to 200; 50 by default (API-8).' })),
+  cursor: Type.Optional(Type.String({ maxLength: 512, description: 'The `nextCursor` of the previous page (API-8).' })),
+  status: Type.Optional(QuestionStatusSchema),
+  categoryId: Type.Optional(Type.String({ maxLength: 64, description: 'Only the questions of this category.' })),
+  mine: Type.Optional(Type.Union([Type.Literal('true'), Type.Literal('false')], { description: "Moderators: `true` lists only their own questions. Editors always see only their own." })),
+  q: Type.Optional(Type.String({ maxLength: 300, description: 'Part of the question text, ignoring ASCII case.' })),
+});
+
+const statusCounts = object({ draft: Type.Integer(), pending: Type.Integer(), approved: Type.Integer(), rejected: Type.Integer() });
+
+export const QuestionCounts = object({
+  mine: statusCounts,
+  reviewQueue: Type.Union([Type.Integer(), Type.Null()], { description: 'Every pending question, for Moderators; null for Editors.' }),
+});
+
+export const QuestionIdParams = object({ id: Type.String({ description: 'The question ID (a UUIDv4); anything else, or a question the member may not see, answers 404.' }) });
+
+const questionContent = {
+  categoryId: Type.String({ maxLength: 64, description: 'An existing category.' }),
+  prompt: Type.String({ maxLength: 1200, description: 'Trimmed; 1 to 300 characters. More than 15 words gives a notice.' }),
+  choices: Type.Array(object({
+    text: Type.String({ maxLength: 800, description: 'Trimmed; 1 to 200 characters, unique within the question ignoring case.' }),
+    isCorrect: Type.Boolean(),
+  }), { maxItems: 8, description: '2 to 4 answers, at least one correct; more than one correct makes a multi-answer question.' }),
+  authorCredit: Type.Optional(Type.Union([Type.String({ maxLength: 256 }), Type.Null()], {
+    description: 'The "Submitted by" credit: 1 to 64 characters, or empty or null for none. Only Moderators can change it; left out, a new question gets the author\'s display name and a changed one keeps its credit.',
+  })),
+};
+
+export const QuestionCreateBody = object(questionContent);
+export const QuestionReplaceBody = object({ ...questionContent, version: Version });
+export const QuestionVersionBody = object({ version: Version });
+export const QuestionRejectBody = object({ version: Version, reviewNote: Type.String({ maxLength: 4000, description: 'Required, trimmed; 1 to 1000 characters. The author sees it.' }) });
+export const QuestionDeleteQuery = object({ version: Type.String({ pattern: '^[1-9][0-9]{0,9}$', description: 'The question version that was read; `409 conflict` when it has changed since.' }) });
