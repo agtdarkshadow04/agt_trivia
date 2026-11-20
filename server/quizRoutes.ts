@@ -1,6 +1,6 @@
 import type { PublicCategory, PublicQuiz, QuizLength } from '../src/lib/api.js';
 import { isUuidV4 } from '../src/lib/api.js';
-import { questionsForQuiz } from '../src/lib/quiz.js';
+import { questionsForQuiz, shuffle } from '../src/lib/quiz.js';
 import { settingValues, type AppContext } from './context.js';
 import { HttpError } from './http.js';
 import { getCategory, listCategories, type Category } from './repository/categories.js';
@@ -20,17 +20,23 @@ function publicCategory(category: Category): PublicCategory {
   return { id, shortName, name, description, priority, questionCount };
 }
 
-function publicQuestion(question: Question) {
+/**
+ * A question as visitors see it, its choices shuffled anew for every quiz
+ * (#41): the 1.x sheet often lists the correct answer first. A choice keeps
+ * its ID, so grading in the browser and on the server (#21) is unchanged.
+ */
+function publicQuestion(question: Question, random: () => number) {
+  const choices = shuffle(question.choices, random);
   return {
     id: question.id,
     prompt: question.prompt,
-    choices: question.choices.map((choice) => ({ id: choice.id, text: choice.text })),
-    correctChoiceIds: question.choices.filter((choice) => choice.isCorrect).map((choice) => choice.id),
+    choices: choices.map((choice) => ({ id: choice.id, text: choice.text })),
+    correctChoiceIds: choices.filter((choice) => choice.isCorrect).map((choice) => choice.id),
     authorCredit: question.authorCredit,
   };
 }
 
-/** A random quiz from a category's approved questions; `random` is for tests. */
+/** A random quiz from a category's approved questions, each with its choices shuffled; `random` is for tests. */
 export function publicQuiz(context: AppContext, categoryId: string, length: QuizLength, random: () => number = Math.random): PublicQuiz {
   // API-5: a malformed ID is just another unknown category.
   const category = isUuidV4(categoryId) ? getCategory(context.db, categoryId.toLowerCase()) : null;
@@ -38,7 +44,7 @@ export function publicQuiz(context: AppContext, categoryId: string, length: Quiz
   const values = settingValues(context.config, readSettings(context.db));
   const count = length === 'short' ? values['quiz.shortLength'] : length === 'long' ? values['quiz.longLength'] : undefined;
   const questions = questionsForQuiz(approvedQuestions(context.db, category.id), count, random);
-  return { category: publicCategory(category), length, questions: questions.map(publicQuestion) };
+  return { category: publicCategory(category), length, questions: questions.map((question) => publicQuestion(question, random)) };
 }
 
 export const quizRoutes: readonly RouteDefinition[] = [
