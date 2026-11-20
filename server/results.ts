@@ -1,7 +1,7 @@
 import type { MemberSession, QuizLength } from '../src/lib/api.js';
 import { isUuidV4 } from '../src/lib/api.js';
 import { fieldError, type FieldError } from '../src/lib/errors.js';
-import { isCorrectSelection } from '../src/lib/quiz.js';
+import { displayPercent, isCorrectSelection, scorePercent } from '../src/lib/quiz.js';
 import type { AppContext } from './context.js';
 import { HttpError } from './http.js';
 import { getCategory } from './repository/categories.js';
@@ -34,7 +34,7 @@ export interface MemberResult {
   length: QuizLength;
   score: number;
   total: number;
-  /** 0 to 100, rounded. */
+  /** 0 to 100, rounded; 100 only for a perfect score and 0 only for none right (#42). */
   percent: number;
   finishedAt: string;
 }
@@ -48,11 +48,9 @@ export interface CategoryStats {
   lastPlayedAt: string;
 }
 
-const percentOf = (score: number, total: number) => Math.round((score / total) * 100);
-
 function toMemberResult(result: repo.StoredResult): MemberResult {
   const { id, categoryId, categoryName, length, score, total, finishedAt } = result;
-  return { id, categoryId, categoryName, length, score, total, percent: percentOf(score, total), finishedAt };
+  return { id, categoryId, categoryName, length, score, total, percent: scorePercent(score, total), finishedAt };
 }
 
 export function encodeResultCursor(position: repo.ResultPagePosition) {
@@ -143,8 +141,8 @@ export class ResultService {
       categoryId: row.categoryId,
       categoryName: row.categoryName,
       plays: row.plays,
-      bestPercent: Math.round(row.bestPercent),
-      averagePercent: Math.round(row.averagePercent),
+      bestPercent: displayPercent(row.bestPercent),
+      averagePercent: displayPercent(row.averagePercent),
       lastPlayedAt: row.lastPlayedAt,
     }));
   }

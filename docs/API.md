@@ -129,10 +129,10 @@ twice adds nothing. The audit log records the action, the files and the counts, 
 | `POST /api/member/categories` | `{ shortName, name, description, priority }`: creates a category; `201 { category, notices }` |
 | `PUT /api/member/categories/{id}` | The same fields and `version`: replaces the category; `200 { category, notices }` |
 | `DELETE /api/member/categories/{id}?version=` | Deletes a category without questions (`409 category_not_empty` otherwise); `204` |
-| `POST /api/member/results` | `{ categoryId, length, answers: [{ questionId, choiceIds }] }`: grades a finished quiz and saves it in the member's history (#21); `201 { result, skippedQuestionIds, notices }`. A result is `{ id, categoryId, categoryName, length, score, total, percent, finishedAt }` |
+| `POST /api/member/results` | `{ categoryId, length, answers: [{ questionId, choiceIds }] }`: grades a finished quiz and saves it in the member's history (#21); `201 { result, skippedQuestionIds, notices }`. A result is `{ id, categoryId, categoryName, length, score, total, percent, finishedAt }`; `percent` is rounded, but 100 only for a perfect score and 0 only for none right |
 | `GET /api/member/results` | The member's own results, newest first: `{ items, nextCursor }` (API-8; `limit`, `cursor`, `categoryId`) |
 | `DELETE /api/member/results` | Clears the member's own history; `204` |
-| `GET /api/member/stats` | Per category that still exists: `[{ categoryId, categoryName, plays, bestPercent, averagePercent, lastPlayedAt }]`, the most recently played first |
+| `GET /api/member/stats` | Per category that still exists: `[{ categoryId, categoryName, plays, bestPercent, averagePercent, lastPlayedAt }]`, the most recently played first; percentages are rounded like `percent` |
 | `GET /api/admin/members` | Member accounts, newest first: `{ items, nextCursor }` (API-8; `limit`, `cursor`, and `q` to search usernames and display names) |
 | `POST /api/admin/members` | `{ username, displayName, role, password }`: creates a local member; `201 { member, notices }` |
 | `PUT /api/admin/members/{id}` | `{ displayName, role, isActive }`; a role change or deactivation signs the member out; for an AGT member only `isActive` may change (`409 managed_by_iam`); `200 { member, notices }` |

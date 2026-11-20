@@ -131,6 +131,23 @@ describe('member score history', () => {
     assert.ok((await as('ada', 'GET', '/api/member/results')).json().items.every((item: { id: string }) => !page.items.some((other: { id: string }) => other.id === item.id)));
   });
 
+  it('shows 100 % only for a perfect score, in results and stats (#42)', async () => {
+    const bob = context.db.connection.prepare("SELECT id FROM members WHERE username = 'r.bob'").get() as { id: string };
+    const biology = otherCategory.categoryId;
+    // 199 of 200 (99.5 %), then 200 of 200: the average is 99.75 %.
+    for (const [minute, wrong] of [[10, 1], [11, 0]] as const) {
+      await withDataWrite(context.operations, () => insertResult(context.db, {
+        memberId: bob.id, categoryId: biology, categoryName: 'Biology', length: 'all',
+        answers: Array.from({ length: 200 }, (_, index) => ({ questionId: otherCategory.id, correct: index >= wrong })),
+      }, new Date(Date.UTC(2030, 0, 1, 0, minute))));
+    }
+    const items = (await as('bob', 'GET', `/api/member/results?categoryId=${biology}`)).json().items;
+    assert.deepEqual(items.map((item: { score: number; percent: number }) => [item.score, item.percent]), [[200, 100], [199, 99]]);
+    const stats = (await as('bob', 'GET', '/api/member/stats')).json().find((entry: { categoryId: string }) => entry.categoryId === biology);
+    assert.equal(stats.bestPercent, 100);
+    assert.equal(stats.averagePercent, 99);
+  });
+
   it('keeps results of a deleted category with its name, out of the stats', async () => {
     await createMember(context, 'r.cleo', 'Player');
     const cleo = await memberCookie(context, 'r.cleo');
