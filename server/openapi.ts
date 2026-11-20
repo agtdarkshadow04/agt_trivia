@@ -1,7 +1,7 @@
 import fastifySwagger from '@fastify/swagger';
 import type { FastifyInstance } from 'fastify';
 import type { RouteDefinition } from './routes.js';
-import { ErrorBodySchema, FieldErrorSchema, RestoreUploadDocument } from './schemas.js';
+import { ErrorBodySchema, FieldErrorSchema } from './schemas.js';
 import { adminSessionCookie, memberSessionCookie } from './session.js';
 
 /** What each kind of route really requires (API-11, AUTH-9, SEC-5); every route uses one of these. */
@@ -70,7 +70,7 @@ export function registerOpenApi(app: FastifyInstance, version: string) {
     transform: ({ schema, url, route }) => {
       const apiRoute = (route.config as { apiRoute?: RouteDefinition } | undefined)?.apiRoute;
       if (!apiRoute?.multipart || !schema) return { schema, url };
-      return { schema: { ...schema, body: RestoreUploadDocument } as typeof schema, url };
+      return { schema: { ...schema, body: apiRoute.multipart } as typeof schema, url };
     },
     refResolver: { buildLocalReference: (json, _baseUri, _fragment, index) => (typeof json.$id === 'string' ? json.$id : `def-${index}`) },
   });

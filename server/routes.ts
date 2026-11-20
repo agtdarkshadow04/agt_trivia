@@ -6,6 +6,7 @@ import { backupRoutes } from './backupRoutes.js';
 import { logRoutes } from './logRoutes.js';
 import { memberRoutes } from './memberRoutes.js';
 import { categoryRoutes } from './categoryRoutes.js';
+import { importRoutes } from './importRoutes.js';
 import { resultRoutes } from './resultRoutes.js';
 import { questionRoutes } from './questionRoutes.js';
 import { quizRoutes } from './quizRoutes.js';
@@ -53,8 +54,8 @@ export interface RouteDefinition {
   writesData: boolean;
   /** GET routes whose reads are audited, such as downloads and exports (LOG-11, #12). */
   audit?: boolean;
-  /** The body is multipart/form-data that the handler reads itself (BAK-1); the OpenAPI document shows its parts. */
-  multipart?: boolean;
+  /** The body is multipart/form-data that the route reads itself (BAK-1); this is how the OpenAPI document shows its parts. */
+  multipart?: { description: string; content: Record<string, { schema: TSchema }> };
   /** Credential-checking routes are rate limited (SEC-7). */
   rateLimit?: RateLimitName;
   /** Unique camelCase verb + noun (API-11); also the audit `action` (LOG-10). */
@@ -263,4 +264,4 @@ const coreRoutes: readonly RouteDefinition[] = [
   },
 ];
 
-export const apiRoutes: readonly RouteDefinition[] = [...coreRoutes, ...quizRoutes, ...memberRoutes, ...questionRoutes, ...categoryRoutes, ...resultRoutes, ...logRoutes, ...backupRoutes];
+export const apiRoutes: readonly RouteDefinition[] = [...coreRoutes, ...quizRoutes, ...memberRoutes, ...questionRoutes, ...categoryRoutes, ...resultRoutes, ...logRoutes, ...importRoutes, ...backupRoutes];

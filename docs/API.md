@@ -1,8 +1,7 @@
 # AGT Galactic Trivia API
 
 The server's REST API lives under `/api/`. The complete, generated description is the OpenAPI 3.1 document at
-`GET /api/openapi.json` (API-11); this guide explains the conventions it follows. The API grows with the rebuild
-(#6): the sheet import arrives in its sub-issue (#22).
+`GET /api/openapi.json` (API-11); this guide explains the conventions it follows. It covers the whole rebuild (#6).
 
 ## Requests and responses
 
@@ -83,6 +82,20 @@ played, never a score. The server grades them against the category's approved qu
 
 The audit log records a saved result with its category, length, score and total, never the answers (LOG-14).
 
+## The sheet import (#22)
+
+`POST /api/admin/import` reads the 1.x Google Sheet's `validCategories` and `pendingQuestions` tabs, downloaded as
+CSV; the server never fetches the sheet (SEC-14). Each file is at most 1 MiB (`413 file_too_large`), sent as
+`text/csv`, `text/plain` or `application/vnd.ms-excel`, and must be UTF-8 text without NUL bytes (`400
+validation_failed` with the file as `field`, `invalid_format` or `not_allowed`). The files are parsed in memory and
+discarded (the SEC-9 deviation in `AGENTS.md`).
+
+Every bad row is a `FieldError` whose `field` is the file (`categories` or `questions`) and whose `params` are the
+sheet `row` (the header is row 1), the `column`, and for an unknown category or correct answer the `value`. A preview
+returns them in `problems` and changes nothing; an import with any refuses the whole import. Categories are matched
+by name and questions by category and text (ignoring case); what already exists is skipped (`skip`), so importing
+twice adds nothing. The audit log records the action, the files and the counts, never the rows (LOG-14).
+
 ## Routes
 
 | Method and path | Purpose |
@@ -131,6 +144,7 @@ The audit log records a saved result with its category, length, score and total,
 | `GET /api/admin/logs/server/export`, `GET /api/admin/logs/audit/export` | The same entries as JSON Lines or CSV (`format=jsonl` or `csv`) |
 | `GET /api/admin/logs/server/summary`, `POST /api/admin/logs/server/seen` | Unseen warnings and errors, and marking them seen |
 | `DELETE /api/admin/logs/server` | Clears the server log; the audit log cannot be cleared |
+| `POST /api/admin/import` | `multipart/form-data` with `action` (`preview` or `import`) and the `categories` and `questions` files (one or both): the 1.x sheet's CSV downloads (#22). `200 { action, imported, categories: { create, skip }, questions: { create, skip, approved, pending }, problems }`; an import with bad rows answers `400 validation_failed` with them in `fields` |
 | `GET /api/admin/backup` | A backup archive (`application/zip`): `manifest.json`, `database.sqlite` and `config.yaml` |
 | `POST /api/admin/restore` | `multipart/form-data` with `action` (`preview` or `restore`) and the `backup` file: previews or restores a backup |
 | `GET /api/openapi.json` | The OpenAPI document |

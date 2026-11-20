@@ -529,3 +529,34 @@ export const MemberStats = Type.Array(object({
   averagePercent: Type.Integer({ description: 'The mean of the percentages, 0 to 100, rounded.' }),
   lastPlayedAt: Type.String({ format: 'date-time' }),
 }), { description: 'Per category that still exists, the most recently played first (a plain array, bounded by the number of categories, API-8).' });
+
+// --- The sheet import (#22) -------------------------------------------------------
+
+export const ImportReport = object({
+  action: Type.Union([Type.Literal('preview'), Type.Literal('import')]),
+  imported: Type.Boolean({ description: 'True once the import has been written; false for a preview.' }),
+  categories: object({
+    create: Type.Integer({ description: 'New categories (matched by name, ignoring case).' }),
+    skip: Type.Integer({ description: 'Categories that already exist; they are left as they are.' }),
+  }),
+  questions: object({
+    create: Type.Integer({ description: 'New questions.' }),
+    skip: Type.Integer({ description: 'Questions whose category already has the same text (ignoring case), or repeated in the file.' }),
+    approved: Type.Integer({ description: 'New questions with `isApproved` TRUE.' }),
+    pending: Type.Integer({ description: 'New questions with `isApproved` FALSE: they wait for review.' }),
+  }),
+  problems: Type.Array(Type.Ref('FieldError'), { description: 'Every bad row: `field` is the file (`categories` or `questions`), `params.row` the sheet row (the header is row 1) and `params.column` the column. An import with any is refused.' }),
+}, 'What an import of the sheet does, or did.');
+
+export const ImportUploadDocument = {
+  description: '`multipart/form-data`: the `action` field (`preview` or `import`) and the `categories` and `questions` files (one or both): CSV downloads of the sheet\'s `validCategories` and `pendingQuestions`, UTF-8 text of at most 1 MiB each.',
+  content: {
+    'multipart/form-data': {
+      schema: object({
+        action: Type.Union([Type.Literal('preview'), Type.Literal('import')], { description: '`preview` checks the files and changes nothing; `import` checks them again and writes them in one transaction.' }),
+        categories: Type.Optional(Type.String({ format: 'binary', description: 'The `validCategories` sheet as CSV.' })),
+        questions: Type.Optional(Type.String({ format: 'binary', description: 'The `pendingQuestions` sheet as CSV.' })),
+      }),
+    },
+  },
+};

@@ -22,6 +22,7 @@ secrets in `.env`.
 - [First run](#first-run)
 - [Configuration reference](#configuration-reference)
 - [Admin dashboard](#admin-dashboard)
+  - [Importing the Google Sheet](#importing-the-google-sheet)
 - [Playing](#playing)
 - [Writing and reviewing questions](#writing-and-reviewing-questions)
 - [Members and roles](#members-and-roles)
@@ -260,10 +261,41 @@ and text size (stored in this browser and shared with the game), **View site** a
 - **Server log** shows, filters, searches, exports and clears the server log (see [Logs](#logs)). While there are
   unseen warnings or errors, the tab shows a badge with their count and the dashboard a link to it.
 - **Audit log** shows, filters, searches and exports the audit log. It cannot be edited or cleared.
+- **Import** brings in the categories and questions of the 1.x Google Sheet (see
+  [Importing the Google Sheet](#importing-the-google-sheet)).
 - **Backup & restore** downloads a backup, and previews and restores one (see [Backup & restore](#backup--restore)).
 - **Account** changes the Admin password. This signs out every other Admin session.
 
-Import arrives in #22.
+### Importing the Google Sheet
+
+The **Import** tab moves the categories and questions of the 1.x trivia sheet (AGT_Trivia_App_DB) into the app. The
+server never contacts Google: you download two of the sheet's tabs as CSV files and upload them.
+
+1. On the **Backup & restore** tab, download a backup, so you can go back if the import is not what you wanted.
+2. Open the sheet in Google Sheets, select the **validCategories** tab and choose **File → Download →
+   Comma-separated values (.csv)**.
+3. Do the same for the **pendingQuestions** tab. Not **approvedQuestions**: it only shows the approved rows of
+   pendingQuestions, which already has every question, approved or not.
+4. On the **Import** tab, choose both files and **Preview**. The preview counts the categories and questions the
+   import would add and those already in the app, and lists every row it cannot import, with its file, row number
+   (as the sheet numbers it) and column. Fix those rows in the sheet, download the files again and preview again;
+   nothing is imported while any row has a problem.
+5. **Import** adds everything at once, in one transaction.
+
+How the sheet maps to the app:
+
+- **Categories** (`catName`, `catNameShort`, `catDesc`, `catPriority`) are matched by name, ignoring case: a category
+  that already exists is left as it is. `catTheme` and `adminNotes` are not imported.
+- **Questions**: `isApproved` TRUE becomes **Approved** (in the quiz at once), FALSE **Waiting for review**.
+  `author` becomes the "Submitted by" credit, and `adminNotes` the review note. `answers` and `correctAnswer` are
+  split on commas, with or without spaces, and the correct answers are matched to the answers ignoring case; more
+  than one correct answer makes a multi-answer question, which `isMultiAnswer` must agree with. Imported questions
+  have no member as their author.
+- The empty rows Google Sheets exports (`,FALSE,,,,,,`) are skipped. A question whose category already has the same
+  text, ignoring case, is skipped too, so importing the same files again adds nothing.
+
+The files may be at most 1 MiB each and must be UTF-8 text. They are read once and never stored, kept on disk or
+served. Every preview and import is in the audit log, with its counts only.
 
 ## Playing
 
@@ -422,7 +454,7 @@ The **Backup & restore** tab of the dashboard downloads a backup and restores on
 `agt-trivia-backup-<time>.zip`, with:
 
 - `database.sqlite`: a consistent copy of the database (the Admin account and the dashboard settings; categories,
-  questions, members and scores as they arrive), without sessions;
+  questions, members and their score histories), without sessions;
 - `config.yaml`, when the server has one;
 - `manifest.json`: the app and schema versions, the time, and each file's size and SHA-256 checksum.
 

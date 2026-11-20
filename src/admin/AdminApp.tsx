@@ -9,6 +9,7 @@ import { adminUsernameError, confirmationError, errorsOf, newPasswordError, requ
 import { formatTranslation } from '../translations';
 import { AccountPanel } from './AccountPanel';
 import { BackupPanel } from './BackupPanel';
+import { ImportPanel } from './ImportPanel';
 import {
   adminUnauthorizedEvent, completeSetup, getServerLogSummary, getSession, getSetupStatus, markServerLogSeen, signIn, signOut,
   type AdminSession, type ServerLogSummary, type SetupStatus,
@@ -26,9 +27,9 @@ type Phase =
   | { name: 'login'; notice?: Notice }
   | { name: 'dashboard'; session: AdminSession };
 
-/** UI-8, in order: the resource tabs (Members; Import arrives in #22), Settings, Server log, Audit log, Backup & restore, Account. */
-type Tab = 'members' | 'settings' | 'serverLog' | 'auditLog' | 'backup' | 'account';
-const tabs: Tab[] = ['members', 'settings', 'serverLog', 'auditLog', 'backup', 'account'];
+/** UI-8, in order: the resource tabs (Members), Settings, Server log, Audit log, Import (#22, before Backup & restore), Backup & restore, Account. */
+type Tab = 'members' | 'settings' | 'serverLog' | 'auditLog' | 'import' | 'backup' | 'account';
+const tabs: Tab[] = ['members', 'settings', 'serverLog', 'auditLog', 'import', 'backup', 'account'];
 
 /** Why the sign-in screen is shown again. */
 type Notice = 'signedOut' | 'sessionEnded' | 'restored';
@@ -196,6 +197,7 @@ function Dashboard({ session, onSessionChange, onRestored }: { session: AdminSes
         {tab === 'settings' && <SettingsPanel />}
         {tab === 'serverLog' && <LogPanel kind="server" />}
         {tab === 'auditLog' && <LogPanel kind="audit" />}
+        {tab === 'import' && <ImportPanel />}
         {tab === 'backup' && <BackupPanel onRestored={onRestored} />}
         {tab === 'account' && <AccountPanel session={session} onSessionRenewed={onSessionChange} />}
       </div>

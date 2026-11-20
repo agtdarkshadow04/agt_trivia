@@ -33,7 +33,7 @@ test.describe('signed in', () => {
     await page.goto('/admin');
     await expect(page.getByText(/^Version \d+\.\d+\.\d+/)).toBeVisible();
     const settings = page.getByRole('tab', { name: 'Settings' });
-    await expect(page.getByRole('tab')).toHaveText(['Members', 'Settings', /^Server log/, 'Audit log', 'Backup & restore', 'Account']);
+    await expect(page.getByRole('tab')).toHaveText(['Members', 'Settings', /^Server log/, 'Audit log', 'Import', 'Backup & restore', 'Account']);
     await settings.focus();
     await page.keyboard.press('ArrowRight');
     await expect(page.getByRole('tab', { name: /Server log/ })).toBeFocused();
