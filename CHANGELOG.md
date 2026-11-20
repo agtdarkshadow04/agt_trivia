@@ -10,7 +10,7 @@ All notable changes to AGT Galactic Trivia are documented in this file. The form
 
 - The admin dashboard's buttons with an icon and a label (Sign out, the log filters, export and clear, the import's
   and backup's preview, download, import and restore) showed the icon at full size against the text; it is now
-  text-sized and spaced like the rest of the app (#39).
+  text-sized and spaced like the rest of the app (#39, #40).
 
 ## [2.0.0] - 2026-11-20
 
