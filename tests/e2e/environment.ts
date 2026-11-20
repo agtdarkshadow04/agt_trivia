@@ -11,6 +11,9 @@ export const port = 8082;
 export const baseURL = `http://127.0.0.1:${port}`;
 /** AGT_TRIVIA_SETUP_PASSWORD of the test server (AUTH-5). */
 export const setupPassword = 'e2e-setup-password-1';
+/** The fake AGT IAM (`fake-iam.ts`, #18) and the API key the app sends it. */
+export const iamPort = 4182;
+export const iamApiKey = 'e2e-iam-api-key';
 /** A setting config.yaml locks, so the Settings tab shows it read-only (CFG-9). */
 export const lockedSupportUrl = 'https://support.example.org/trivia';
 
@@ -27,6 +30,11 @@ export function prepare(env: NodeJS.ProcessEnv): Record<string, string> {
     `  dataDir: ${JSON.stringify(join(directory, 'data'))}`,
     'site:',
     `  supportUrl: ${lockedSupportUrl}`,
+    // AGT sign-in against the fake IAM; iam.enabled stays a dashboard setting, off until iam.spec.ts turns it on.
+    'iam:',
+    `  baseUrl: http://127.0.0.1:${iamPort}`,
+    '  appId: agt-trivia-e2e',
+    '  roleMap: { Editor: Editor, Moderator: Moderator }',
     // The suite signs in more often than a person would.
     'rateLimits:',
     '  login: { max: 1000, windowMinutes: 15 }',
@@ -39,6 +47,7 @@ export function prepare(env: NodeJS.ProcessEnv): Record<string, string> {
     AGT_TRIVIA_CONFIG_FILE: configFile,
     AGT_TRIVIA_STATIC_DIR: 'dist',
     AGT_TRIVIA_SETUP_PASSWORD: setupPassword,
+    AGT_TRIVIA_IAM_API_KEY: iamApiKey,
   };
 }
 

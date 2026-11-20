@@ -83,6 +83,7 @@ export function buildApp(context: AppContext, options: BuildAppOptions = {}): Fa
   app.register(fastifyMultipart, { limits: { files: 1, fields: 1, parts: 2 } });
   app.decorateRequest('admin', null);
   app.decorateRequest('member', null);
+  app.decorateRequest('prepared', null);
   app.decorateRequest('audit', null);
   app.decorateRequest('auditError', null);
   // LOG-11: one hook audits every request that needs it.
@@ -212,9 +213,11 @@ function registerRoute(app: FastifyInstance, context: AppContext, route: RouteDe
       response: { ...route.schema.response, default: Type.Ref('ErrorBody', { description: 'Error (API-6).' }) },
     },
     // BAK-8: a writing route's handler runs as a data write; its response is computed before it is sent.
-    handler: async (request: FastifyRequest, reply: FastifyReply) => (
-      route.writesData ? withDataWrite(context.operations, () => route.handler(context, request, reply)) : route.handler(context, request, reply)
-    ),
+    // Its `prepare` step runs first, outside the write.
+    handler: async (request: FastifyRequest, reply: FastifyReply) => {
+      if (route.prepare) request.prepared = await route.prepare(context, request);
+      return route.writesData ? withDataWrite(context.operations, () => route.handler(context, request, reply)) : route.handler(context, request, reply);
+    },
   });
 }
 

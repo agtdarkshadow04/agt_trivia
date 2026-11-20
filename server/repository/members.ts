@@ -18,6 +18,8 @@ interface MemberRow {
   is_active: number;
   created_at: string;
   updated_at: string;
+  iam_traveller_id: string | null;
+  iam_permission: string | null;
 }
 
 export interface MemberCredentials {
@@ -33,6 +35,8 @@ function toMember(row: MemberRow): AdminMember {
     role: row.role,
     authSource: row.auth_source,
     isActive: row.is_active === 1,
+    travellerId: row.iam_traveller_id,
+    iamPermission: row.iam_permission,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -160,4 +164,46 @@ export function deleteMemberSession(db: Database, tokenHash: string) {
 /** AUTH-4: ends every session of one member. */
 export function deleteMemberSessions(sqlite: Sqlite, memberId: string) {
   sqlite.prepare('DELETE FROM member_sessions WHERE member_id = ?').run(memberId);
+}
+
+// --- AGT members (#18) ---------------------------------------------------------------
+
+/** An AGT member by traveller ID, active or not. */
+export function iamMember(db: Database, travellerId: string): AdminMember | null {
+  const row = db.connection.prepare("SELECT * FROM members WHERE iam_traveller_id = ? AND auth_source = 'agt_iam'").get(travellerId) as MemberRow | undefined;
+  return row ? toMember(row) : null;
+}
+
+export interface IamMemberInput {
+  travellerId: string;
+  /** The traveller name, also the display name (an empty one shows as the traveller ID). */
+  travellerName: string;
+  permission: string;
+  role: MemberRole;
+}
+
+const displayNameOf = (input: IamMemberInput) => (input.travellerName || input.travellerId).slice(0, 120);
+
+/** Creates an AGT member at their first sign-in: no username, no password. */
+export function insertIamMember(db: Database, id: string, input: IamMemberInput, now = new Date()): AdminMember {
+  assertDataWrite();
+  const at = now.toISOString();
+  db.connection.prepare(`INSERT INTO members (id, auth_source, username, display_name, password_hash, role, is_active, created_at, updated_at,
+    iam_traveller_id, iam_traveller_name, iam_permission, iam_synced_at) VALUES (?, 'agt_iam', NULL, ?, NULL, ?, 1, ?, ?, ?, ?, ?, ?)`)
+    .run(id, displayNameOf(input), input.role, at, at, input.travellerId, input.travellerName || null, input.permission || null, at);
+  return getMember(db, id)!;
+}
+
+/** Refreshes an AGT member's name, tier and role from IAM at a sign-in. */
+export function updateIamMember(db: Database, id: string, input: IamMemberInput, now = new Date()): AdminMember {
+  assertDataWrite();
+  const at = now.toISOString();
+  db.connection.prepare(`UPDATE members SET display_name = ?, role = ?, iam_traveller_name = ?, iam_permission = ?, iam_synced_at = ?, updated_at = ?
+    WHERE id = ?`).run(displayNameOf(input), input.role, input.travellerName || null, input.permission || null, at, at, id);
+  return getMember(db, id)!;
+}
+
+/** Switching AGT sign-in off ends every AGT member's session (AUTH-4). */
+export function deleteIamMemberSessions(sqlite: Sqlite) {
+  sqlite.prepare("DELETE FROM member_sessions WHERE member_id IN (SELECT id FROM members WHERE auth_source = 'agt_iam')").run();
 }

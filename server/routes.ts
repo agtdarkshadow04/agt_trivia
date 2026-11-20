@@ -9,6 +9,7 @@ import { quizRoutes } from './quizRoutes.js';
 import { readSettings } from './repository/settings.js';
 import * as S from './schemas.js';
 import { AdminAuthService, clearedCookie, secureCookie, sessionCookie, type AdminSession } from './session.js';
+import { iamStatus } from './iam.js';
 import { currentSettings, updateSettings } from './settings.js';
 
 /**
@@ -60,6 +61,12 @@ export interface RouteDefinition {
   summary: string;
   description?: string;
   schema: RouteSchemas;
+  /**
+   * Slow work a writing route does before its data write, such as asking AGT
+   * IAM (#18), so it never holds the write lock (BAK-8). Its result is
+   * `request.prepared` in the handler.
+   */
+  prepare?: (context: AppContext, request: FastifyRequest) => Promise<unknown>;
   /** Returns the response body; throw `HttpError` for failures. Set a status with `reply.code()`. */
   handler: (context: AppContext, request: FastifyRequest, reply: FastifyReply) => unknown;
 }
@@ -70,6 +77,8 @@ declare module 'fastify' {
     admin: string | null;
     /** The signed-in member, set by the authentication hook on `member` routes (#17). */
     member: MemberSession | null;
+    /** What the route's `prepare` step returned. */
+    prepared: unknown;
   }
 }
 
@@ -81,6 +90,7 @@ export function publicSettings(context: AppContext): PublicSettings {
     supportUrl: values['site.supportUrl'],
     quizShortLength: values['quiz.shortLength'],
     quizLongLength: values['quiz.longLength'],
+    agtSignIn: iamStatus(context, values).available,
   };
 }
 
@@ -226,7 +236,10 @@ const coreRoutes: readonly RouteDefinition[] = [
     tag: 'admin',
     summary: 'List every dashboard setting with its effective value and where it comes from.',
     schema: { response: { 200: S.SettingsList } },
-    handler: (context) => ({ settings: currentSettings(context) }),
+    handler: (context) => {
+      const settings = currentSettings(context);
+      return { settings, iam: iamStatus(context, { 'iam.enabled': settings.find((state) => state.key === 'iam.enabled')!.value as boolean }) };
+    },
   },
   {
     method: 'PUT',
@@ -242,7 +255,7 @@ const coreRoutes: readonly RouteDefinition[] = [
       const { settings, changes } = updateSettings(context, (request.body as { values: Record<string, unknown> }).values);
       // LOG-14: each changed key with its old and new value; no setting holds a secret (SEC-8).
       request.audit = { details: { changes } };
-      return { settings, notices: [] };
+      return { settings, iam: iamStatus(context, { 'iam.enabled': settings.find((state) => state.key === 'iam.enabled')!.value as boolean }), notices: [] };
     },
   },
 ];

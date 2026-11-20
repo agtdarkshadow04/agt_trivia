@@ -69,6 +69,11 @@ export const EDITABLE_SETTINGS = {
     10_000,
     'Most entries an uploaded backup archive may contain.',
   ),
+  'iam.enabled': editable(
+    Type.Boolean(),
+    false,
+    'Whether members can sign in with their AGT account (AGT IAM); needs iam.baseUrl, iam.appId and AGT_TRIVIA_IAM_API_KEY.',
+  ),
   'logs.serverRetentionDays': editable(integer(1, 3650), 30, 'Days the server log keeps an entry (1-3650).'),
   'logs.serverMaxEntries': editable(integer(1000, 10_000_000), 100_000, 'Most entries the server log keeps; the oldest go first.'),
   // LOG-16: at least 30 days, so recent audit history cannot be erased by shortening retention.
@@ -158,6 +163,20 @@ export const ConfigSchema = Type.Object({
     serverMaxEntries: fileSetting('logs.serverMaxEntries'),
     auditRetentionDays: fileSetting('logs.auditRetentionDays'),
     auditMaxEntries: fileSetting('logs.auditMaxEntries'),
+  }),
+  /** AGT sign-in through AGT IAM (#18); the API key is AGT_TRIVIA_IAM_API_KEY in .env, never a key here (SEC-8). */
+  iam: group({
+    enabled: fileSetting('iam.enabled'),
+    /** https://, or http:// only to a loopback host (checked in parseConfig). */
+    baseUrl: optional(Type.String({ maxLength: 2000, pattern: '^https?://[^\\s/?#]+(/[^\\s?#]*)?$' })),
+    appId: optional(Type.String({ minLength: 1, maxLength: 200, pattern: '^\\S+$' })),
+    timeoutSeconds: Type.Integer({ minimum: 1, maximum: 30, default: 10 }),
+    defaultRole: Type.Union([Type.Literal('Player'), Type.Literal('Editor'), Type.Literal('Moderator')], { default: 'Player' }),
+    roleMap: Type.Record(
+      Type.String({ minLength: 1, maxLength: 200 }),
+      Type.Union([Type.Literal('Player'), Type.Literal('Editor'), Type.Literal('Moderator')]),
+      { default: {} },
+    ),
   }),
 }, { additionalProperties: false });
 
@@ -249,7 +268,23 @@ export function parseConfig(text: string, options: ConfigOptions = {}): AppConfi
     const problem = quizLengthsError(shortLength, longLength);
     if (problem) throw new ConfigError(`Invalid ${source}: ${problem.field}: ${problem.message}`);
   }
+  if (parsed.iam.baseUrl !== undefined && !allowedIamUrl(parsed.iam.baseUrl)) {
+    throw new ConfigError(`Invalid ${source}: iam.baseUrl: must be an https:// URL (http:// only to localhost or a loopback address)`);
+  }
   return { ...parsed, server: { ...parsed.server, host: parsed.server.host ?? options.defaultHost ?? '127.0.0.1' } };
+}
+
+/** AGT IAM credentials travel only over HTTPS, except to a loopback host (development and tests). */
+function allowedIamUrl(value: string) {
+  let url: URL;
+  try {
+    url = new URL(value);
+  } catch {
+    return false;
+  }
+  if (url.username || url.password) return false;
+  if (url.protocol === 'https:') return true;
+  return url.protocol === 'http:' && ['localhost', '127.0.0.1', '[::1]'].includes(url.hostname);
 }
 
 export interface LoadedConfig {

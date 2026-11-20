@@ -64,6 +64,9 @@ All notable changes to AGT Galactic Trivia are documented in this file. The form
   (no self-registration). Members sign in with the **Sign in** button in the game's header, and the **Account**
   button shows their account, changes their password and signs them out. A role change, deactivation, password
   reset or deletion signs the member out everywhere; member sessions are never backed up (#17).
+- **AGT sign-in**: members can sign in with their AGT account through AGT IAM, off by default. The first sign-in
+  creates the member; every sign-in sets the role from the AGT IAM tier (`iam.roleMap`, Player by default). Set
+  `iam.baseUrl`, `iam.appId` and `AGT_TRIVIA_IAM_API_KEY`, then turn it on in the Settings tab (#18).
 - A **Settings** button in the header for the language and the text size, shared with the admin dashboard, and a
   footer with the Alliance links and the support link (#16).
 

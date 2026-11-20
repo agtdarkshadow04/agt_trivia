@@ -1,6 +1,7 @@
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import type { AppContext } from './context.js';
 import { HttpError } from './http.js';
+import { IamClient, type IamTraveller } from './iam.js';
 import { AdminMemberService, MemberAuthService, type MemberInput, type MemberSessionResult, type MemberUpdate } from './members.js';
 import type { RouteDefinition } from './routes.js';
 import * as S from './schemas.js';
@@ -49,6 +50,32 @@ export const memberRoutes: readonly RouteDefinition[] = [
     handler: async (context, request, reply) => {
       const { username, password } = request.body as { username: string; password: string };
       return startMemberSession(context, request, reply, await new MemberAuthService(context).login(username, password, authLog(request)));
+    },
+  },
+  {
+    method: 'POST',
+    url: '/api/member/iam/login',
+    auth: 'csrf',
+    // The first sign-in creates the member; every sign-in refreshes their role.
+    writesData: true,
+    rateLimit: 'login',
+    operationId: 'createMemberIamSession',
+    tag: 'auth',
+    summary: 'Sign a member in with their AGT account through AGT IAM and set the member session cookie.',
+    description: 'Available while `iam.enabled` is on and AGT IAM is configured (`403 iam_disabled`, `503 iam_unavailable` otherwise). The first sign-in creates the member; each sign-in sets the role from the AGT IAM tier through `iam.roleMap` (Player by default).',
+    schema: { body: S.IamCredentials, response: { 200: S.MemberSession } },
+    // AGT IAM is asked before the data write, so a slow answer never holds the write lock (BAK-8).
+    prepare: async (context, request) => {
+      const { travellerName, password } = request.body as { travellerName: string; password: string };
+      const log = { error: (message: string) => request.log.error({ source: 'auth' }, message), warn: (message: string) => request.log.warn({ source: 'auth' }, message) };
+      return new MemberAuthService(context).verifyIam(travellerName, password, new IamClient(context, log));
+    },
+    handler: (context, request, reply) => {
+      const traveller = request.prepared as IamTraveller;
+      const result = new MemberAuthService(context).completeIamLogin(traveller);
+      // LOG-14: the traveller ID and tier, never the password or IAM's token.
+      request.audit = { details: { travellerId: traveller.travellerId, permission: traveller.permission, role: traveller.role } };
+      return startMemberSession(context, request, reply, result);
     },
   },
   {

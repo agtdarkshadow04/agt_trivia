@@ -39,6 +39,9 @@ export interface MemberSession {
 /** A member account as the Admin sees it (#17). */
 export interface AdminMember extends MemberSession {
   isActive: boolean;
+  /** An AGT member's traveller ID and AGT IAM tier (#18); null for a local member. */
+  travellerId: string | null;
+  iamPermission: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -80,4 +83,6 @@ export interface PublicSettings {
   supportUrl: string;
   quizShortLength: number;
   quizLongLength: number;
+  /** Members can sign in with their AGT account (#18). */
+  agtSignIn: boolean;
 }

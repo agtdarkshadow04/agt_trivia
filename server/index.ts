@@ -7,6 +7,7 @@ import { openDatabase, SchemaTooNewError, SCHEMA_VERSION, type OpenedDatabase } 
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { markerFile } from './backup.js';
+import { iamMissingName, iamStatus } from './iam.js';
 import { createLogger, LOG_MIGRATIONS, logStoreStream, openLogStore, startRetention } from './logs.js';
 import { OperationLock } from './operation.js';
 import { readSettings } from './repository/settings.js';
@@ -87,6 +88,7 @@ const context = {
   logs,
   operations,
   setupPassword: startup.setupPassword,
+  iamApiKey: startup.iamApiKey,
   version,
 };
 // AUTH-5, AUTH-6: a setup password too long to type stops the server; one left set after setup is a warning.
@@ -96,6 +98,11 @@ if (setupCheck.error) {
   fail(setupCheck.error);
 }
 if (setupCheck.warning) logger.warn({ source: 'config' }, setupCheck.warning);
+// #18: AGT sign-in switched on but not fully configured is a warning; members then cannot use it.
+const iam = iamStatus(context, settingValues(config, readSettings(context.db)));
+if (iam.enabled && !iam.available) {
+  logger.warn({ source: 'config' }, `AGT sign-in (iam.enabled) is on, but ${iam.missing.map(iamMissingName).join(', ')} ${iam.missing.length === 1 ? 'is' : 'are'} not set; members cannot sign in with their AGT account.`);
+}
 
 const app = buildApp(context, { logger, staticDir: startup.staticDir });
 

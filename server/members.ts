@@ -3,7 +3,9 @@ import type { AdminMember, MemberRole, MemberSession } from '../src/lib/api.js';
 import { isUuidV4 } from '../src/lib/api.js';
 import { fieldError, type FieldError } from '../src/lib/errors.js';
 import { displayNameError, errorsOf, memberUsernameError, newPasswordError, normalizeMemberUsername } from '../src/lib/validation.js';
-import type { AppContext } from './context.js';
+import { settingValues, type AppContext } from './context.js';
+import { iamDisabled, iamStatus, iamUnavailable, invalidIamCredentials, type IamTraveller, type IamVerifier } from './iam.js';
+import { readSettings } from './repository/settings.js';
 import { HttpError } from './http.js';
 import { dummyPasswordHash, hashPassword, verifyPassword } from './passwords.js';
 import * as repo from './repository/members.js';
@@ -27,17 +29,31 @@ function validation(errors: FieldError[]): never {
   throw new HttpError(400, 'validation_failed', errors.map((error) => error.message).join(' '), { fields: errors });
 }
 
+function managedByIam(): never {
+  throw new HttpError(409, 'managed_by_iam', 'AGT IAM manages this member: only activate, deactivate or delete them here.');
+}
+
 function notFound(): never {
   throw new HttpError(404, 'not_found', 'The member does not exist.');
 }
 
 export class MemberAuthService {
-  constructor(private readonly context: Pick<AppContext, 'config' | 'db'>) {}
+  constructor(private readonly context: Pick<AppContext, 'config' | 'db' | 'iamApiKey'>) {}
 
-  /** A new session for a member (AUTH-8), on `sqlite` when it runs inside a transaction. */
-  newSession(member: AdminMember, sqlite = this.context.db.connection): MemberSessionResult {
+  /** Whether AGT sign-in is on and configured (#18). */
+  iamAvailability() {
+    return iamStatus(this.context, settingValues(this.context.config, readSettings(this.context.db)));
+  }
+
+  /**
+   * A new session for a member (AUTH-8), on `sqlite` when it runs inside a
+   * transaction. `maxSeconds` shortens it, for an AGT sign-in whose IAM token
+   * expires sooner.
+   */
+  newSession(member: AdminMember, sqlite = this.context.db.connection, maxSeconds?: number): MemberSessionResult {
     const token = randomBytes(32).toString('base64url');
-    const expiresAt = new Date(Date.now() + this.context.config.session.ttlHours * 60 * 60 * 1000);
+    const ttlMs = this.context.config.session.ttlHours * 60 * 60 * 1000;
+    const expiresAt = new Date(Date.now() + (maxSeconds === undefined ? ttlMs : Math.min(ttlMs, maxSeconds * 1000)));
     repo.insertMemberSession(sqlite, hashSessionToken(token), member.id, expiresAt);
     return { token, expiresAt, member: repo.toSession(member) };
   }
@@ -64,11 +80,48 @@ export class MemberAuthService {
     return this.newSession(found.member);
   }
 
-  /** The active member of a session token, or null. */
+  /** The active member of a session token, or null; an AGT member's session counts only while AGT sign-in is available. */
   session(token: string | undefined): MemberSession | null {
     if (!plausibleToken(token)) return null;
     const member = repo.memberForSession(this.context.db, hashSessionToken(token));
-    return member ? repo.toSession(member) : null;
+    if (!member) return null;
+    if (member.authSource === 'agt_iam' && !this.iamAvailability().available) return null;
+    return repo.toSession(member);
+  }
+
+  /**
+   * Step 1 of an AGT sign-in (#18), before the data write, so a slow IAM never
+   * holds the write lock (BAK-8): checks that AGT sign-in is on and
+   * configured, then asks IAM. The password goes only to IAM.
+   */
+  async verifyIam(travellerName: string, password: string, iam: IamVerifier | null): Promise<IamTraveller> {
+    const status = this.iamAvailability();
+    if (!status.enabled) throw iamDisabled();
+    if (!status.available || !iam) throw iamUnavailable();
+    return iam.verify(travellerName, password);
+  }
+
+  /**
+   * Step 2, inside the data write: creates the AGT member at their first
+   * sign-in, or refreshes their name, tier and role (a changed role ends their
+   * other sessions, AUTH-4), then starts a session that ends no later than
+   * IAM's own token. A member the Admin deactivated cannot sign in.
+   */
+  completeIamLogin(traveller: IamTraveller): MemberSessionResult {
+    if (!this.iamAvailability().available) throw iamDisabled();
+    return this.context.db.transaction((sqlite) => {
+      const input = { travellerId: traveller.travellerId, travellerName: traveller.travellerName, permission: traveller.permission, role: traveller.role };
+      const existing = repo.iamMember(this.context.db, traveller.travellerId);
+      if (existing && !existing.isActive) invalidIamCredentials();
+      let member: AdminMember;
+      if (existing) {
+        member = repo.updateIamMember(this.context.db, existing.id, input);
+        if (existing.role !== member.role) repo.deleteMemberSessions(sqlite, existing.id);
+      } else {
+        member = repo.insertIamMember(this.context.db, randomUUID(), input);
+      }
+      return this.newSession(member, sqlite, traveller.expiresInSeconds);
+    });
   }
 
   logout(token: string | undefined) {
@@ -152,13 +205,19 @@ export class AdminMemberService {
     return repo.insertLocalMember(this.context.db, { id: randomUUID(), username, displayName: input.displayName.trim(), role: input.role, passwordHash });
   }
 
-  /** Replaces the display name, role and active flag; a role change or deactivation ends the member's sessions (AUTH-4). */
+  /**
+   * Replaces the display name, role and active flag; a role change or
+   * deactivation ends the member's sessions (AUTH-4). AGT IAM sets an AGT
+   * member's name and role, so for them only the active flag may change
+   * (`409 managed_by_iam`).
+   */
   replace(id: string, input: MemberUpdate): { member: AdminMember; changed: string[] } {
     const current = this.get(id);
     const problems = errorsOf(displayNameError(input.displayName));
     if (problems.length) validation(problems);
     const next = { displayName: input.displayName.trim(), role: input.role, isActive: input.isActive };
     const changed = (['displayName', 'role', 'isActive'] as const).filter((key) => current[key] !== next[key]);
+    if (current.authSource === 'agt_iam' && changed.some((key) => key !== 'isActive')) managedByIam();
     const member = this.context.db.transaction((sqlite) => {
       const updated = repo.updateMember(this.context.db, current.id, next);
       if (changed.includes('role') || !next.isActive) repo.deleteMemberSessions(sqlite, current.id);
@@ -170,7 +229,7 @@ export class AdminMemberService {
   /** Sets a local member's password and ends their sessions (AUTH-4). */
   async setPassword(id: string, password: string): Promise<AdminMember> {
     const member = this.get(id);
-    if (member.authSource !== 'local') throw new HttpError(409, 'conflict', 'This member signs in with their AGT account and has no password here.');
+    if (member.authSource !== 'local') managedByIam();
     const problems = errorsOf(newPasswordError(password));
     if (problems.length) validation(problems);
     const passwordHash = await hashPassword(password);

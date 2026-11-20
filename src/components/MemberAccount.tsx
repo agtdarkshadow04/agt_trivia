@@ -1,6 +1,6 @@
 import { type FormEvent, type RefObject, useState } from 'react';
 import type { MemberSession } from '../lib/api';
-import { changeMemberPassword, memberSignIn, memberSignOut } from '../lib/playerApi';
+import { changeMemberPassword, memberIamSignIn, memberSignIn, memberSignOut } from '../lib/playerApi';
 import { confirmationError, errorsOf, newPasswordError, requiredError } from '../lib/validation';
 import { Dialog } from './Dialog';
 import { formErrors, noFormErrors, TextField } from './Field';
@@ -9,28 +9,33 @@ import { LogInIcon, LogOutIcon } from './Icons';
 import { useViewHeading } from './useViewHeading';
 
 /**
- * `?page=login` (#17): the member sign-in. Accounts are created by the Admin;
- * there is no self-registration. Anonymous visitors can play without one.
+ * `?page=login` (#17): the member sign-in, with a local account or, while AGT
+ * sign-in is available, an AGT account (#18). Local accounts are created by
+ * the Admin, AGT members at their first sign-in; there is no other
+ * registration. Anonymous visitors can play without an account.
  */
-export function SignIn({ onSignedIn }: { onSignedIn(member: MemberSession): void }) {
+export function SignIn({ agtSignIn, onSignedIn }: { agtSignIn: boolean; onSignedIn(member: MemberSession): void }) {
   const { t } = useI18n();
   const heading = useViewHeading('login');
   const [busy, setBusy] = useState(false);
   const [errors, setErrors] = useState(noFormErrors);
+  const [method, setMethod] = useState<'local' | 'agt'>('local');
+  const agt = agtSignIn && method === 'agt';
+  const labels = { travellerName: t.login.travellerName };
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const data = new FormData(event.currentTarget);
-    const username = String(data.get('username'));
+    const name = String(data.get(agt ? 'travellerName' : 'username'));
     const password = String(data.get('password'));
-    const problems = errorsOf(requiredError('username', username.trim()), requiredError('password', password));
-    setErrors(formErrors(problems, t));
+    const problems = errorsOf(requiredError(agt ? 'travellerName' : 'username', name.trim()), requiredError('password', password));
+    setErrors(formErrors(problems, t, labels));
     if (problems.length) return;
     setBusy(true);
     try {
-      onSignedIn(await memberSignIn(username, password));
+      onSignedIn(await (agt ? memberIamSignIn(name.trim(), password) : memberSignIn(name, password)));
     } catch (cause) {
-      setErrors(formErrors(cause, t));
+      setErrors(formErrors(cause, t, labels));
       setBusy(false);
     }
   }
@@ -39,10 +44,23 @@ export function SignIn({ onSignedIn }: { onSignedIn(member: MemberSession): void
     <section className="auth-card" aria-labelledby="member-login-title">
       <p className="eyebrow">{t.login.eyebrow}</p>
       <h1 id="member-login-title" ref={heading} tabIndex={-1}>{t.login.title}</h1>
-      <p>{t.login.text}</p>
+      <p>{agt ? t.login.agtText : t.login.text}</p>
+      {agtSignIn && (
+        <fieldset className="sign-in-methods">
+          <legend>{t.login.methods}</legend>
+          {(['local', 'agt'] as const).map((value) => (
+            <label key={value} className="check-field">
+              <input type="radio" name="method" value={value} checked={method === value} onChange={() => { setMethod(value); setErrors(noFormErrors); }} />
+              {value === 'local' ? t.login.localTab : t.login.agtTab}
+            </label>
+          ))}
+        </fieldset>
+      )}
       {errors.form && <p className="error-note" role="alert">{errors.form}</p>}
-      <form className="stack-form" noValidate onSubmit={(event) => void submit(event)}>
-        <TextField label={t.fields.username} name="username" autoComplete="username" autoCapitalize="none" required error={errors.fields.username} />
+      <form key={method} className="stack-form" noValidate onSubmit={(event) => void submit(event)}>
+        {agt
+          ? <TextField label={t.login.travellerName} name="travellerName" autoComplete="username" autoCapitalize="none" required error={errors.fields.travellerName} />
+          : <TextField label={t.fields.username} name="username" autoComplete="username" autoCapitalize="none" required error={errors.fields.username} />}
         <TextField label={t.fields.password} name="password" type="password" autoComplete="current-password" required error={errors.fields.password} />
         <div className="form-actions">
           <button className="button button-primary button-with-icon" disabled={busy} type="submit"><LogInIcon />{busy ? t.login.submitting : t.login.submit}</button>

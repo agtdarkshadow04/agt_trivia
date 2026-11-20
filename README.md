@@ -7,7 +7,8 @@ short, long or full quiz of single- and multi-answer questions, and see their sc
 built now (#6), turns the former static app on a published Google Sheet into a self-hosted web application: members
 keep a score history, write and review questions in the app, and a single installation Admin manages members,
 settings, backups and logs from a separate page at `/admin`. It is fully self-hosted: it uses no cloud service and
-no CDN, the server makes no outbound requests, and the browser loads everything from your server. All data will
+no CDN, the server makes no outbound requests (except one to AGT IAM per [AGT sign-in](#agt-sign-in), which is off
+until you turn it on), and the browser loads everything from your server. All data will
 live on your machine, in the app's SQLite database and data directory, with the settings in `config.yaml` and the
 secrets in `.env`.
 
@@ -23,6 +24,7 @@ secrets in `.env`.
 - [Admin dashboard](#admin-dashboard)
 - [Playing](#playing)
 - [Members and roles](#members-and-roles)
+- [AGT sign-in](#agt-sign-in)
 - [Backup & restore](#backup--restore)
 - [Logs](#logs)
 - [Content safety](#content-safety)
@@ -209,6 +211,11 @@ Settings come from three places:
 | `rateLimits.login` | 10 per 15 minutes | Admin and member sign-in and both password changes, each counted separately, per client address |
 | `rateLimits.setup` | 10 per 15 minutes | First-run setup, per client address |
 | `rateLimits.adminUploads` | 120 per 15 minutes | Backup previews and restores, per client address |
+| `iam.baseUrl` | — | The AGT IAM address for [AGT sign-in](#agt-sign-in): `https://`, or `http://` only to localhost |
+| `iam.appId` | — | The App ID AGT IAM registered for this installation |
+| `iam.timeoutSeconds` | `10` | How long an AGT sign-in waits for AGT IAM (1–30) |
+| `iam.defaultRole` | `Player` | The role of an authorized traveller whose AGT tier `iam.roleMap` does not name |
+| `iam.roleMap` | `{}` | AGT IAM tier → role (`Player`, `Editor` or `Moderator`); the README example maps `Editor` and `Moderator` |
 
 ### Dashboard-editable keys
 
@@ -221,6 +228,7 @@ Settings come from three places:
 | `backup.maxZipBytes` | `209715200` (200 MiB) | Largest backup upload, in bytes (1024 to 2 GiB) |
 | `backup.maxUncompressedBytes` | `1073741824` (1 GiB) | Largest total size of a backup's files once unpacked, in bytes (1024 to 8 GiB) |
 | `backup.maxEntries` | `10000` | Most files in a backup archive (1–100000) |
+| `iam.enabled` | `false` | Whether members can sign in with their AGT account ([AGT sign-in](#agt-sign-in)); needs `iam.baseUrl`, `iam.appId` and `AGT_TRIVIA_IAM_API_KEY`. Turning it off signs every AGT member out |
 | `logs.serverRetentionDays` | `30` | Days the server log keeps an entry (1–3650) |
 | `logs.serverMaxEntries` | `100000` | Most server log entries (1000–10000000); the oldest go first |
 | `logs.auditRetentionDays` | `365` | Days the audit log keeps an entry (30–3650) |
@@ -231,6 +239,7 @@ Settings come from three places:
 | Variable | Purpose |
 | --- | --- |
 | `AGT_TRIVIA_SETUP_PASSWORD` | In `.env`: the one-time setup password for [First run](#first-run). Remove it after setup |
+| `AGT_TRIVIA_IAM_API_KEY` | In `.env`: the API key AGT IAM gave this installation, for [AGT sign-in](#agt-sign-in) |
 | `AGT_TRIVIA_CONFIG_FILE` | Path of `config.yaml` (default `./config.yaml`); set by the Dockerfile and the systemd unit |
 | `AGT_TRIVIA_SERVER_HOST` | Listen address when `server.host` is not in `config.yaml`; set by the Dockerfile |
 | `AGT_TRIVIA_STATIC_DIR` | Development only: the built client, instead of `dist/` |
@@ -298,8 +307,9 @@ Anonymous visitors can still play without an account.
 | **Moderator** | What an Editor can, plus review (approve, reject, edit, unpublish, delete) any question and manage the categories (#19, #20) |
 
 There is no self-registration: the Admin creates member accounts in the **Members** tab, with a username (3 to 64
-lowercase letters, digits, dots, underscores or hyphens), a display name, a role and a first password. Signing in
-with an AGT account arrives in #18.
+lowercase letters, digits, dots, underscores or hyphens), a display name, a role and a first password. Members
+can also sign in with their AGT account, which creates their member account at the first sign-in (see
+[AGT sign-in](#agt-sign-in)).
 
 Members sign in with the **Sign in** button in the game's header (`/?page=login`). Signed in, the header shows their
 display name and role, and an **Account** button that shows their account, changes their password and signs them
@@ -308,6 +318,43 @@ out. Member sessions use their own cookie, which the admin dashboard never accep
 A member is signed out everywhere when they change their password, and when the Admin changes their role,
 deactivates them (an inactive member cannot sign in), sets a new password for them or deletes them. Deleting a
 member keeps the questions they wrote, without their name.
+
+## AGT sign-in
+
+Members can sign in with their **AGT account** (their AGT Traveller Name and password) through AGT IAM, the
+Alliance's identity service, besides local accounts. It is **off by default**; while it is off, the server makes no
+outbound request at all.
+
+To turn it on:
+
+1. Ask an AGT IAM administrator to register an App ID for your installation, with the `auth:verify` capability and
+   the tiers you want to map (for example `Editor` and `Moderator`). They give you the App ID and an API key.
+2. In `config.yaml`:
+
+   ```yaml
+   iam:
+     baseUrl: https://iam.example.org   # the AGT IAM address: https://, or http:// only to localhost
+     appId: agt-trivia                  # the App ID AGT IAM registered
+     roleMap: { Editor: Editor, Moderator: Moderator }
+   ```
+
+3. In `.env`: `AGT_TRIVIA_IAM_API_KEY=<the API key>`. Restart the server.
+4. In the dashboard's **Settings** tab, tick **Let members sign in with their AGT account**. The tab says what is
+   still missing while something is.
+
+The sign-in page then offers **Local account** and **AGT account**. With an AGT account:
+
+- The server sends one request per sign-in to `<iam.baseUrl>/api/v1/auth/verify`, with the Traveller Name, the
+  password, the App ID and the API key: over HTTPS only, without following redirects, waiting at most
+  `iam.timeoutSeconds`, reading at most 64 KiB, never retrying. The AGT password, AGT IAM's token and the API key
+  are never stored, logged or shown.
+- The first sign-in creates the member, named after the traveller, without a username or password here.
+- Every sign-in sets the role again from the traveller's AGT IAM tier through `iam.roleMap`. A tier the map does not
+  name gets `iam.defaultRole`, **Player**. The tiers `NOACCESS` and `NONE`, and travellers AGT IAM does not
+  authorize, are refused, and nothing is created. A changed role signs the member's other sessions out.
+- The Admin sees AGT members in the **Members** tab, with their traveller ID and tier, and can only activate,
+  deactivate or delete them: AGT IAM sets their name and role. A deactivated AGT member cannot sign in.
+- Turning AGT sign-in off signs every AGT member out at once; their accounts and questions stay.
 
 ## Backup & restore
 
