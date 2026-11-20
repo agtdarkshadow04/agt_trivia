@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import type { PublicQuestion } from './api.js';
-import { choiceState, choose, currentQuestion, isFinished, isMultiAnswer, lockAnswer, nextQuestion, quizResult, startSession } from './quizSession.js';
+import { choiceState, choose, currentQuestion, isFinished, isMultiAnswer, lockAnswer, nextQuestion, quizResult, reviewAnswers, startSession } from './quizSession.js';
 
 const single: PublicQuestion = {
   id: 'q1', prompt: 'Largest planet?', authorCredit: null,
@@ -89,5 +89,24 @@ describe('the answers a member result sends (#21)', () => {
     session = nextQuestion(lockAnswer(session));
     session = lockAnswer(choose(choose(session, 'e'), 'c'));
     assert.deepEqual(session.answers, [{ questionId: 'q1', choiceIds: ['b'] }, { questionId: 'q2', choiceIds: ['e', 'c'] }]);
+  });
+});
+
+describe('the end-of-quiz review (#44)', () => {
+  it('lists every locked answer in the order played, with the chosen and the correct answers', () => {
+    let session = startSession([multi, single]);
+    session = nextQuestion(lockAnswer(choose(choose(session, 'e'), 'c')));
+    session = nextQuestion(lockAnswer(choose(session, 'b')));
+    assert.deepEqual(reviewAnswers(session), [
+      { questionId: 'q2', prompt: 'Gas giants?', chosen: ['Jupiter', 'Saturn'], correct: ['Jupiter', 'Saturn'], right: true },
+      { questionId: 'q1', prompt: 'Largest planet?', chosen: ['Mars'], correct: ['Jupiter'], right: false },
+    ]);
+  });
+
+  it('marks a partly right multi-answer question wrong, and lists nothing before an answer is locked', () => {
+    const fresh = startSession([multi]);
+    assert.deepEqual(reviewAnswers(choose(fresh, 'c')), []);
+    const [item] = reviewAnswers(lockAnswer(choose(fresh, 'c')));
+    assert.deepEqual(item, { questionId: 'q2', prompt: 'Gas giants?', chosen: ['Jupiter'], correct: ['Jupiter', 'Saturn'], right: false });
   });
 });

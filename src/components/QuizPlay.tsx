@@ -1,7 +1,7 @@
 import { type FormEvent, useEffect, useId, useRef } from 'react';
 import type { PublicCategory, QuizLength } from '../lib/api';
 import { availableLengths } from '../lib/quiz';
-import { choiceState, currentQuestion, isMultiAnswer, quizResult, type ChoiceState, type QuizSession } from '../lib/quizSession';
+import { choiceState, currentQuestion, isMultiAnswer, quizResult, reviewAnswers, type ChoiceState, type QuizSession } from '../lib/quizSession';
 import { formatTranslation } from '../translations';
 import { useI18n } from './I18n';
 import { ArrowLeftIcon, ArrowRightIcon, CheckCircleIcon, RotateCcwIcon, XCircleIcon } from './Icons';
@@ -204,7 +204,37 @@ function ScoreRing({ score, total, percent }: { score: number; total: number; pe
   );
 }
 
-/** The results (#16): score, percentage and rank, then replay or choose another category. */
+/**
+ * The end-of-quiz review (#44): every question in the order played, with the
+ * player's answer, the correct one, and whether it was right in an icon and
+ * words (A11Y-1). Closed until opened; a native disclosure, so the keyboard
+ * and screen readers work without extra code.
+ */
+function AnswerReview({ session }: { session: QuizSession }) {
+  const { t, number } = useI18n();
+  const items = reviewAnswers(session);
+  if (!items.length) return null;
+  return (
+    <details className="answer-review">
+      <summary>{t.quiz.reviewAnswers}</summary>
+      <ol className="review-list">
+        {items.map((item, index) => (
+          <li key={item.questionId} className="review-item">
+            <p className="review-item-meta">{formatTranslation(t.quiz.progress, { number: number(index + 1), total: number(items.length) })}</p>
+            <p className="review-item-prompt" lang="en">{item.prompt}</p>
+            <span className={`answer-state ${item.right ? 'answer-state-correct' : 'answer-state-wrong'}`}>
+              {item.right ? <CheckCircleIcon /> : <XCircleIcon />}{item.right ? t.quiz.stateCorrectChosen : t.quiz.stateWrongChosen}
+            </span>
+            <p>{formatTranslation(t.quiz.reviewChosen, { answers: item.chosen.join(', ') })}</p>
+            {!item.right && <p>{formatTranslation(item.correct.length > 1 ? t.quiz.correctAnswers : t.quiz.correctAnswer, { answers: item.correct.join(', ') })}</p>}
+          </li>
+        ))}
+      </ol>
+    </details>
+  );
+}
+
+/** The results (#16): score, percentage and rank, then replay or choose another category, and the review (#44). */
 export function Results({ category, session, onReplay, onAnother, children }: {
   category: PublicCategory;
   session: QuizSession;
@@ -229,6 +259,7 @@ export function Results({ category, session, onReplay, onAnother, children }: {
           <button className="button button-secondary" type="button" onClick={onAnother}>{t.quiz.chooseAnother}</button>
         </div>
       </div>
+      <AnswerReview session={session} />
     </section>
   );
 }

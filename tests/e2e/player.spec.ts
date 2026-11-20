@@ -84,6 +84,21 @@ test('plays a quiz with single- and multi-answer questions, then replays and cho
   await expect(page.getByText('You completed Biology with a score of 67%.')).toBeVisible();
   await expectAccessible(page, 'results');
 
+  // #44: the review lists every question with the player's answer; it is closed until opened.
+  const review = page.locator('details.answer-review');
+  const items = review.getByRole('listitem');
+  await expect(items.first()).toBeHidden();
+  await review.getByText('Review your answers').click();
+  await expect(items).toHaveCount(3);
+  const right = items.filter({ hasText: 'Your answer: correct' });
+  await expect(right).toHaveCount(2);
+  await expect(right.filter({ hasText: /The correct answers?:/ })).toHaveCount(0);
+  const wrong = items.filter({ hasText: 'Your answer: incorrect' });
+  await expect(wrong).toHaveCount(1);
+  await expect(wrong).toContainText(/You chose: Wrong/);
+  await expect(wrong).toContainText(/The correct answer: Right/);
+  await expectAccessible(page, 'answer review');
+
   await page.getByRole('button', { name: 'Replay category' }).click();
   await expect(page.getByText('Question 1 of 3')).toBeVisible();
   await expect(page.getByText('Score: 0')).toBeVisible();
@@ -207,6 +222,8 @@ test('every view fits every width, and 300 px at 2× text (UI-12, A11Y-6)', asyn
         await page.getByRole('button', { name: number === 3 ? 'View results' : 'Next question' }).click();
       }
       await expect(page.getByRole('heading', { name: 'Atlas Archivist' })).toBeVisible();
+      await page.getByText('Review your answers').click();
+      await expect(page.locator('.review-item').first()).toBeVisible();
     }],
   ];
   for (const [scale, sizes] of [['1', widths], ['2', [300]]] as const) {
