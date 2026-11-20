@@ -14,6 +14,8 @@ export interface StoredResult {
   score: number;
   total: number;
   finishedAt: string;
+  /** The signed quiz attempt it was saved from (#45), or null. */
+  attemptId: string | null;
 }
 
 interface ResultRow {
@@ -25,6 +27,7 @@ interface ResultRow {
   score: number;
   total: number;
   finished_at: string;
+  attempt_id: string | null;
 }
 
 function toResult(row: ResultRow): StoredResult {
@@ -37,6 +40,7 @@ function toResult(row: ResultRow): StoredResult {
     score: row.score,
     total: row.total,
     finishedAt: row.finished_at,
+    attemptId: row.attempt_id,
   };
 }
 
@@ -45,6 +49,8 @@ export interface NewResult {
   categoryId: string;
   categoryName: string;
   length: QuizLength;
+  /** The verified attempt (#45), or null for a result sent without one. */
+  attemptId?: string | null;
   /** In the order they were played; `correct` only, never the chosen choices. */
   answers: readonly { questionId: string; correct: boolean }[];
 }
@@ -56,12 +62,18 @@ export function insertResult(db: Database, input: NewResult, now = new Date()): 
   const at = now.toISOString();
   const score = input.answers.filter((answer) => answer.correct).length;
   db.transaction((sqlite) => {
-    sqlite.prepare(`INSERT INTO quiz_results (id, member_id, category_id, category_name, length, score, total, finished_at, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(id, input.memberId, input.categoryId, input.categoryName, input.length, score, input.answers.length, at, at, at);
+    sqlite.prepare(`INSERT INTO quiz_results (id, member_id, category_id, category_name, length, score, total, finished_at, attempt_id, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(id, input.memberId, input.categoryId, input.categoryName, input.length, score, input.answers.length, at, input.attemptId ?? null, at, at);
     const answer = sqlite.prepare('INSERT INTO quiz_result_answers (result_id, position, question_id, correct, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)');
     input.answers.forEach((entry, position) => answer.run(id, position, entry.questionId, entry.correct ? 1 : 0, at, at));
   });
   return toResult(db.connection.prepare('SELECT * FROM quiz_results WHERE id = ?').get(id) as ResultRow);
+}
+
+/** The result saved from a quiz attempt (#45), by any member, or null. */
+export function getResultByAttempt(db: Database, attemptId: string): StoredResult | null {
+  const row = db.connection.prepare('SELECT * FROM quiz_results WHERE attempt_id = ?').get(attemptId) as ResultRow | undefined;
+  return row ? toResult(row) : null;
 }
 
 export interface ResultPagePosition {

@@ -1,13 +1,20 @@
 import assert from 'node:assert/strict';
 import { after, before, describe, it } from 'node:test';
 import type { FastifyInstance } from 'fastify';
+import { join } from 'node:path';
+import { ATTEMPT_KEY_NAME, ATTEMPT_TTL_MS, ensureAttemptKey } from '../attempts.js';
 import { buildApp } from '../app.js';
 import { withDataWrite } from '../dataWrite.js';
+import { openDatabase } from '../db.js';
 import { AdminMemberService } from '../members.js';
 import { deleteCategory, insertCategory } from '../repository/categories.js';
 import { insertQuestion, type Question } from '../repository/questions.js';
 import { insertResult } from '../repository/results.js';
-import { adminCookie, createMember, memberCookie, sampleQuestion, seedQuiz, testContext } from './helpers.js';
+import { getSecret } from '../repository/secrets.js';
+import { publicQuiz } from '../quizRoutes.js';
+import { ResultService } from '../results.js';
+import type { MemberSession, PublicQuiz } from '../../src/lib/api.js';
+import { adminCookie, createMember, memberCookie, sampleQuestion, seedQuiz, testContext, totalChanges } from './helpers.js';
 
 /** Member score history (#21): grading on the server, only one's own results, stats, clearing, and the audit log. */
 
@@ -197,7 +204,153 @@ describe('member score history', () => {
     const entry = context.logs.listAudit({}, null, 200).find((candidate) => candidate.targetId === id)!;
     assert.equal(entry.action, 'createResult');
     assert.equal(entry.actorType, 'member');
-    assert.deepEqual(entry.details, { categoryId: space.category.id, length: 'short', score: 1, total: 1 });
+    assert.deepEqual(entry.details, { categoryId: space.category.id, length: 'short', score: 1, total: 1, attempt: 'none' });
     assert.doesNotMatch(JSON.stringify(entry), new RegExp(space.questions[0].choices[0].id));
+  });
+});
+
+describe('signed quiz attempts (#45)', () => {
+  const context = testContext();
+  let app: FastifyInstance;
+  let space: Awaited<ReturnType<typeof seedQuiz>>;
+  let biologyId: string;
+  const cookies: Record<'cleo' | 'dan', string> = {} as never;
+
+  before(async () => {
+    app = buildApp(context);
+    await app.ready();
+    space = await seedQuiz(context, 4);
+    biologyId = (await withDataWrite(context.operations, () => insertCategory(context.db, { shortName: 'bio', name: 'Biology', description: 'd', priority: 20 }))).id;
+    await withDataWrite(context.operations, () => insertQuestion(context.db, sampleQuestion(biologyId, 'Cells?')));
+    for (const key of ['cleo', 'dan'] as const) {
+      await createMember(context, `a.${key}`, 'Player');
+      cookies[key] = await memberCookie(context, `a.${key}`);
+    }
+  });
+  after(async () => { await app.close(); context.close(); });
+
+  const draw = async (length = 'all', categoryId = space.category.id) => (await app.inject(`/api/categories/${categoryId}/quiz?length=${length}`)).json() as PublicQuiz;
+  /** Right answers to every question of `quiz`, in the order drawn. */
+  const answersFor = (quiz: PublicQuiz) => quiz.questions.map((question) => ({ questionId: question.id, choiceIds: question.correctChoiceIds }));
+  const save = (key: keyof typeof cookies, body: object) => app.inject({
+    method: 'POST', url: '/api/member/results', headers: { cookie: cookies[key], ...csrf }, payload: body,
+  });
+  const body = (quiz: PublicQuiz, overrides: Record<string, unknown> = {}) => ({
+    categoryId: quiz.category.id, length: quiz.length, attemptToken: quiz.attempt.token, answers: answersFor(quiz), ...overrides,
+  });
+  const history = async (key: keyof typeof cookies) => (await app.inject({ url: '/api/member/results', headers: { cookie: cookies[key] } })).json().items as { id: string }[];
+  const reason = (response: { statusCode: number; json(): { error: string; params?: { reason?: string } } }) => [response.statusCode, response.json().error, response.json().params?.reason];
+
+  it('gives every drawn quiz a new signed attempt, and drawing writes nothing (BAK-8)', async () => {
+    const before = totalChanges(context);
+    const [first, second] = [await draw(), await draw()];
+    assert.equal(totalChanges(context), before);
+    assert.notEqual(first.attempt.id, second.attempt.id);
+    assert.match(first.attempt.token, /^v1\.[\w-]+\.[\w-]+$/);
+    const expires = Date.parse(first.attempt.expiresAt) - Date.now();
+    assert.ok(expires > ATTEMPT_TTL_MS - 60_000 && expires <= ATTEMPT_TTL_MS, 'a day to save it');
+    // The key never leaves the server.
+    const key = getSecret(context.db, ATTEMPT_KEY_NAME)!;
+    assert.ok(key.length >= 43);
+    assert.doesNotMatch(JSON.stringify(first), new RegExp(key));
+  });
+
+  it('saves an attempt once: sending it again returns the saved result with 200', async () => {
+    const quiz = await draw();
+    const saved = await save('cleo', body(quiz));
+    assert.equal(saved.statusCode, 201, saved.body);
+    assert.equal(saved.json().result.score, 4);
+    const again = await save('cleo', body(quiz));
+    assert.equal(again.statusCode, 200, again.body);
+    assert.equal(again.json().result.id, saved.json().result.id);
+    assert.equal((await history('cleo')).filter((item) => item.id === saved.json().result.id).length, 1);
+    assert.equal((await history('cleo')).length, 1);
+    // Another member cannot save someone else's attempt.
+    assert.deepEqual(reason(await save('dan', body(quiz))), [409, 'conflict', undefined]);
+    const entries = context.logs.listAudit({}, null, 200).filter((entry) => entry.action === 'createResult' && entry.targetId === saved.json().result.id);
+    assert.deepEqual(entries.map((entry) => entry.details.attempt).sort(), ['repeated', 'verified']);
+  });
+
+  it('refuses a subset, extra, reordered or changed answers, and another category or length (mismatch)', async () => {
+    const quiz = await draw();
+    const answers = answersFor(quiz);
+    for (const changed of [
+      { answers: answers.slice(1) },
+      { answers: [...answers].reverse() },
+      { answers: answers.slice(0, 1) },
+      { length: 'long' },
+    ]) {
+      assert.deepEqual(reason(await save('dan', body(quiz, changed))), [400, 'attempt_invalid', 'mismatch'], JSON.stringify(changed));
+    }
+    const biology = await draw('all', biologyId);
+    assert.deepEqual(reason(await save('dan', body(quiz, { categoryId: biologyId, answers: answersFor(biology) }))), [400, 'attempt_invalid', 'mismatch']);
+    // Wrong answers to the right questions are fine: they are graded, not refused.
+    const wrong = await save('dan', body(quiz, { answers: answers.map((entry) => ({ ...entry, choiceIds: [] })) }));
+    assert.equal(wrong.statusCode, 201, wrong.body);
+    assert.equal(wrong.json().result.score, 0);
+  });
+
+  it('refuses a token it did not sign or that was changed (invalid)', async () => {
+    const quiz = await draw();
+    const [version, payload, signature] = quiz.attempt.token.split('.');
+    const claims = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8'));
+    const forged = Buffer.from(JSON.stringify({ ...claims, length: 'short' })).toString('base64url');
+    const flipped = `${signature.slice(0, -2)}${signature.endsWith('AA') ? 'BB' : 'AA'}`;
+    for (const token of [`${version}.${forged}.${signature}`, `${version}.${payload}.${flipped}`, `v2.${payload}.${signature}`, 'nonsense', `${quiz.attempt.token}.x`]) {
+      assert.deepEqual(reason(await save('dan', body(quiz, { attemptToken: token }))), [400, 'attempt_invalid', 'invalid'], token);
+    }
+    // A token another installation signed (another key) is not this server's.
+    const other = testContext();
+    try {
+      const elsewhere = await withDataWrite(other.operations, () => insertCategory(other.db, { shortName: 'space', name: 'Space', description: 'd', priority: 10 }));
+      await withDataWrite(other.operations, () => insertQuestion(other.db, sampleQuestion(elsewhere.id, 'Elsewhere?')));
+      const foreign = publicQuiz(other, elsewhere.id, 'all');
+      assert.deepEqual(reason(await save('dan', body(quiz, { attemptToken: foreign.attempt.token }))), [400, 'attempt_invalid', 'invalid']);
+    } finally {
+      other.close();
+    }
+  });
+
+  it('refuses an attempt older than a day (expired)', async () => {
+    const quiz = await draw();
+    const session = (await app.inject({ url: '/api/member/session', headers: { cookie: cookies.dan } })).json() as MemberSession;
+    const later = () => new Date(Date.now() + ATTEMPT_TTL_MS + 60_000);
+    await withDataWrite(context.operations, () => {
+      // The service, with a clock a day ahead: the route has no clock to turn.
+      assert.throws(() => new ResultService(context, session, later).submit(body(quiz) as never), (error: { statusCode: number; error: string; params: { reason: string } }) => (
+        error.statusCode === 400 && error.error === 'attempt_invalid' && error.params.reason === 'expired'
+      ));
+    });
+  });
+
+  it('still saves a result without a token, as before (deprecated until 3.0.0)', async () => {
+    const quiz = await draw();
+    const response = await save('dan', { categoryId: quiz.category.id, length: quiz.length, answers: answersFor(quiz) });
+    assert.equal(response.statusCode, 201, response.body);
+  });
+});
+
+describe('the quiz attempt key (SEC-8, #45)', () => {
+  it('is created once, kept across restarts, and created again for a database without one', () => {
+    const context = testContext('', { file: true });
+    const file = join(context.dataDir, 'agt-trivia.sqlite');
+    try {
+      const key = getSecret(context.db, ATTEMPT_KEY_NAME);
+      assert.ok(key);
+      assert.equal(ensureAttemptKey(context.db), false, 'an existing key is kept');
+      context.db.close();
+      const reopened = openDatabase(file).db;
+      try {
+        assert.equal(getSecret(reopened, ATTEMPT_KEY_NAME), key);
+        reopened.connection.prepare('DELETE FROM app_secrets').run();
+        assert.equal(ensureAttemptKey(reopened), true);
+        const fresh = getSecret(reopened, ATTEMPT_KEY_NAME);
+        assert.ok(fresh && fresh !== key);
+      } finally {
+        reopened.close();
+      }
+    } finally {
+      context.close();
+    }
   });
 });

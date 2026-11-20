@@ -1,6 +1,7 @@
 import type { PublicCategory, PublicQuiz, QuizLength } from '../src/lib/api.js';
 import { isUuidV4 } from '../src/lib/api.js';
 import { questionsForQuiz, shuffle } from '../src/lib/quiz.js';
+import { issueAttempt } from './attempts.js';
 import { settingValues, type AppContext } from './context.js';
 import { HttpError } from './http.js';
 import { getCategory, listCategories, type Category } from './repository/categories.js';
@@ -44,7 +45,9 @@ export function publicQuiz(context: AppContext, categoryId: string, length: Quiz
   const values = settingValues(context.config, readSettings(context.db));
   const count = length === 'short' ? values['quiz.shortLength'] : length === 'long' ? values['quiz.longLength'] : undefined;
   const questions = questionsForQuiz(approvedQuestions(context.db, category.id), count, random);
-  return { category: publicCategory(category), length, questions: questions.map((question) => publicQuestion(question, random)) };
+  // #45: signed, not stored; drawing a quiz writes nothing (BAK-8).
+  const attempt = issueAttempt(context.db, { categoryId: category.id, length, questionIds: questions.map((question) => question.id) });
+  return { category: publicCategory(category), length, questions: questions.map((question) => publicQuestion(question, random)), attempt };
 }
 
 export const quizRoutes: readonly RouteDefinition[] = [
@@ -67,7 +70,7 @@ export const quizRoutes: readonly RouteDefinition[] = [
     operationId: 'getQuiz',
     tag: 'public',
     summary: "Draw a random quiz from a category's approved questions.",
-    description: 'Each call draws anew. The correct answers are included: anonymous play is graded in the browser, as in 1.x.',
+    description: 'Each call draws anew, with a new signed `attempt` that a member sends back with their result (#45). The correct answers are included: anonymous play is graded in the browser, as in 1.x.',
     schema: { params: S.CategoryIdParams, querystring: S.QuizQuery, response: { 200: S.PublicQuiz } },
     handler: (context, request) => {
       const { id } = request.params as { id: string };

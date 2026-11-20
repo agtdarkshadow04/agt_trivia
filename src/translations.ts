@@ -76,6 +76,7 @@ const en = {
     conflict: "This could not be done because of another change or a running backup or restore. Reload and try again.",
     app_access_denied: "Your AGT account is not authorized for AGT Galactic Trivia. Ask an AGT administrator for access.",
     category_not_empty: "This category still has {{count}} questions. Move them to another category or delete them first.",
+    attempt_invalid: "This quiz can no longer be saved. Play it again to save your score.",
   },
   layout: {
     homeLabel: "{{alliance}} {{product}}: home",
@@ -406,6 +407,7 @@ const fr: Translations = {
     conflict: "Impossible pour le moment à cause d'une autre modification ou d'une sauvegarde ou restauration en cours. Rechargez et réessayez.",
     app_access_denied: "Votre compte AGT n'est pas autorisé pour AGT Galactic Trivia. Demandez l'accès à un administrateur AGT.",
     category_not_empty: "Cette catégorie contient encore {{count}} questions. Déplacez-les vers une autre catégorie ou supprimez-les d'abord.",
+    attempt_invalid: "Ce quiz ne peut plus être enregistré. Rejouez-le pour enregistrer votre score.",
   },
   layout: {
     homeLabel: "{{alliance}} {{product}} : accueil",
@@ -734,6 +736,7 @@ const de: Translations = {
     conflict: "Das ging wegen einer anderen Änderung oder einer laufenden Sicherung oder Wiederherstellung nicht. Laden Sie neu und versuchen Sie es erneut.",
     app_access_denied: "Ihr AGT-Konto ist für AGT Galactic Trivia nicht freigegeben. Bitten Sie einen AGT-Administrator um Zugang.",
     category_not_empty: "Diese Kategorie enthält noch {{count}} Fragen. Verschieben Sie sie zuerst in eine andere Kategorie oder löschen Sie sie.",
+    attempt_invalid: "Dieses Quiz kann nicht mehr gespeichert werden. Spielen Sie es erneut, um Ihr Ergebnis zu speichern.",
   },
   layout: {
     homeLabel: "{{alliance}} {{product}}: Startseite",
@@ -1062,6 +1065,7 @@ const es: Translations = {
     conflict: "No se pudo hacer por otro cambio o por una copia de seguridad o restauración en curso. Recarga e inténtalo de nuevo.",
     app_access_denied: "Tu cuenta AGT no está autorizada para AGT Galactic Trivia. Pide acceso a un administrador de la AGT.",
     category_not_empty: "Esta categoría todavía tiene {{count}} preguntas. Muévelas a otra categoría o elimínalas primero.",
+    attempt_invalid: "Este cuestionario ya no se puede guardar. Vuelve a jugarlo para guardar tu puntuación.",
   },
   layout: {
     homeLabel: "{{alliance}} {{product}}: inicio",
@@ -1390,6 +1394,7 @@ const pt: Translations = {
     conflict: "Não foi possível por causa de outra alteração ou de um backup ou restauração em andamento. Recarregue e tente novamente.",
     app_access_denied: "Sua conta AGT não está autorizada para o AGT Galactic Trivia. Peça acesso a um administrador da AGT.",
     category_not_empty: "Esta categoria ainda tem {{count}} perguntas. Mova-as para outra categoria ou exclua-as primeiro.",
+    attempt_invalid: "Este quiz não pode mais ser salvo. Jogue-o novamente para salvar sua pontuação.",
   },
   layout: {
     homeLabel: "{{alliance}} {{product}}: início",
@@ -1718,6 +1723,7 @@ const it: Translations = {
     conflict: "Non è stato possibile a causa di un'altra modifica o di un backup o ripristino in corso. Ricarica e riprova.",
     app_access_denied: "Il tuo account AGT non è autorizzato per AGT Galactic Trivia. Chiedi l'accesso a un amministratore AGT.",
     category_not_empty: "Questa categoria contiene ancora {{count}} domande. Spostale in un'altra categoria o eliminale prima.",
+    attempt_invalid: "Questo quiz non può più essere salvato. Rigiocalo per salvare il tuo punteggio.",
   },
   layout: {
     homeLabel: "{{alliance}} {{product}}: home",
@@ -2046,6 +2052,7 @@ const th: Translations = {
     conflict: "ทำรายการนี้ไม่ได้เนื่องจากมีการเปลี่ยนแปลงอื่น หรือมีการสำรองหรือกู้คืนข้อมูลที่กำลังทำงานอยู่ โปรดโหลดใหม่แล้วลองอีกครั้ง",
     app_access_denied: "บัญชี AGT ของคุณไม่ได้รับสิทธิ์ใช้ AGT Galactic Trivia โปรดขอสิทธิ์จากผู้ดูแล AGT",
     category_not_empty: "หมวดหมู่นี้ยังมีคำถาม {{count}} ข้อ ย้ายไปหมวดหมู่อื่นหรือลบออกก่อน",
+    attempt_invalid: "ไม่สามารถบันทึกแบบทดสอบนี้ได้อีกแล้ว เล่นอีกครั้งเพื่อบันทึกคะแนนของคุณ",
   },
   layout: {
     homeLabel: "{{alliance}} {{product}}: หน้าแรก",
@@ -2374,6 +2381,7 @@ const zh: Translations = {
     conflict: "由于存在其他更改或正在进行的备份或恢复，无法完成此操作。请刷新后重试。",
     app_access_denied: "你的 AGT 账户未获准使用 AGT Galactic Trivia。请向 AGT 管理员申请访问权限。",
     category_not_empty: "此类别仍有 {{count}} 道题目。请先将它们移到其他类别或删除。",
+    attempt_invalid: "此测验已无法保存。请重新游玩以保存你的分数。",
   },
   layout: {
     homeLabel: "{{alliance}} {{product}}：首页",
@@ -2702,6 +2710,7 @@ const hi: Translations = {
     conflict: "किसी अन्य बदलाव या चल रहे बैकअप या रीस्टोर के कारण यह नहीं हो सका। पेज फिर से लोड करें और दोबारा प्रयास करें।",
     app_access_denied: "आपका AGT खाता AGT Galactic Trivia के लिए अधिकृत नहीं है। पहुँच के लिए किसी AGT व्यवस्थापक से कहें।",
     category_not_empty: "इस श्रेणी में अभी भी {{count}} प्रश्न हैं। पहले उन्हें किसी दूसरी श्रेणी में ले जाएँ या हटाएँ।",
+    attempt_invalid: "यह क्विज़ अब सहेजा नहीं जा सकता। अपना स्कोर सहेजने के लिए इसे फिर से खेलें।",
   },
   layout: {
     homeLabel: "{{alliance}} {{product}}: होम",
@@ -3030,6 +3039,7 @@ const ja: Translations = {
     conflict: "別の変更、または実行中のバックアップや復元のため、実行できませんでした。再読み込みしてもう一度お試しください。",
     app_access_denied: "あなたの AGT アカウントには AGT Galactic Trivia へのアクセス権がありません。AGT の管理者にアクセスを依頼してください。",
     category_not_empty: "このカテゴリーにはまだ {{count}} 問の問題があります。先に別のカテゴリーへ移すか削除してください。",
+    attempt_invalid: "このクイズはもう保存できません。スコアを保存するにはもう一度プレイしてください。",
   },
   layout: {
     homeLabel: "{{alliance}} {{product}}：ホーム",

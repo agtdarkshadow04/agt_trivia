@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { parseConfig } from '../config.js';
 import type { AppContext } from '../context.js';
 import { withDataWrite } from '../dataWrite.js';
+import { ensureAttemptKey } from '../attempts.js';
 import { Database, openDatabase, openSqlite, runMigrations } from '../db.js';
 import { openLogStore } from '../logs.js';
 import { insertCategory, type Category } from '../repository/categories.js';
@@ -41,6 +42,8 @@ export function testContext(config = '', options: TestContextOptions = {}): Test
     runMigrations(sqlite);
     db = new Database(sqlite);
   }
+  // As server/index.ts does before listening (SEC-8, #45).
+  ensureAttemptKey(db);
   const { store: logs } = openLogStore(':memory:', { now: options.now });
   return {
     config: parseConfig(config),

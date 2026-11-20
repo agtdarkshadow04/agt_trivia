@@ -10,12 +10,20 @@ All notable changes to AGT Galactic Trivia are documented in this file. The form
 
 - **Review your answers** on the results screen: every question of the quiz in the order played, with your answer, the
   correct one, and whether it was right. It works without signing in, and nothing is sent to the server (#44).
+- `GET /api/categories/{id}/quiz` returns the quiz's signed `attempt`, and `POST /api/member/results` takes its token
+  as `attemptToken` (error `attempt_invalid` when it does not fit). The key that signs attempts is generated at
+  startup and kept in the database, so backups carry it (#45).
 
 ### Changed
 
 - A category offers only the quiz lengths that differ: with no more questions than a short quiz it offers only the
   full quiz, and with no more than a long quiz, the short and the full ones, instead of the same quiz up to three
   times (#43).
+
+### Deprecated
+
+- Saving a result (`POST /api/member/results`) without `attemptToken` still works as before but is deprecated; 3.0.0
+  will refuse it. Send the `attempt.token` of the quiz `GET /api/categories/{id}/quiz` drew (#45).
 
 ### Fixed
 
@@ -28,6 +36,10 @@ All notable changes to AGT Galactic Trivia are documented in this file. The form
 - A rounded percentage chose the rank, so 199 of 200 showed 100 % and earned Atlas Archivist, and 149 of 200 counted
   as 75 %. The rank now comes from the exact score, and a percentage (on the results screen and in **My scores**)
   shows 100 % only for a perfect score and 0 % only when no answer was right (#42).
+- A member's saved score is now tied to the quiz the server drew. Every quiz comes with a signed attempt, and a
+  result that carries it must answer exactly the questions drawn, for that category and length, within a day; each
+  quiz is saved once, so **Try again** after a save whose answer was lost no longer saves it twice. Before, a result
+  could answer only some questions, claim any length, or be saved again (#45).
 
 ## [2.0.0] - 2026-11-20
 

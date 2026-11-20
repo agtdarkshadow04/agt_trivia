@@ -1,5 +1,6 @@
 import pino from 'pino';
 import packageJson from '../package.json' with { type: 'json' };
+import { ensureAttemptKey } from './attempts.js';
 import { buildApp } from './app.js';
 import { ConfigError } from './config.js';
 import { settingValues } from './context.js';
@@ -77,6 +78,14 @@ try {
 }
 for (const migration of opened.applied) {
   logger.info({ source: 'migrations', version: migration.version, name: migration.name }, `Applied migration ${migration.name}.`);
+}
+// SEC-8: generated secrets are created at startup, before the server listens, never by a request (#45).
+try {
+  if (ensureAttemptKey(opened.db)) logger.info({ source: 'startup' }, 'Generated the quiz attempt key.');
+} catch (error) {
+  opened.db.close();
+  logs.close();
+  fail(`The quiz attempt key could not be created: ${error instanceof Error ? error.message : String(error)}`, error);
 }
 
 const operations = new OperationLock();

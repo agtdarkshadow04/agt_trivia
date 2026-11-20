@@ -26,12 +26,16 @@ export const resultRoutes: readonly RouteDefinition[] = [
     operationId: 'createResult',
     tag: 'results',
     summary: "Grade a finished quiz and add it to the member's history.",
-    description: 'The server grades the answers against the category\'s approved questions; answers to questions no longer approved are left out and listed in `skippedQuestionIds` (`409 conflict` when none is left).',
-    schema: { body: S.ResultCreateBody, response: { 201: S.ResultCreated } },
+    description: 'The server grades the answers against the category\'s approved questions; answers to questions no longer approved are left out and listed in `skippedQuestionIds` (`409 conflict` when none is left). With `attemptToken` (#45) the answers must be exactly the drawn quiz\'s questions (`400 attempt_invalid` otherwise), and sending the same attempt again returns the saved result with `200`. Sending a result without `attemptToken` is deprecated: 3.0.0 will refuse it.',
+    schema: { body: S.ResultCreateBody, response: { 200: S.ResultCreated, 201: S.ResultCreated } },
     handler: (context, request, reply) => {
-      const { result, skippedQuestionIds } = new ResultService(context, request.member!).submit(request.body as ResultSubmission);
-      request.audit = { targetType: 'result', targetId: result.id, details: { categoryId: result.categoryId, length: result.length, score: result.score, total: result.total } };
-      reply.code(201);
+      const { result, skippedQuestionIds, repeated } = new ResultService(context, request.member!).submit(request.body as ResultSubmission);
+      request.audit = {
+        targetType: 'result',
+        targetId: result.id,
+        details: { categoryId: result.categoryId, length: result.length, score: result.score, total: result.total, attempt: (request.body as ResultSubmission).attemptToken === undefined ? 'none' : repeated ? 'repeated' : 'verified' },
+      };
+      reply.code(repeated ? 200 : 201);
       return { result, skippedQuestionIds, notices: [] };
     },
   },
