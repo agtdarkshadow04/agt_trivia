@@ -26,11 +26,15 @@ describe('player deep links (FE-4)', () => {
     assert.equal(searchWithCategory('?x=1&category=Space', null), '?x=1');
   });
 
-  it('reads and writes the sign-in page (#17)', () => {
+  it('reads and writes the sign-in page (#17) and the question pages (#19)', () => {
     assert.equal(pageParam('?page=login'), 'login');
     assert.equal(pageParam('?page=nope'), null);
     assert.equal(pageParam('?category=x'), null);
     assert.equal(searchForPage('login'), '?page=login');
+    assert.equal(pageParam('?page=questions'), 'questions');
+    assert.equal(pageParam('?page=review'), 'review');
+    assert.equal(pageParam('?page=REVIEW'), null);
+    assert.equal(searchForPage('review'), '?page=review');
     assert.equal(searchForPage(null), '');
   });
 });

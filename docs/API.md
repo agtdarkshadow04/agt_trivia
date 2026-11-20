@@ -2,7 +2,7 @@
 
 The server's REST API lives under `/api/`. The complete, generated description is the OpenAPI 3.1 document at
 `GET /api/openapi.json` (API-11); this guide explains the conventions it follows. The API grows with the rebuild
-(#6): authoring and score history arrive in their sub-issues.
+(#6): score history and the category and import tools arrive in their sub-issues.
 
 ## Requests and responses
 
@@ -30,6 +30,33 @@ The server's REST API lives under `/api/`. The complete, generated description i
 - **Roles:** a Player plays and keeps a score history; an Editor also writes questions; a Moderator also reviews
   them and manages categories. A member route the role does not allow answers `403 forbidden`.
 
+## Question authoring (#19)
+
+Editors write questions and submit them for review; Moderators approve or reject them. Who may do what:
+
+| Action | Editor (own questions only) | Moderator (any question) |
+| --- | --- | --- |
+| Read, list | Their own | Every question |
+| Create | As a draft | As a draft |
+| Replace, delete | Draft, pending or rejected | Any status; an approved question stays approved |
+| Submit | Draft or rejected | Draft or rejected |
+| Approve, reject | — | Pending (their own included) |
+| Unpublish | — | Approved |
+
+- A Player gets `403 forbidden` on every question route; an Editor gets `404 not_found` for another member's
+  question and `403 forbidden` for changing their own approved one.
+- **Optimistic concurrency:** every change carries the `version` that was read (in the body, or `?version=` for a
+  delete), and the version goes up by one with each change. A different version, or a status the action does not
+  start from, answers `409 conflict` and changes nothing: reload and try again.
+- **Credit:** `authorCredit` (1 to 64 characters, or empty or `null` for none) is the "Submitted by" players see.
+  Left out, a new question is credited to the author's display name and a changed one keeps its credit. Only
+  Moderators may change it; an Editor who sends a different credit gets `400 validation_failed` with the field
+  error `authorCredit` `not_allowed`.
+- **Notices** (API-2, never errors): `prompt` `too_many_words` for a question of more than 15 words, and `prompt`
+  `duplicate` when another question of the same category has the same text, ignoring case.
+- The audit log records each change with the question ID, its status and the names of the changed fields, never the
+  question's text or the review note (LOG-14).
+
 ## Routes
 
 | Method and path | Purpose |
@@ -49,6 +76,16 @@ The server's REST API lives under `/api/`. The complete, generated description i
 | `POST /api/member/logout` | Ends the member session; `204` |
 | `GET /api/member/session` | The signed-in member |
 | `POST /api/member/password` | `{ currentPassword, password }`: changes a local member's password, ends their other sessions; `200` the member |
+| `GET /api/member/questions` | Questions, newest first: `{ items, nextCursor }` (API-8; `limit`, `cursor`, `status`, `categoryId`, `q` to search the text, `mine=true`). Editors see only their own; Moderators every question. Each is `{ id, categoryId, prompt, status, choices: [{ id, text, isCorrect }], authorCredit, reviewNote, createdBy, createdByName, approvedAt, version, createdAt, updatedAt }` (#19) |
+| `GET /api/member/question-counts` | `{ mine: { draft, pending, approved, rejected }, reviewQueue }`: the member's own questions by status, and for Moderators the number of pending questions (`null` for Editors) |
+| `GET /api/member/questions/{id}` | One question. A question an Editor did not write answers `404` |
+| `POST /api/member/questions` | `{ categoryId, prompt, choices: [{ text, isCorrect }], authorCredit? }`: a new draft; `201 { question, notices }` |
+| `PUT /api/member/questions/{id}` | The same fields and `version`: replaces the question; a rejected one becomes a draft; `200 { question, notices }` |
+| `DELETE /api/member/questions/{id}?version=` | Deletes the question and its answers; `204` |
+| `POST /api/member/questions/{id}/submit` | `{ version }`: draft or rejected → pending; `200` the question |
+| `POST /api/member/questions/{id}/approve` | `{ version }`: pending → approved, in the public quiz (Moderators); `200` the question |
+| `POST /api/member/questions/{id}/reject` | `{ version, reviewNote }`: pending → rejected, with a required note for the author (Moderators); `200` the question |
+| `POST /api/member/questions/{id}/unpublish` | `{ version }`: approved → draft (Moderators); `200` the question |
 | `GET /api/admin/members` | Member accounts, newest first: `{ items, nextCursor }` (API-8; `limit`, `cursor`, and `q` to search usernames and display names) |
 | `POST /api/admin/members` | `{ username, displayName, role, password }`: creates a local member; `201 { member, notices }` |
 | `PUT /api/admin/members/{id}` | `{ displayName, role, isActive }`; a role change or deactivation signs the member out; for an AGT member only `isActive` may change (`409 managed_by_iam`); `200 { member, notices }` |
@@ -94,9 +131,9 @@ and `fields` lists field-level problems, each with a `field` (the request proper
 | `csrf` | 403 | A state-changing request without `x-agt-request: 1` | — |
 | `iam_disabled` | 403 | AGT sign-in while `iam.enabled` is off | — |
 | `app_access_denied` | 403 | AGT IAM does not authorize the traveller for this app (or gives the tier `NOACCESS` or `NONE`); nothing was created | — |
-| `forbidden` | 403 | The member's role does not allow this, or an AGT member asks to change a password here | — |
+| `forbidden` | 403 | The member's role does not allow this (a Player on a question route, an Editor changing an approved question), or an AGT member asks to change a password here | — |
 | `not_found` | 404 | Unknown route, or an unknown or invisible resource | — |
-| `conflict` | 409 | A backup or restore is already running, or the server stayed busy for 30 seconds; nothing was changed | — |
+| `conflict` | 409 | The question changed since it was read (another `version` or status), a backup or restore is already running, or the server stayed busy for 30 seconds; nothing was changed | — |
 | `managed_by_iam` | 409 | The Admin changes an AGT member's name, role or password: AGT IAM sets those; only activate, deactivate or delete | — |
 | `defined_in_config` | 409 | A settings update names a key that `config.yaml` sets; nothing was changed | `{ key }` |
 | `setup_complete` | 410 | First-run setup after the Admin exists | — |

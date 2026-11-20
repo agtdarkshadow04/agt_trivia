@@ -69,8 +69,9 @@ interface SeedQuestion {
  * The quiz the player tests play (#16): Space (12 questions), Biology (2
  * single-answer and 1 multi-answer question, all with a credit but the
  * first) and Empty (only a draft). Correct answers start with "Right" or
- * "Also right", so the tests can find them. The app has no authoring or
- * import yet (#19, #22), so this writes the running server's database
+ * "Also right", so the tests can find them. Authoring this many questions
+ * through the UI (#19, `authoring.spec.ts` writes one) would be slow, and
+ * the import arrives in #22, so this writes the running server's database
  * directly, with the same columns the repository writes.
  */
 export async function seedQuizData() {

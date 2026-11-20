@@ -6,6 +6,7 @@ import adminSessionsMigration from './migrations/0002_admin_sessions.sql';
 import categoriesQuestionsMigration from './migrations/0003_categories_questions.sql';
 import membersMigration from './migrations/0004_members.sql';
 import agtIamMembersMigration from './migrations/0005_agt_iam_members.sql';
+import questionAuthoringMigration from './migrations/0006_question_authoring.sql';
 
 /**
  * The SQLite database (DATA-1, DATA-5): one file in `storage.dataDir`, opened
@@ -32,6 +33,7 @@ export const MIGRATIONS: readonly Migration[] = [
   { version: 3, name: '0003_categories_questions', sql: categoriesQuestionsMigration },
   { version: 4, name: '0004_members', sql: membersMigration },
   { version: 5, name: '0005_agt_iam_members', sql: agtIamMembersMigration },
+  { version: 6, name: '0006_question_authoring', sql: questionAuthoringMigration },
 ];
 
 /** The schema version this build creates and supports. */

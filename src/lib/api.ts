@@ -86,3 +86,49 @@ export interface PublicSettings {
   /** Members can sign in with their AGT account (#18). */
   agtSignIn: boolean;
 }
+
+// --- Question authoring and review (#19) -----------------------------------------
+
+export type MemberQuestionStatus = 'draft' | 'pending' | 'approved' | 'rejected';
+
+/** A question as its author or a Moderator sees it (#19). */
+export interface MemberQuestion {
+  id: string;
+  categoryId: string;
+  prompt: string;
+  status: MemberQuestionStatus;
+  /** 2 to 4 answers, in the author's order; more than one correct for a multi-answer question. */
+  choices: { id: string; text: string; isCorrect: boolean }[];
+  /** The "Submitted by" credit, or null. */
+  authorCredit: string | null;
+  /** A Moderator's reason for rejecting it; empty when there is none. */
+  reviewNote: string;
+  createdBy: string | null;
+  /** The author's display name, or null when they are gone or it was imported. */
+  createdByName: string | null;
+  approvedAt: string | null;
+  version: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface QuestionPage {
+  items: MemberQuestion[];
+  nextCursor: string | null;
+}
+
+/** `GET /api/member/question-counts`: the member's own questions by status, and for Moderators the review queue. */
+export interface QuestionCounts {
+  mine: Record<MemberQuestionStatus, number>;
+  /** Every pending question, for Moderators; null for Editors. */
+  reviewQueue: number | null;
+}
+
+/** The body of a new or changed question. */
+export interface QuestionBody {
+  categoryId: string;
+  prompt: string;
+  choices: { text: string; isCorrect: boolean }[];
+  /** Moderators only; left out, it is the author's display name (new) or stays (changed). */
+  authorCredit?: string | null;
+}

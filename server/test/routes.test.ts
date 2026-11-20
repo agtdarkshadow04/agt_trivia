@@ -28,8 +28,8 @@ describe('the route table', () => {
   it('has unique operation IDs and only GET routes without writesData that write nothing', async () => {
     assert.equal(new Set(apiRoutes.map((route) => route.operationId)).size, apiRoutes.length);
     const cookie = await adminCookie(context);
-    const { category } = await seedQuiz(context);
-    await createMember(context, 'route.tester');
+    const { category, questions } = await seedQuiz(context);
+    await createMember(context, 'route.tester', 'Moderator');
     const member = await memberCookie(context, 'route.tester');
     const credentials = { admin: { cookie }, member: { cookie: member }, none: {}, csrf: {} };
     const queries: Record<string, string> = { '/export': '?format=jsonl', '/quiz': '?length=all' };
@@ -37,7 +37,7 @@ describe('the route table', () => {
       assert.equal(route.writesData, false, route.url);
       const before = totalChanges(context);
       const query = Object.entries(queries).find(([suffix]) => route.url.endsWith(suffix))?.[1] ?? '';
-      const url = route.url.replace(':id', category.id);
+      const url = route.url.replace(':id', route.url.startsWith('/api/member/questions/') ? questions[0].id : category.id);
       const response = await app.inject({ url: `${url}${query}`, headers: credentials[route.auth] });
       assert.equal(response.statusCode, 200, route.url);
       assert.equal(totalChanges(context), before, `${route.url} writes nothing (BAK-8)`);

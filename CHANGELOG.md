@@ -69,6 +69,11 @@ All notable changes to AGT Galactic Trivia are documented in this file. The form
   `iam.baseUrl`, `iam.appId` and `AGT_TRIVIA_IAM_API_KEY`, then turn it on in the Settings tab (#18).
 - A **Settings** button in the header for the language and the text size, shared with the admin dashboard, and a
   footer with the Alliance links and the support link (#16).
+- **Writing and reviewing questions**: Editors write questions in **My questions** (`/?page=questions`) with a live
+  preview and the writing guidelines, save them as drafts and submit them; Moderators approve them into the quiz or
+  reject them with a note in the **Review queue** (`/?page=review`, with a count in the header), and can change,
+  unpublish and delete any question. A changed rejected question is a draft again; approved questions are locked for
+  Editors. Two people changing the same question never overwrite each other: the second one is asked to reload (#19).
 
 ### Changed
 

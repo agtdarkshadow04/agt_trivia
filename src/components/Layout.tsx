@@ -1,10 +1,12 @@
 import { type MouseEvent, type ReactNode, useRef, useState } from 'react';
 import type { MemberSession } from '../lib/api';
+import { canAuthor } from '../lib/questionRules';
+import type { Page } from '../lib/routes';
 import { COMMON_TRANSLATIONS, formatTranslation } from '../translations';
 import { Dialog } from './Dialog';
 import { DisplaySettings } from './DisplaySettings';
 import { useI18n } from './I18n';
-import { LogInIcon, SettingsIcon, UserRoundIcon } from './Icons';
+import { ClipboardCheckIcon, LogInIcon, PencilIcon, SettingsIcon, UserRoundIcon } from './Icons';
 import { AccountDialog } from './MemberAccount';
 import { MaintenanceNotice } from './MaintenanceNotice';
 
@@ -26,20 +28,22 @@ function SettingsDialog({ onClose, returnFocusRef }: { onClose(): void; returnFo
  * sign-out (A11Y-4), `<main id="main-content">`, and the `site-footer` with the
  * Alliance links and the support link. The brand returns to the category list.
  */
-export function Layout({ siteTitle, supportUrl, member, status, onHome, onSignIn, onMemberChanged, onSignedOut, children }: {
+export function Layout({ siteTitle, supportUrl, member, status, reviewCount, onHome, onOpenPage, onMemberChanged, onSignedOut, children }: {
   siteTitle: string;
   /** `site.supportUrl`, once the public settings have loaded. */
   supportUrl: string | null;
   /** The signed-in member; undefined while the session is being read. */
   member: MemberSession | null | undefined;
   status: string;
+  /** Moderators: the questions waiting for review (#19); null for everyone else or while unknown. */
+  reviewCount: number | null;
   onHome(): void;
-  onSignIn(): void;
+  onOpenPage(page: Page): void;
   onMemberChanged(member: MemberSession): void;
   onSignedOut(): void;
   children: ReactNode;
 }) {
-  const { t } = useI18n();
+  const { t, number } = useI18n();
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
   const settingsButton = useRef<HTMLButtonElement>(null);
@@ -64,6 +68,25 @@ export function Layout({ siteTitle, supportUrl, member, status, onHome, onSignIn
           </a>
           <nav className="header-actions" aria-label={t.layout.mainNavigation}>
             {member && <span className="identity-badge">{member.displayName} · {t.roles[member.role]}</span>}
+            {member && canAuthor(member.role) && (
+              <a className="button button-icon" href="/?page=questions" onClick={follow(() => onOpenPage('questions'))} aria-label={t.layout.myQuestions} title={t.layout.myQuestions}>
+                <PencilIcon />
+              </a>
+            )}
+            {member && member.role === 'Moderator' && (
+              <span className="icon-with-count">
+                <a
+                  className="button button-icon"
+                  href="/?page=review"
+                  onClick={follow(() => onOpenPage('review'))}
+                  aria-label={reviewCount ? formatTranslation(t.layout.reviewQueueCount, { count: number(reviewCount) }) : t.layout.reviewQueue}
+                  title={t.layout.reviewQueue}
+                >
+                  <ClipboardCheckIcon />
+                </a>
+                {reviewCount ? <span className="count-badge" aria-hidden="true">{reviewCount > 99 ? `${number(99)}+` : number(reviewCount)}</span> : null}
+              </span>
+            )}
             {member ? (
               <button
                 ref={accountButton}
@@ -78,7 +101,7 @@ export function Layout({ siteTitle, supportUrl, member, status, onHome, onSignIn
                 <UserRoundIcon />
               </button>
             ) : member === null && (
-              <a className="button button-icon" href="/?page=login" onClick={follow(onSignIn)} aria-label={t.layout.signIn} title={t.layout.signIn}>
+              <a className="button button-icon" href="/?page=login" onClick={follow(() => onOpenPage('login'))} aria-label={t.layout.signIn} title={t.layout.signIn}>
                 <LogInIcon />
               </a>
             )}
