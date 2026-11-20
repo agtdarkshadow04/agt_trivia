@@ -7,7 +7,8 @@ import { apiRoutes } from '../routes.js';
 import { adminCookie, createMember, memberCookie, seedQuiz, testContext, totalChanges } from './helpers.js';
 
 describe('the route table', () => {
-  const context = testContext();
+  // Leaderboards on, so their GET route answers 200 like every other (#49).
+  const context = testContext('leaderboards:\n  enabled: true\n');
   let app: FastifyInstance;
   before(async () => { app = buildApp(context); await app.ready(); });
   after(async () => { await app.close(); context.close(); });

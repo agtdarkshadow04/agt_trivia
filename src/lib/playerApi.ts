@@ -1,4 +1,4 @@
-import type { CategoryBody, CategoryStats, ManagedCategory, QuizResultRecord, MemberQuestion, MemberQuestionStatus, MemberSession, PublicCategory, PublicQuiz, PublicSettings, QuestionBody, QuestionCounts, QuestionPage, QuestionReport, QuizLength } from './api.js';
+import type { CategoryBody, CategoryStats, ManagedCategory, QuizResultRecord, MemberQuestion, MemberQuestionStatus, MemberSession, PublicCategory, PublicLeaderboard, PublicQuiz, PublicSettings, QuestionBody, QuestionCounts, QuestionPage, QuestionReport, QuizLength } from './api.js';
 import type { FieldError } from './errors.js';
 import { ApiError, apiRequest } from './client.js';
 
@@ -148,4 +148,14 @@ export const moveCategoryQuestions = (id: string, version: number, targetCategor
     `/api/member/categories/${encodeURIComponent(id)}/move-questions`,
     { method: 'POST', body: { targetCategoryId, version } },
   )
+);
+
+// --- Leaderboards (#49) --------------------------------------------------------------
+
+export const getLeaderboard = (categoryId: string) => apiRequest<PublicLeaderboard>(`/api/categories/${encodeURIComponent(categoryId)}/leaderboard`);
+
+export const getMemberPreferences = () => apiRequest<{ leaderboardOptIn: boolean }>('/api/member/preferences');
+
+export const setMemberPreferences = (leaderboardOptIn: boolean) => (
+  apiRequest<{ leaderboardOptIn: boolean }>('/api/member/preferences', { method: 'PUT', body: { leaderboardOptIn } })
 );

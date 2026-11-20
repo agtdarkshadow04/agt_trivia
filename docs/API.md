@@ -56,6 +56,16 @@ Editors write questions and submit them for review; Moderators approve or reject
 - The audit log records each change with the question ID, its status and the names of the changed fields, never the
   question's text or the review note (LOG-14).
 
+## Leaderboards (#49)
+
+`GET /api/categories/{id}/leaderboard` is public while `leaderboards.enabled` is on (`403 leaderboards_closed`
+otherwise; `404` for an unknown category). It lists at most `leaderboards.size` active members who chose to appear,
+`{ rank, displayName, bestPercent, plays }` each: nothing else about them, no ID or username (API-3). Only results
+saved with an `attemptToken` (#45) count, of a `long` or `all` quiz with at least `minimumAnswers` answers
+(`quiz.shortLength`, or every approved question of a smaller category). Members rank by their best percentage, then
+by more plays, then by who reached it first. Members choose with `PUT /api/member/preferences`
+(`{ leaderboardOptIn }`, off by default); turning it off takes them off every board at once.
+
 ## Question reports (#46)
 
 Any signed-in member can report a problem with an **approved** question (any other status, or an unknown ID, answers
@@ -129,8 +139,9 @@ twice adds nothing. The audit log records the action, the files and the counts, 
 | Method and path | Purpose |
 | --- | --- |
 | `GET /api/health` | `{ "status": "ok" }` when the server and its database answer (SRV-11) |
-| `GET /api/settings/public` | The settings the player UI needs: `siteTitle`, `supportUrl`, `quizShortLength`, `quizLongLength`, and `agtSignIn` (AGT sign-in is on and configured) (CFG-10) |
+| `GET /api/settings/public` | The settings the player UI needs: `siteTitle`, `supportUrl`, `quizShortLength`, `quizLongLength`, `agtSignIn` (AGT sign-in is on and configured) and `leaderboards` (`leaderboards.enabled`, #49) (CFG-10) |
 | `GET /api/categories` | Every category, `[{ id, shortName, name, description, priority, questionCount }]`, lower `priority` first, then by name; `questionCount` counts approved questions. A plain array (API-8) |
+| `GET /api/categories/{id}/leaderboard` | A category's leaderboard while `leaderboards.enabled` is on (#49): `{ category, minimumAnswers, entries: [{ rank, displayName, bestPercent, plays }] }` |
 | `GET /api/categories/{id}/quiz?length=short\|long\|all` | A random quiz: `{ category, length, questions, attempt }`, with `quiz.shortLength`, `quiz.longLength` or all approved questions (fewer when the category has fewer). Each question is `{ id, prompt, choices: [{ id, text }], correctChoiceIds, authorCredit }`, choices shuffled anew for every quiz (each keeps its ID); more than one correct choice makes it a multi-answer question. `attempt` is `{ id, token, expiresAt }`, the signed attempt a member's result sends back (#45). An unknown or malformed `id` answers `404 not_found` |
 | `GET /api/setup/status` | `{ adminExists, setupPasswordConfigured }` (AUTH-5) |
 | `POST /api/setup` | `{ setupPassword, username, password }`: creates the Admin with `AGT_TRIVIA_SETUP_PASSWORD` and signs it in; `201 { username }` |
@@ -144,6 +155,7 @@ twice adds nothing. The audit log records the action, the files and the counts, 
 | `GET /api/member/session` | The signed-in member |
 | `POST /api/member/password` | `{ currentPassword, password }`: changes a local member's password, ends their other sessions; `200` the member |
 | `GET /api/member/questions` | Questions, newest first: `{ items, nextCursor }` (API-8; `limit`, `cursor`, `status`, `categoryId`, `q` to search the text, `mine=true`). Editors see only their own; Moderators every question. Each is `{ id, categoryId, prompt, status, choices: [{ id, text, isCorrect }], authorCredit, reviewNote, createdBy, createdByName, approvedAt, version, createdAt, updatedAt }` (#19) |
+| `GET /api/member/preferences`, `PUT /api/member/preferences` | The member's own `{ leaderboardOptIn }` (#49); any member, for themselves |
 | `GET /api/member/question-counts` | `{ mine: { draft, pending, approved, rejected }, reviewQueue, openReports }`: the member's own questions by status, and for Moderators the number of pending questions and of open question reports (#46; both `null` for Editors) |
 | `GET /api/member/questions/{id}` | One question. A question an Editor did not write answers `404` |
 | `POST /api/member/questions` | `{ categoryId, prompt, choices: [{ text, isCorrect }], authorCredit? }`: a new draft; `201 { question, notices }` |
@@ -214,6 +226,7 @@ and `fields` lists field-level problems, each with a `field` (the request proper
 | `app_access_denied` | 403 | AGT IAM does not authorize the traveller for this app (or gives the tier `NOACCESS` or `NONE`); nothing was created | — |
 | `forbidden` | 403 | The member's role does not allow this (a Player on a question route, an Editor changing an approved question), or an AGT member asks to change a password here | — |
 | `not_found` | 404 | Unknown route, or an unknown or invisible resource | — |
+| `leaderboards_closed` | 403 | A leaderboard while `leaderboards.enabled` is off (#49) | — |
 | `report_exists` | 409 | The member already has an open report on this question; nothing was saved | — |
 | `category_not_empty` | 409 | The category still has questions (`params.count`, of any status); move or delete them first | `count` |
 | `conflict` | 409 | The question or category changed since it was read (another `version`, or a question's status), a backup or restore is already running, or the server stayed busy for 30 seconds; nothing was changed | — |

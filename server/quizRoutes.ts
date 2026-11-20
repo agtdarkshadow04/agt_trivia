@@ -2,6 +2,7 @@ import type { PublicCategory, PublicQuiz, QuizLength } from '../src/lib/api.js';
 import { isUuidV4 } from '../src/lib/api.js';
 import { questionsForQuiz, shuffle } from '../src/lib/quiz.js';
 import { issueAttempt } from './attempts.js';
+import { publicLeaderboard } from './leaderboards.js';
 import { settingValues, type AppContext } from './context.js';
 import { HttpError } from './http.js';
 import { getCategory, listCategories, type Category } from './repository/categories.js';
@@ -77,5 +78,17 @@ export const quizRoutes: readonly RouteDefinition[] = [
       const { length } = request.query as { length: QuizLength };
       return publicQuiz(context, id, length);
     },
+  },
+  {
+    method: 'GET',
+    url: '/api/categories/:id/leaderboard',
+    auth: 'none',
+    writesData: false,
+    operationId: 'getLeaderboard',
+    tag: 'public',
+    summary: "Read a category's leaderboard of the members who chose to appear on it.",
+    description: 'Only while `leaderboards.enabled` is on (`403 leaderboards_closed` otherwise). Display names only.',
+    schema: { params: S.CategoryIdParams, response: { 200: S.PublicLeaderboard } },
+    handler: (context, request) => publicLeaderboard(context, (request.params as { id: string }).id),
   },
 ];

@@ -3,11 +3,12 @@ import type { MemberSession, PublicCategory, PublicQuiz, PublicSettings, QuizLen
 import { getMemberSession, getPublicSettings, getQuestionCounts, getQuiz, listCategories } from './lib/playerApi';
 import { canAuthor } from './lib/questionRules';
 import { choose, isFinished, lockAnswer, nextQuestion, startSession, type QuizSession } from './lib/quizSession';
-import { categoryParam, findCategory, pageParam, searchForPage, searchWithCategory, type Page } from './lib/routes';
+import { categoryParam, findCategory, pageParam, searchForLeaderboard, searchForPage, searchWithCategory, viewParam, type Page } from './lib/routes';
 import { COMMON_TRANSLATIONS, formatTranslation } from './translations';
 import { CategoryList } from './components/CategoryList';
 import { useI18n } from './components/I18n';
-import { RefreshIcon } from './components/Icons';
+import { RefreshIcon, TrophyIcon } from './components/Icons';
+import { Leaderboard } from './components/Leaderboard';
 import { Layout } from './components/Layout';
 import { SignIn } from './components/MemberAccount';
 import { BackToCategories, LengthChoice, QuestionView, Results } from './components/QuizPlay';
@@ -105,6 +106,8 @@ export function App() {
 
   const page = pageParam(search);
   const code = page ? null : categoryParam(search);
+  // #49: a category's leaderboard instead of its length choice.
+  const view = page ? null : viewParam(search);
   const category = data.status === 'ready' ? findCategory(data.categories, code) : null;
   const playable = category !== null && category.questionCount > 0;
 
@@ -176,10 +179,23 @@ export function App() {
   else if (data.status === 'error') content = <LoadState message="" cause={data.cause} onRetry={() => void load()} />;
   else if (!playable) {
     content = <CategoryList categories={data.categories} notice={notice} onChoose={(chosen) => navigate(chosen.shortName)} />;
-  } else if (play === null) {
+  } else if (play === null && view === 'leaderboard') {
     content = (
       <>
         <BackToCategories onBack={() => navigate(null)} />
+        <Leaderboard category={category} signedIn={Boolean(member)} onPlay={() => navigate(category.shortName)} />
+      </>
+    );
+  } else if (play === null) {
+    content = (
+      <>
+        <BackToCategories onBack={() => navigate(null)}>
+          {data.settings.leaderboards && (
+            <button className="button button-secondary button-with-icon" type="button" onClick={() => go(searchForLeaderboard(category.shortName))}>
+              <TrophyIcon />{t.leaderboard.link}
+            </button>
+          )}
+        </BackToCategories>
         <LengthChoice
           category={category}
           shortLength={data.settings.quizShortLength}
@@ -235,6 +251,7 @@ export function App() {
       member={member}
       status={status}
       reviewCount={reviewCount}
+      leaderboards={data.status === 'ready' && data.settings.leaderboards}
       onHome={() => navigate(null)}
       onOpenPage={openPage}
       onMemberChanged={setMember}

@@ -96,6 +96,7 @@ export function publicSettings(context: AppContext): PublicSettings {
     quizShortLength: values['quiz.shortLength'],
     quizLongLength: values['quiz.longLength'],
     agtSignIn: iamStatus(context, values).available,
+    leaderboards: values['leaderboards.enabled'],
   };
 }
 

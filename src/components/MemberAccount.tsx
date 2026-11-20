@@ -1,6 +1,6 @@
-import { type FormEvent, type RefObject, useState } from 'react';
+import { type FormEvent, type RefObject, useEffect, useId, useState } from 'react';
 import type { MemberSession } from '../lib/api';
-import { changeMemberPassword, memberIamSignIn, memberSignIn, memberSignOut } from '../lib/playerApi';
+import { changeMemberPassword, getMemberPreferences, memberIamSignIn, memberSignIn, memberSignOut, setMemberPreferences } from '../lib/playerApi';
 import { confirmationError, errorsOf, newPasswordError, requiredError } from '../lib/validation';
 import { Dialog } from './Dialog';
 import { formErrors, noFormErrors, TextField } from './Field';
@@ -118,9 +118,65 @@ function ChangePassword({ onChanged }: { onChanged(member: MemberSession): void 
   );
 }
 
-/** The member menu (#17): who is signed in, the password change and Sign out. */
-export function AccountDialog({ member, onClose, onChanged, onSignedOut, returnFocusRef }: {
+/**
+ * "Show me on leaderboards" (#49): the member's own choice, off until they
+ * turn it on; saved at once, with the outcome in a live region.
+ */
+function LeaderboardOptIn() {
+  const { t, error } = useI18n();
+  const helpId = useId();
+  const [optIn, setOptIn] = useState<boolean | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState('');
+  const [problem, setProblem] = useState('');
+
+  useEffect(() => {
+    getMemberPreferences().then((preferences) => setOptIn(preferences.leaderboardOptIn), (cause) => setProblem(error(cause)));
+  }, [error]);
+
+  async function change(next: boolean) {
+    const previous = optIn;
+    // The box follows the click at once, and goes back if saving fails.
+    setOptIn(next);
+    setBusy(true);
+    setMessage('');
+    setProblem('');
+    try {
+      const saved = await setMemberPreferences(next);
+      setOptIn(saved.leaderboardOptIn);
+      setMessage(saved.leaderboardOptIn ? t.account.optInOn : t.account.optInOff);
+    } catch (cause) {
+      setOptIn(previous);
+      setProblem(error(cause));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="account-opt-in">
+      <label className="check-field">
+        <input
+          type="checkbox"
+          checked={optIn ?? false}
+          disabled={optIn === null || busy}
+          aria-describedby={helpId}
+          onChange={(event) => void change(event.target.checked)}
+        />
+        {t.account.optIn}
+      </label>
+      <p id={helpId} className="field-help">{t.account.optInHelp}</p>
+      <div role="status">{message && <p className="success-note">{message}</p>}</div>
+      {problem && <p className="error-note" role="alert">{problem}</p>}
+    </div>
+  );
+}
+
+/** The member menu (#17): who is signed in, leaderboards (#49), the password change and Sign out. */
+export function AccountDialog({ member, leaderboards = false, onClose, onChanged, onSignedOut, returnFocusRef }: {
   member: MemberSession;
+  /** `leaderboards.enabled` (#49): offer the opt-in. */
+  leaderboards?: boolean;
   onClose(): void;
   onChanged(member: MemberSession): void;
   onSignedOut(): void;
@@ -145,6 +201,7 @@ export function AccountDialog({ member, onClose, onChanged, onSignedOut, returnF
         {member.username && <div><dt>{t.fields.username}</dt><dd>{member.username}</dd></div>}
         <div><dt>{t.fields.role}</dt><dd>{t.roles[member.role]}</dd></div>
       </dl>
+      {leaderboards && <LeaderboardOptIn />}
       {member.authSource === 'local' ? <ChangePassword onChanged={onChanged} /> : <p className="field-help">{t.account.agtPassword}</p>}
       {signOutError && <p className="error-note" role="alert">{signOutError}</p>}
       <div className="form-actions account-sign-out">

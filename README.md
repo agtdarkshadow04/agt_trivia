@@ -227,6 +227,8 @@ Settings come from three places:
 | `site.supportUrl` | `https://www.nms-agt.com/support` | Support link: an absolute `http:` or `https:` URL |
 | `quiz.shortLength` | `10` | Questions in a short quiz (1–100, fewer than `quiz.longLength`) |
 | `quiz.longLength` | `30` | Questions in a long quiz (2–500, more than `quiz.shortLength`) |
+| `leaderboards.enabled` | `false` | Whether each category has a public [leaderboard](#leaderboards) of the members who chose to appear on it |
+| `leaderboards.size` | `10` | How many members a leaderboard shows (3–50) |
 | `backup.maxZipBytes` | `209715200` (200 MiB) | Largest backup upload, in bytes (1024 to 2 GiB) |
 | `backup.maxUncompressedBytes` | `1073741824` (1 GiB) | Largest total size of a backup's files once unpacked, in bytes (1024 to 8 GiB) |
 | `backup.maxEntries` | `10000` | Most files in a backup archive (1–100000) |
@@ -343,10 +345,24 @@ language and time zone of their settings.
 
 What is stored, per finished quiz: the member, the category (and its name at the time), the quiz length, the score
 and the number of questions, the time it was finished, and for each question whether the answer was right, never the
-answers chosen. Nobody else sees a member's results, not even Moderators or the Admin in the dashboard; they are in
-backups like the rest of the data. **Clear history** on My scores deletes all of a member's results, and deleting a
-member deletes theirs. A deleted category's results stay in the history under its old name. There are no
-leaderboards.
+answers chosen. Nobody else sees a member's results, not even Moderators or the Admin in the dashboard, except on a
+[leaderboard](#leaderboards) the member chose to appear on; they are in backups like the rest of the data. **Clear
+history** on My scores deletes all of a member's results, and deleting a member deletes theirs. A deleted category's
+results stay in the history under its old name.
+
+### Leaderboards
+
+Leaderboards are off until the Admin turns on `leaderboards.enabled` (Settings tab, or `config.yaml`). Then each
+category's length choice has a **Leaderboard** button (`/?category=<short name>&view=leaderboard`), public like the
+quiz itself. A link to a board while they are off says that leaderboards are turned off.
+
+Only members who turn on **Show me on leaderboards** in their account menu appear, and only by their **display name**,
+with their best percentage and how many results count; turning it off takes them off every board at once. **Their
+display name becomes public**, which the account menu says. Inactive members never appear. A result counts when it was
+a long or full quiz of at least `quiz.shortLength` questions (every question of a smaller category) and was saved
+from the quiz the server drew (a signed attempt), so hand-made or short results never place anyone. Members are
+ranked by their best percentage, then by more results, then by who reached it first; `leaderboards.size` sets how
+many are shown. To take an unwanted name off the boards, the Admin renames or deactivates the member.
 
 ## Writing and reviewing questions
 
@@ -414,7 +430,7 @@ Anonymous visitors can still play without an account.
 
 | Role | Can |
 | --- | --- |
-| **Player** | Play, keep a score history, and report a problem with a question |
+| **Player** | Play, keep a score history, appear on leaderboards if they choose, and report a problem with a question |
 | **Editor** | What a Player can, plus write questions and submit them, and edit or delete their own until they are approved |
 | **Moderator** | What an Editor can, plus review (approve, reject, edit, unpublish, delete) any question, their own included, handle question reports, and manage the categories |
 

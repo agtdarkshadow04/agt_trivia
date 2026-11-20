@@ -93,6 +93,13 @@ export interface PublicQuiz {
   attempt: QuizAttempt;
 }
 
+/** `GET /api/categories/{id}/leaderboard` (#49). */
+export interface PublicLeaderboard {
+  category: PublicCategory;
+  minimumAnswers: number;
+  entries: { rank: number; displayName: string; bestPercent: number; plays: number }[];
+}
+
 /** `GET /api/settings/public` (CFG-10): what the player UI needs, nothing sensitive. */
 export interface PublicSettings {
   siteTitle: string;
@@ -101,6 +108,8 @@ export interface PublicSettings {
   quizLongLength: number;
   /** Members can sign in with their AGT account (#18). */
   agtSignIn: boolean;
+  /** `leaderboards.enabled` (#49). */
+  leaderboards: boolean;
 }
 
 // --- Question authoring and review (#19) -----------------------------------------

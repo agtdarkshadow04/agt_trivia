@@ -7,7 +7,7 @@ import { listSettings, updateSettings, type IamStatus, type SettingState, type S
 import { useAdminI18n } from './context';
 import type { AdminTranslations } from './i18n';
 
-type Key = 'site.title' | 'site.supportUrl' | 'quiz.shortLength' | 'quiz.longLength'
+type Key = 'site.title' | 'site.supportUrl' | 'quiz.shortLength' | 'quiz.longLength' | 'leaderboards.enabled' | 'leaderboards.size'
   | 'backup.maxZipBytes' | 'backup.maxUncompressedBytes' | 'backup.maxEntries' | 'iam.enabled'
   | 'logs.serverRetentionDays' | 'logs.serverMaxEntries' | 'logs.auditRetentionDays' | 'logs.auditMaxEntries';
 
@@ -15,6 +15,11 @@ type Key = 'site.title' | 'site.supportUrl' | 'quiz.shortLength' | 'quiz.longLen
 const groups: { title: (a: AdminTranslations) => string; help?: (a: AdminTranslations) => string; keys: { key: Key; type: 'text' | 'url' | 'number' | 'checkbox' }[] }[] = [
   { title: (a) => a.settings.site, keys: [{ key: 'site.title', type: 'text' }, { key: 'site.supportUrl', type: 'url' }] },
   { title: (a) => a.settings.quiz, help: (a) => a.settings.quizHelp, keys: [{ key: 'quiz.shortLength', type: 'number' }, { key: 'quiz.longLength', type: 'number' }] },
+  {
+    title: (a) => a.settings.leaderboards,
+    help: (a) => a.settings.leaderboardsHelp,
+    keys: [{ key: 'leaderboards.enabled', type: 'checkbox' }, { key: 'leaderboards.size', type: 'number' }],
+  },
   {
     title: (a) => a.settings.backupLimits,
     keys: [{ key: 'backup.maxZipBytes', type: 'number' }, { key: 'backup.maxUncompressedBytes', type: 'number' }, { key: 'backup.maxEntries', type: 'number' }],
@@ -35,6 +40,8 @@ const labels = (a: AdminTranslations): Record<Key, string> => ({
   'site.supportUrl': a.settings.supportUrl,
   'quiz.shortLength': a.settings.quizShortLength,
   'quiz.longLength': a.settings.quizLongLength,
+  'leaderboards.enabled': a.settings.leaderboardsEnabled,
+  'leaderboards.size': a.settings.leaderboardsSize,
   'backup.maxZipBytes': a.settings.maxZipBytes,
   'backup.maxUncompressedBytes': a.settings.maxUncompressedBytes,
   'backup.maxEntries': a.settings.maxEntries,

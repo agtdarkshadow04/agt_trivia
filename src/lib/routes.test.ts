@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { categoryParam, findCategory, pageParam, searchForPage, searchWithCategory } from './routes.js';
+import { categoryParam, findCategory, pageParam, searchForLeaderboard, searchForPage, searchWithCategory, viewParam } from './routes.js';
 
 describe('player deep links (FE-4)', () => {
   const categories = [{ shortName: 'Space' }, { shortName: 'bio-1' }];
@@ -38,5 +38,15 @@ describe('player deep links (FE-4)', () => {
     assert.equal(pageParam('?page=REVIEW'), null);
     assert.equal(searchForPage('review'), '?page=review');
     assert.equal(searchForPage(null), '');
+  });
+
+  it('reads and writes a category\'s leaderboard view (#49)', () => {
+    assert.equal(viewParam('?category=space&view=leaderboard'), 'leaderboard');
+    assert.equal(viewParam('?category=space&view=other'), null);
+    assert.equal(viewParam('?category=space'), null);
+    assert.equal(searchForLeaderboard('space'), '?category=space&view=leaderboard');
+    assert.equal(categoryParam(searchForLeaderboard('space')), 'space');
+    // Choosing another category leaves the view behind.
+    assert.equal(searchWithCategory('', 'bio'), '?category=bio');
   });
 });
