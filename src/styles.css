@@ -177,3 +177,9 @@ img { max-width: 100%; }
   .results-panel { grid-template-columns: minmax(0, 1fr); justify-items: center; text-align: center; }
   .results-copy .form-actions { justify-content: center; }
 }
+
+/* #17: the sign-in and sign-out status under the header, and the account menu. */
+.status-region:empty { display: none; }
+.status-region { width: min(100%, 80rem); margin: 1rem auto 0; padding-inline: clamp(1rem, 4vw, 3rem); }
+.account-sign-out { margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid var(--line); }
+.player .auth-card h1 { font-size: clamp(1.3rem, 3vw, 1.8rem); }

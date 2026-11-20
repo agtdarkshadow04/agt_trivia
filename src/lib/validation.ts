@@ -209,3 +209,38 @@ export function questionNotices(input: Pick<QuestionInput, 'prompt'>): FieldErro
     ? [fieldError('prompt', 'too_many_words', `Questions read best with at most ${questionLimits.promptWords} words; this one has ${words}.`, { max: questionLimits.promptWords, count: words })]
     : [];
 }
+
+// --- Member accounts (#17) ----------------------------------------------------------
+
+/** A member's username: 3–64 lowercase letters, digits, dots, underscores or hyphens (stored lowercase). */
+export const memberLimits = {
+  username: { min: 3, max: 64 },
+  displayName: { max: 120 },
+} as const;
+
+const memberUsernamePattern = /^[a-z0-9_.-]+$/;
+
+/** The username as stored: trimmed and lowercase. Sign-in compares it the same way. */
+export function normalizeMemberUsername(username: string) {
+  return username.trim().toLowerCase();
+}
+
+export function memberUsernameError(username: string, field = 'username'): FieldError | null {
+  const value = normalizeMemberUsername(username);
+  const { min, max } = memberLimits.username;
+  if (!value) return fieldError(field, 'required', 'The username is required.');
+  if (value.length < min) return fieldError(field, 'too_short', `The username must be at least ${min} characters.`, { min });
+  if (value.length > max) return fieldError(field, 'too_long', `The username must be at most ${max} characters.`, { max });
+  if (!memberUsernamePattern.test(value)) return fieldError(field, 'invalid_format', 'The username may contain only letters, digits, dots, underscores and hyphens.');
+  return null;
+}
+
+/** The name players see, trimmed: 1–120 characters. */
+export function displayNameError(displayName: string, field = 'displayName'): FieldError | null {
+  const value = displayName.trim();
+  if (!value) return fieldError(field, 'required', 'The display name is required.');
+  if (codePoints(value) > memberLimits.displayName.max) {
+    return fieldError(field, 'too_long', `The display name must be at most ${memberLimits.displayName.max} characters.`, { max: memberLimits.displayName.max });
+  }
+  return null;
+}

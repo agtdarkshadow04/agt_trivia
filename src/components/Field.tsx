@@ -1,4 +1,4 @@
-import { type InputHTMLAttributes, type ReactNode, useId } from 'react';
+import { type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes, useId } from 'react';
 import { ApiError } from '../lib/client';
 import { errorText, fieldErrorText, type FieldError } from '../lib/errors';
 import type { Translations } from '../translations';
@@ -23,6 +23,23 @@ export function TextField({ label, help, error, ...input }: FieldParts & InputHT
     <div className="field">
       <span><label htmlFor={id}>{label}</label></span>
       <input id={id} {...input} aria-invalid={error ? true : undefined} aria-describedby={[errorId, helpId].filter(Boolean).join(' ') || undefined} />
+      {help && <span id={helpId} className="field-help">{help}</span>}
+      {error && <span id={errorId} className="field-error">{error}</span>}
+    </div>
+  );
+}
+
+/** A labelled select with the same help and error wiring as `TextField` (A11Y-5). */
+export function SelectField({ label, help, error, children, ...select }: FieldParts & SelectHTMLAttributes<HTMLSelectElement>) {
+  const id = useId();
+  const helpId = help ? `${id}-help` : undefined;
+  const errorId = error ? `${id}-error` : undefined;
+  return (
+    <div className="field">
+      <span><label htmlFor={id}>{label}</label></span>
+      <select id={id} {...select} aria-invalid={error ? true : undefined} aria-describedby={[errorId, helpId].filter(Boolean).join(' ') || undefined}>
+        {children}
+      </select>
       {help && <span id={helpId} className="field-help">{help}</span>}
       {error && <span id={errorId} className="field-error">{error}</span>}
     </div>

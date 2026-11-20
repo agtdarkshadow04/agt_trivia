@@ -37,7 +37,7 @@ export function auditOutcome(statusCode: number): AuditOutcome {
 
 /**
  * LOG-11: audits every request to a non-GET route, GET routes marked
- * `audit: true`, every 401/403 from an admin route and every 429. Ordinary
+ * `audit: true`, every 401/403 from an admin or member route and every 429. Ordinary
  * reads and unknown routes are not audited. A failure to write never fails the
  * request (LOG-3).
  */
@@ -48,13 +48,14 @@ export function auditHook(logs: Pick<LogStore, 'audit' | 'ipHash'>) {
     const statusCode = reply.statusCode;
     const audited = route.method !== 'GET'
       || route.audit === true
-      || (route.url.startsWith('/api/admin/') && (statusCode === 401 || statusCode === 403))
+      || ((route.auth === 'admin' || route.auth === 'member') && (statusCode === 401 || statusCode === 403))
       || statusCode === 429;
     if (!audited) return;
     const info = request.audit ?? {};
     logs.audit({
-      actorType: info.actorType ?? (request.admin ? 'admin' : 'anonymous'),
-      actor: info.actor !== undefined ? info.actor : request.admin ?? null,
+      actorType: info.actorType ?? (request.admin ? 'admin' : request.member ? 'member' : 'anonymous'),
+      // LOG-10: a member by username, or display name for an AGT member without one.
+      actor: info.actor !== undefined ? info.actor : request.admin ?? (request.member ? request.member.username ?? request.member.displayName : null),
       ipHash: logs.ipHash(request.ip),
       // LOG-13: informational only; it never affects authorization.
       client: request.headers['x-agt-client'] === 'web' ? 'web' : 'api',

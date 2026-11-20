@@ -5,6 +5,7 @@ import pino from 'pino';
 import type { AppConfig } from './config.js';
 import { openSqlite, runMigrations, type Migration, type Sqlite } from './db.js';
 import initialLogs from './migrations/logs/0001_initial.sql';
+import memberActorLogs from './migrations/logs/0002_member_actor.sql';
 import * as repo from './repository/logs.js';
 import type { AuditEntry, AuditFilters, ServerEntry, ServerFilters, ServerLevel } from './repository/logs.js';
 
@@ -20,6 +21,7 @@ export type { AuditEntry, ServerEntry } from './repository/logs.js';
 /** The log store's own migrations (LOG-1), run at startup like the main database's. */
 export const LOG_MIGRATIONS: readonly Migration[] = [
   { version: 1, name: '0001_initial', sql: initialLogs },
+  { version: 2, name: '0002_member_actor', sql: memberActorLogs },
 ];
 
 /** Where a failure to write the log store is reported, once (LOG-3). Never the logger itself. */

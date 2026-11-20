@@ -96,3 +96,19 @@ export function RotateCcwIcon(props: IconProps) {
 export function RefreshIcon(props: IconProps) {
   return <Icon name="refresh-cw" {...props}><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" /><path d="M21 3v5h-5" /><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" /><path d="M8 16H3v5" /></Icon>;
 }
+
+export function LogInIcon(props: IconProps) {
+  return <Icon name="log-in" {...props}><path d="m10 17 5-5-5-5" /><path d="M15 12H3" /><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" /></Icon>;
+}
+
+export function UserRoundIcon(props: IconProps) {
+  return <Icon name="user-round" {...props}><circle cx="12" cy="8" r="5" /><path d="M20 21a8 8 0 0 0-16 0" /></Icon>;
+}
+
+export function PencilIcon(props: IconProps) {
+  return <Icon name="pencil" {...props}><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z" /><path d="m15 5 4 4" /></Icon>;
+}
+
+export function PlusIcon(props: IconProps) {
+  return <Icon name="plus" {...props}><path d="M5 12h14" /><path d="M12 5v14" /></Icon>;
+}

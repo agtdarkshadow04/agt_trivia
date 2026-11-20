@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { isUuidV4 } from './api.js';
+import { isUuidV4, roleAtLeast } from './api.js';
 import {
-  adminUsernameError, categoryErrors, confirmationError, errorsOf, newPasswordError, normalizeCategory, normalizeQuestion,
+  adminUsernameError, categoryErrors, displayNameError, memberUsernameError, normalizeMemberUsername, confirmationError, errorsOf, newPasswordError, normalizeCategory, normalizeQuestion,
   questionErrors, questionNotices, quizLengthsError, requiredError, type CategoryInput, type QuestionInput,
 } from './validation.js';
 
@@ -118,5 +118,34 @@ describe('category and question validators (#15, FE-6)', () => {
     const long = Array(16).fill('word').join('  ');
     assert.deepEqual(questionNotices({ prompt: long }).map((notice) => [notice.field, notice.code, notice.params]), [['prompt', 'too_many_words', { max: 15, count: 16 }]]);
     assert.deepEqual(questionErrors({ ...question, prompt: long }), []);
+  });
+});
+
+describe('member accounts (#17)', () => {
+  it('ranks the roles: each has every power of the ones before it', () => {
+    assert.equal(roleAtLeast('Player', 'Player'), true);
+    assert.equal(roleAtLeast('Player', 'Editor'), false);
+    assert.equal(roleAtLeast('Editor', 'Player'), true);
+    assert.equal(roleAtLeast('Editor', 'Moderator'), false);
+    assert.equal(roleAtLeast('Moderator', 'Editor'), true);
+    assert.equal(roleAtLeast('Moderator', 'Moderator'), true);
+  });
+
+  it('checks usernames after trimming and lowercasing', () => {
+    assert.equal(normalizeMemberUsername('  Pilot.One '), 'pilot.one');
+    assert.equal(memberUsernameError('  Pilot.One_2-x '), null);
+    const code = (value: string) => memberUsernameError(value)?.code;
+    assert.equal(code(' '), 'required');
+    assert.equal(code('ab'), 'too_short');
+    assert.equal(code('a'.repeat(65)), 'too_long');
+    assert.equal(code('has space'), 'invalid_format');
+    assert.equal(code('émile'), 'invalid_format');
+  });
+
+  it('checks display names after trimming, counting code points', () => {
+    assert.equal(displayNameError('  Pilot  '), null);
+    assert.equal(displayNameError(' ')?.code, 'required');
+    assert.equal(displayNameError('🚀'.repeat(120)), null);
+    assert.equal(displayNameError('x'.repeat(121))?.code, 'too_long');
   });
 });

@@ -1,3 +1,4 @@
+import type { AdminMember, MemberRole } from '../lib/api';
 import { ApiError, apiFetch, apiRequest, attachmentName, type RequestOptions } from '../lib/client';
 
 /**
@@ -90,7 +91,7 @@ export interface RestoreReport {
   createdAt: string;
   appVersion: string;
   schemaVersion: { backup: number; current: number };
-  counts: { categories: number; questions: number; admin: number; settings: number };
+  counts: { categories: number; questions: number; members: number; admin: number; settings: number };
   adminUsername: string | null;
   ignoredSettings: string[];
   warningCodes: RestoreWarningCode[];
@@ -193,3 +194,29 @@ export async function exportLog(log: LogKind, filters: LogFilters, format: 'json
     throw error;
   }
 }
+
+// --- Members (#17) -----------------------------------------------------------
+
+export interface MemberPage {
+  items: AdminMember[];
+  nextCursor: string | null;
+}
+
+export function listMembers(search: string, cursor: string | null) {
+  const query = new URLSearchParams(Object.entries({ q: search.trim(), cursor: cursor ?? '' }).filter(([, value]) => value));
+  return adminRequest<MemberPage>(`/api/admin/members${query.size ? `?${query}` : ''}`);
+}
+
+export const createMember = (input: { username: string; displayName: string; role: MemberRole; password: string }) => (
+  adminRequest<{ member: AdminMember }>('/api/admin/members', { method: 'POST', body: input })
+);
+
+export const replaceMember = (id: string, input: { displayName: string; role: MemberRole; isActive: boolean }) => (
+  adminRequest<{ member: AdminMember }>(`/api/admin/members/${encodeURIComponent(id)}`, { method: 'PUT', body: input })
+);
+
+export const setMemberPassword = (id: string, password: string) => (
+  adminRequest<AdminMember>(`/api/admin/members/${encodeURIComponent(id)}/password`, { method: 'POST', body: { password } })
+);
+
+export const deleteMember = (id: string) => adminRequest<void>(`/api/admin/members/${encodeURIComponent(id)}`, { method: 'DELETE' });

@@ -9,7 +9,9 @@ import { openLogStore } from '../logs.js';
 import { insertCategory, type Category } from '../repository/categories.js';
 import { insertQuestion, type NewQuestion, type Question } from '../repository/questions.js';
 import { OperationLock, type OperationTimings } from '../operation.js';
-import { adminSessionCookie, AdminAuthService } from '../session.js';
+import { adminSessionCookie, AdminAuthService, memberSessionCookie } from '../session.js';
+import { AdminMemberService, MemberAuthService } from '../members.js';
+import type { AdminMember, MemberRole } from '../../src/lib/api.js';
 
 export interface TestContextOptions {
   setupPassword?: string | null;
@@ -112,4 +114,19 @@ export async function seedQuiz(context: AppContext, approved = 3, category: Part
     })));
     return { category: created, questions, hidden };
   });
+}
+
+/** The password of the members `createMember()` makes. */
+export const testMemberPassword = 'Member-Password-1!';
+
+/** Creates a local member as the Admin would (a data write). */
+export async function createMember(context: AppContext, username: string, role: MemberRole = 'Player'): Promise<AdminMember> {
+  const service = new AdminMemberService(context);
+  return withDataWrite(context.operations, () => service.create({ username, displayName: `Display ${username}`, role, password: testMemberPassword }));
+}
+
+/** Signs a member in and returns a `cookie` header value with the member session. */
+export async function memberCookie(context: AppContext, username: string) {
+  const session = await new MemberAuthService(context).login(username, testMemberPassword, silentLog);
+  return `${memberSessionCookie}=${session.token}`;
 }

@@ -60,6 +60,10 @@ All notable changes to AGT Galactic Trivia are documented in this file. The form
 - The game, rebuilt on the new server: choose a category, a short, long or full quiz, answer single- and
   multi-answer questions with feedback after each one, and see your score, percentage and rank. Links like
   `/?category=space` open a category directly, ignoring case (#16).
+- **Member accounts** with the roles Player, Editor and Moderator, created by the Admin in the new **Members** tab
+  (no self-registration). Members sign in with the **Sign in** button in the game's header, and the **Account**
+  button shows their account, changes their password and signs them out. A role change, deactivation, password
+  reset or deletion signs the member out everywhere; member sessions are never backed up (#17).
 - A **Settings** button in the header for the language and the text size, shared with the admin dashboard, and a
   footer with the Alliance links and the support link (#16).
 

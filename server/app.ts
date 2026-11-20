@@ -16,7 +16,8 @@ import { errorReply, HttpError, MaintenanceError, RateLimitedError, type ErrorRe
 import { registerOpenApi, routeSecurity } from './openapi.js';
 import { apiRoutes, type RateLimitName, type RouteDefinition } from './routes.js';
 import { Empty } from './schemas.js';
-import { AdminAuthService, adminSessionCookie, clearedCookie, hashSessionToken, secureCookie } from './session.js';
+import { MemberAuthService } from './members.js';
+import { AdminAuthService, adminSessionCookie, clearedCookie, hashSessionToken, memberSessionCookie, secureCookie } from './session.js';
 
 /** The header every state-changing request to `/api/setup` and `/api/admin/*` must carry (SEC-5, NAME-3). */
 export const csrfHeader = 'x-agt-request';
@@ -81,6 +82,7 @@ export function buildApp(context: AppContext, options: BuildAppOptions = {}): Fa
   // BAK-1: the restore upload; the route streams the file part to disk itself.
   app.register(fastifyMultipart, { limits: { files: 1, fields: 1, parts: 2 } });
   app.decorateRequest('admin', null);
+  app.decorateRequest('member', null);
   app.decorateRequest('audit', null);
   app.decorateRequest('auditError', null);
   // LOG-11: one hook audits every request that needs it.
@@ -115,12 +117,15 @@ export function buildApp(context: AppContext, options: BuildAppOptions = {}): Fa
   // SEC-4: one warning per process, the first time credentials arrive over plain HTTP from another machine.
   let plainHttpWarned = false;
   const auth = new AdminAuthService(context);
+  const members = new MemberAuthService(context);
 
   /**
-   * AUTH-9, SEC-5: the one hook that checks the CSRF header and the Admin
-   * session, before the body is read. A state-changing `csrf` or `admin` route
+   * AUTH-9, SEC-5: the one hook that checks the CSRF header and the sessions,
+   * before the body is read. A state-changing `csrf`, `admin` or `member` route
    * without `x-agt-request: 1` gets `403 csrf`; an `admin` route without a valid
-   * session gets `401 unauthorized`, and an unknown or expired cookie is cleared.
+   * Admin session, or a `member` route without a valid member session, gets
+   * `401 unauthorized`, and an unknown or expired cookie is cleared. Each mode
+   * reads only its own cookie (#17).
    * Rate limits run right after it, as `@fastify/rate-limit` route hooks.
    */
   app.addHook('onRequest', async (request, reply) => {
@@ -132,6 +137,14 @@ export function buildApp(context: AppContext, options: BuildAppOptions = {}): Fa
     }
     if (route.method !== 'GET' && request.headers[csrfHeader] !== '1') {
       throw new HttpError(403, 'csrf', `Requests that change data must include the ${csrfHeader}: 1 header.`);
+    }
+    if (route.auth === 'member') {
+      // Only the member cookie counts here; the Admin's is never read (AUTH-1 deviation).
+      const token = request.cookies[memberSessionCookie];
+      request.member = members.session(token);
+      if (request.member) return;
+      if (token) reply.header('set-cookie', clearedCookie(secureCookie(context, request), memberSessionCookie));
+      throw new HttpError(401, 'unauthorized', 'Member sign-in is required.');
     }
     if (route.auth !== 'admin') return;
     if (request.recoveryAdmin) {
