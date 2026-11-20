@@ -66,6 +66,12 @@
 #   # Questions in a long quiz (2-500, more than shortLength).
 #   longLength: 30
 
+# leaderboards:
+#   # Whether each category has a public leaderboard of the members who chose to appear on it.
+#   enabled: false
+#   # How many members a leaderboard shows (3-50).
+#   size: 10
+
 # backup:
 #   # Largest backup upload in bytes (1024-2147483648).
 #   maxZipBytes: 209715200

@@ -227,3 +227,16 @@ export function updateIamMember(db: Database, id: string, input: IamMemberInput,
 export function deleteIamMemberSessions(sqlite: Sqlite) {
   sqlite.prepare("DELETE FROM member_sessions WHERE member_id IN (SELECT id FROM members WHERE auth_source = 'agt_iam')").run();
 }
+
+// --- Leaderboard opt-in (#49) -----------------------------------------------------
+
+export function leaderboardOptIn(db: Database, id: string): boolean {
+  const row = db.connection.prepare('SELECT leaderboard_opt_in FROM members WHERE id = ?').get(id) as { leaderboard_opt_in: number } | undefined;
+  return row?.leaderboard_opt_in === 1;
+}
+
+/** The member's own choice; `updated_at` stays, as for a sign-in (#48). */
+export function setLeaderboardOptIn(db: Database, id: string, optIn: boolean) {
+  assertDataWrite();
+  db.connection.prepare('UPDATE members SET leaderboard_opt_in = ? WHERE id = ?').run(optIn ? 1 : 0, id);
+}

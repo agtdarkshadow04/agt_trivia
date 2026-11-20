@@ -2,7 +2,7 @@ import { readFileSync, statSync } from 'node:fs';
 import { Type, type Static, type TSchema } from '@sinclair/typebox';
 import { Value } from '@sinclair/typebox/value';
 import { parse as parseYaml } from 'yaml';
-import { backupLimits, quizLengthLimits, quizLengthsError } from '../src/lib/validation.js';
+import { backupLimits, leaderboardSizeLimits, quizLengthLimits, quizLengthsError } from '../src/lib/validation.js';
 
 /**
  * `config.yaml`: its TypeBox schema (CFG-3), the standard keys (CFG-5) and the
@@ -53,6 +53,16 @@ export const EDITABLE_SETTINGS = {
     integer(quizLengthLimits.long.min, quizLengthLimits.long.max),
     30,
     'Number of questions in a long quiz (2-500, more than quiz.shortLength).',
+  ),
+  'leaderboards.enabled': editable(
+    Type.Boolean(),
+    false,
+    'Whether each category has a public leaderboard of the members who chose to appear on it (#49).',
+  ),
+  'leaderboards.size': editable(
+    integer(leaderboardSizeLimits.min, leaderboardSizeLimits.max),
+    10,
+    'How many members a leaderboard shows (3-50).',
   ),
   'backup.maxZipBytes': editable(
     integer(backupLimits.maxZipBytes.min, backupLimits.maxZipBytes.max),
@@ -152,6 +162,10 @@ export const ConfigSchema = Type.Object({
   quiz: group({
     shortLength: fileSetting('quiz.shortLength'),
     longLength: fileSetting('quiz.longLength'),
+  }),
+  leaderboards: group({
+    enabled: fileSetting('leaderboards.enabled'),
+    size: fileSetting('leaderboards.size'),
   }),
   backup: group({
     maxZipBytes: fileSetting('backup.maxZipBytes'),

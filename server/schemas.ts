@@ -50,6 +50,7 @@ export const errorCodes = [
   'iam_timeout',
   'attempt_invalid',
   'report_exists',
+  'leaderboards_closed',
 ] as const;
 
 const Params = Type.Record(Type.String(), Type.Union([Type.String(), Type.Number(), Type.Boolean()]), {
@@ -82,6 +83,7 @@ export const PublicSettings = object({
   quizShortLength: Type.Integer({ description: '`quiz.shortLength`: questions in a short quiz.' }),
   quizLongLength: Type.Integer({ description: '`quiz.longLength`: questions in a long quiz.' }),
   agtSignIn: Type.Boolean({ description: 'Members can sign in with their AGT account: `iam.enabled` is on and AGT IAM is configured (#18).' }),
+  leaderboards: Type.Boolean({ description: '`leaderboards.enabled`: categories have public leaderboards (#49).' }),
 }, 'The settings the player UI needs (CFG-10); nothing sensitive.');
 
 // --- Categories and the public quiz (#15) -----------------------------------
@@ -123,6 +125,23 @@ export const PublicQuiz = object({
     expiresAt: Type.String({ format: 'date-time', description: 'After this the result can no longer be saved.' }),
   }, 'The signed attempt of this draw (#45). Nothing is stored when a quiz is drawn.'),
 });
+
+// --- Leaderboards (#49) ---------------------------------------------------------
+
+export const PublicLeaderboard = object({
+  category: PublicCategory,
+  minimumAnswers: Type.Integer({ description: 'Results count from a long or full quiz with at least this many answers: `quiz.shortLength`, or every question of a smaller category.' }),
+  entries: Type.Array(object({
+    rank: Type.Integer({ minimum: 1 }),
+    displayName: Type.String({ description: "The member's display name; nothing else about them." }),
+    bestPercent: Type.Integer({ description: '0 to 100, rounded; 100 only for a perfect score.' }),
+    plays: Type.Integer({ description: 'Their results that count.' }),
+  }), { description: 'At most `leaderboards.size`, best first: by best percentage, then more plays, then who reached it first.' }),
+}, 'A category\'s leaderboard (#49): only active members who chose to appear on it, and only results saved from a signed quiz attempt (#45).');
+
+export const MemberPreferences = object({
+  leaderboardOptIn: Type.Boolean({ description: 'Whether the member appears, by display name, on the public leaderboards (#49). Off until they turn it on.' }),
+}, "The signed-in member's own preferences.");
 
 // --- Setup and the Admin session (AUTH-3..AUTH-6) --------------------------
 

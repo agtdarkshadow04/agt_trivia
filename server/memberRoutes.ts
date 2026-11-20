@@ -3,6 +3,7 @@ import type { AdminMember } from '../src/lib/api.js';
 import type { AppContext } from './context.js';
 import { HttpError } from './http.js';
 import { IamClient, type IamTraveller } from './iam.js';
+import { memberPreferences, updateMemberPreferences } from './leaderboards.js';
 import { AdminMemberService, MemberAuthService, type MemberInput, type MemberSessionResult, type MemberUpdate } from './members.js';
 import type { RouteDefinition } from './routes.js';
 import * as S from './schemas.js';
@@ -124,6 +125,33 @@ export const memberRoutes: readonly RouteDefinition[] = [
       const { currentPassword, password } = request.body as { currentPassword: string; password: string };
       const result = await new MemberAuthService(context).changePassword(request.member!.id, currentPassword, password, authLog(request));
       return startMemberSession(context, request, reply, result);
+    },
+  },
+  {
+    method: 'GET',
+    url: '/api/member/preferences',
+    auth: 'member',
+    writesData: false,
+    operationId: 'getMemberPreferences',
+    tag: 'results',
+    summary: "Read the member's own preferences.",
+    schema: { response: { 200: S.MemberPreferences } },
+    handler: (context, request) => memberPreferences(context, request.member!.id),
+  },
+  {
+    method: 'PUT',
+    url: '/api/member/preferences',
+    auth: 'member',
+    writesData: true,
+    operationId: 'replaceMemberPreferences',
+    tag: 'results',
+    summary: "Change the member's own preferences, such as appearing on leaderboards.",
+    description: 'Any member, for themselves only. Turning `leaderboardOptIn` off takes them off every leaderboard at once (#49).',
+    schema: { body: S.MemberPreferences, response: { 200: S.MemberPreferences } },
+    handler: (context, request) => {
+      const preferences = updateMemberPreferences(context, request.member!.id, request.body as { leaderboardOptIn: boolean });
+      request.audit = { targetType: 'member', targetId: request.member!.id, details: { leaderboardOptIn: preferences.leaderboardOptIn } };
+      return preferences;
     },
   },
   {

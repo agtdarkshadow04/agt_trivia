@@ -5,6 +5,7 @@
  * member sign-in (#17); `?page=questions` and `?page=review` are the question
  * workshop and the review queue (#19); `?page=categories` is the Moderators'
  * category management (#20); `?page=scores` is a member's score history (#21).
+ * `?category=<shortName>&view=leaderboard` is a category's leaderboard (#49).
  */
 
 /** The pages besides the game itself. */
@@ -46,4 +47,17 @@ export function searchWithCategory(search: string, shortName: string | null): st
   else params.set('category', shortName);
   const query = params.toString();
   return query ? `?${query}` : '';
+}
+
+/** A category's views besides playing it (#49). */
+export type CategoryView = 'leaderboard';
+
+/** The `view` parameter beside `category`, or null for the quiz itself. */
+export function viewParam(search: string): CategoryView | null {
+  return new URLSearchParams(search).get('view') === 'leaderboard' ? 'leaderboard' : null;
+}
+
+/** The address of a category's leaderboard. */
+export function searchForLeaderboard(shortName: string): string {
+  return `?${new URLSearchParams({ category: shortName, view: 'leaderboard' })}`;
 }

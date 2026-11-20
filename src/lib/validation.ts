@@ -13,6 +13,9 @@ export const quizLengthLimits = {
   long: { min: 2, max: 500 },
 } as const;
 
+/** CFG-6: how many members a leaderboard shows (`leaderboards.size`, #49). */
+export const leaderboardSizeLimits = { min: 3, max: 50 } as const;
+
 /** CFG-6: the allowed backup upload limits (`backup.*`). */
 export const backupLimits = {
   maxZipBytes: { min: 1024, max: 2 * 1024 * 1024 * 1024 },

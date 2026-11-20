@@ -30,7 +30,7 @@ describe('setting precedence (CFG-7)', () => {
 
   it('lists every setting in EDITABLE_SETTINGS order', () => {
     assert.deepEqual(settingStates(parseConfig(''), new Map()).map((state) => state.key), [
-      'site.title', 'site.supportUrl', 'quiz.shortLength', 'quiz.longLength',
+      'site.title', 'site.supportUrl', 'quiz.shortLength', 'quiz.longLength', 'leaderboards.enabled', 'leaderboards.size',
       'backup.maxZipBytes', 'backup.maxUncompressedBytes', 'backup.maxEntries', 'iam.enabled', 'logs.serverRetentionDays', 'logs.serverMaxEntries', 'logs.auditRetentionDays', 'logs.auditMaxEntries',
     ]);
   });
@@ -62,7 +62,7 @@ describe('GET /api/settings/public (CFG-10)', () => {
       const response = await app.inject('/api/settings/public');
       assert.equal(response.statusCode, 200);
       assert.deepEqual(response.json(), {
-        siteTitle: 'Trivia Night', supportUrl: 'https://www.nms-agt.com/support', quizShortLength: 10, quizLongLength: 40, agtSignIn: false,
+        siteTitle: 'Trivia Night', supportUrl: 'https://www.nms-agt.com/support', quizShortLength: 10, quizLongLength: 40, agtSignIn: false, leaderboards: false,
       });
     } finally {
       await app.close();

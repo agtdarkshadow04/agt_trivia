@@ -21,6 +21,9 @@ All notable changes to AGT Galactic Trivia are documented in this file. The form
 - The **Members** tab shows each member's last sign-in, or "Never", and filters the members who have not signed in
   for 30, 90 or 365 days. A member sign-in now records the time, so like every other change it is refused during a
   restore (#48).
+- **Leaderboards**, off by default (`leaderboards.enabled`, `leaderboards.size`): each category gets a public board of
+  the members who turn on **Show me on leaderboards** in their account, by display name, ranked by their best long or
+  full quiz saved from a signed attempt (#49).
 
 ### Changed
 

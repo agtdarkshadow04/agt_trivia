@@ -28,7 +28,7 @@ function SettingsDialog({ onClose, returnFocusRef }: { onClose(): void; returnFo
  * sign-out (A11Y-4), `<main id="main-content">`, and the `site-footer` with the
  * Alliance links and the support link. The brand returns to the category list.
  */
-export function Layout({ siteTitle, supportUrl, member, status, reviewCount, onHome, onOpenPage, onMemberChanged, onSignedOut, children }: {
+export function Layout({ siteTitle, supportUrl, member, status, reviewCount, leaderboards = false, onHome, onOpenPage, onMemberChanged, onSignedOut, children }: {
   siteTitle: string;
   /** `site.supportUrl`, once the public settings have loaded. */
   supportUrl: string | null;
@@ -37,6 +37,8 @@ export function Layout({ siteTitle, supportUrl, member, status, reviewCount, onH
   status: string;
   /** Moderators: the questions waiting for review (#19); null for everyone else or while unknown. */
   reviewCount: number | null;
+  /** `leaderboards.enabled` (#49): the account menu offers the opt-in. */
+  leaderboards?: boolean;
   onHome(): void;
   onOpenPage(page: Page): void;
   onMemberChanged(member: MemberSession): void;
@@ -148,6 +150,7 @@ export function Layout({ siteTitle, supportUrl, member, status, reviewCount, onH
       {accountOpen && member && (
         <AccountDialog
           member={member}
+          leaderboards={leaderboards}
           returnFocusRef={accountButton}
           onClose={() => setAccountOpen(false)}
           onChanged={onMemberChanged}

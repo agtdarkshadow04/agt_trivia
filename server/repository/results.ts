@@ -118,3 +118,36 @@ export function deleteMemberResults(db: Database, memberId: string) {
   assertDataWrite();
   return db.connection.prepare('DELETE FROM quiz_results WHERE member_id = ?').run(memberId).changes;
 }
+
+export interface LeaderboardRow {
+  memberId: string;
+  displayName: string;
+  /** The best result's exact percentage, 0 to 100. */
+  bestPercent: number;
+  plays: number;
+  /** When the member first reached their best. */
+  bestAt: string;
+}
+
+/**
+ * A category's leaderboard (#49): active members who opted in, by their best
+ * result, then by more plays, then by who reached it first. Only results
+ * saved from a signed quiz attempt (#45) count, of a long or full quiz with
+ * at least `minimumAnswers` answers, so a short or hand-made result never
+ * places anyone.
+ */
+export function leaderboard(db: Database, options: { categoryId: string; minimumAnswers: number; limit: number }): LeaderboardRow[] {
+  return db.connection.prepare(`WITH eligible AS (
+      SELECT quiz_results.member_id, 100.0 * quiz_results.score / quiz_results.total AS percent, quiz_results.finished_at
+      FROM quiz_results JOIN members ON members.id = quiz_results.member_id
+      WHERE quiz_results.category_id = ? AND quiz_results.attempt_id IS NOT NULL AND quiz_results.length IN ('long', 'all')
+        AND quiz_results.total >= ? AND members.is_active = 1 AND members.leaderboard_opt_in = 1
+    ), best AS (
+      SELECT member_id, max(percent) AS best_percent, count(*) AS plays FROM eligible GROUP BY member_id
+    )
+    SELECT best.member_id AS memberId, members.display_name AS displayName, best.best_percent AS bestPercent, best.plays AS plays,
+      (SELECT min(eligible.finished_at) FROM eligible WHERE eligible.member_id = best.member_id AND eligible.percent = best.best_percent) AS bestAt
+    FROM best JOIN members ON members.id = best.member_id
+    ORDER BY best.best_percent DESC, best.plays DESC, bestAt, best.member_id
+    LIMIT ?`).all(options.categoryId, options.minimumAnswers, options.limit) as LeaderboardRow[];
+}
