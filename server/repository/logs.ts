@@ -7,7 +7,7 @@ import type { Sqlite } from '../db.js';
  */
 
 export type ServerLevel = 'info' | 'warn' | 'error' | 'fatal';
-export type ActorType = 'admin' | 'anonymous';
+export type ActorType = 'admin' | 'member' | 'anonymous';
 export type AuditOutcome = 'success' | 'denied' | 'rate_limited' | 'failure';
 
 export interface ServerEntry {

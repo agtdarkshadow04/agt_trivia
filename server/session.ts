@@ -14,6 +14,8 @@ import * as repo from './repository/admin.js';
  */
 
 export const adminSessionCookie = 'agt_trivia_session';
+/** The member session cookie (#17, AUTH-1 deviation): same attributes, accepted only on member routes. */
+export const memberSessionCookie = 'agt_trivia_member_session';
 export const setupPasswordVariable = 'AGT_TRIVIA_SETUP_PASSWORD';
 /** AUTH-5: the longest setup password the setup form can send. */
 export const maxSetupPasswordLength = 1024;
@@ -35,11 +37,11 @@ export function hashSessionToken(token: string) {
 }
 
 /** A token no real one can look like is never looked up. */
-function plausibleToken(token: string | undefined): token is string {
+export function plausibleToken(token: string | undefined): token is string {
   return typeof token === 'string' && /^[A-Za-z0-9_-]{43}$/.test(token);
 }
 
-function invalidCredentials(): never {
+export function invalidCredentials(): never {
   throw new HttpError(401, 'invalid_credentials', 'Invalid username or password.');
 }
 
@@ -176,12 +178,12 @@ export function secureCookie(context: Pick<AppContext, 'config'>, request: Fasti
   return setting === 'auto' ? request.protocol === 'https' : setting;
 }
 
-/** The session cookie with the AUTH-8 attributes. */
-export function sessionCookie(token: string, expiresAt: Date, secure: boolean) {
+/** A session cookie with the AUTH-8 attributes: the Admin's unless `name` says otherwise. */
+export function sessionCookie(token: string, expiresAt: Date, secure: boolean, name = adminSessionCookie) {
   const maxAge = Math.max(0, Math.ceil((expiresAt.getTime() - Date.now()) / 1000));
-  return [`${adminSessionCookie}=${token}`, 'Path=/', `Max-Age=${maxAge}`, 'HttpOnly', 'SameSite=Strict', ...(secure ? ['Secure'] : [])].join('; ');
+  return [`${name}=${token}`, 'Path=/', `Max-Age=${maxAge}`, 'HttpOnly', 'SameSite=Strict', ...(secure ? ['Secure'] : [])].join('; ');
 }
 
-export function clearedCookie(secure: boolean) {
-  return [`${adminSessionCookie}=`, 'Path=/', 'Max-Age=0', 'HttpOnly', 'SameSite=Strict', ...(secure ? ['Secure'] : [])].join('; ');
+export function clearedCookie(secure: boolean, name = adminSessionCookie) {
+  return [`${name}=`, 'Path=/', 'Max-Age=0', 'HttpOnly', 'SameSite=Strict', ...(secure ? ['Secure'] : [])].join('; ');
 }

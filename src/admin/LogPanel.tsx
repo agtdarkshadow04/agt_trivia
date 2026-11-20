@@ -16,7 +16,7 @@ import type { AdminTranslations } from './i18n';
 type Entry = ServerLogEntry | AuditLogEntry;
 
 const levelOptions = (a: AdminTranslations) => [['', a.logs.anyLevel], ['info', a.logs.infoUp], ['warn', a.logs.warnUp], ['error', a.logs.errorUp], ['fatal', a.logs.fatalOnly]];
-const actorOptions = (a: AdminTranslations) => [['', a.logs.anyone], ['admin', a.logs.actorAdmin], ['anonymous', a.logs.actorAnonymous]];
+const actorOptions = (a: AdminTranslations) => [['', a.logs.anyone], ['admin', a.logs.actorAdmin], ['member', a.logs.actorMember], ['anonymous', a.logs.actorAnonymous]];
 const outcomeOptions = (a: AdminTranslations) => [['', a.logs.anyOutcome], ['success', a.logs.success], ['denied', a.logs.denied], ['rate_limited', a.logs.rateLimited], ['failure', a.logs.failure]];
 
 /** LOG-19: colour and text, never colour alone. */
@@ -27,7 +27,7 @@ function severity(value: string) {
 }
 
 const outcomeLabel = (outcome: string, a: AdminTranslations) => ({ success: a.logs.success, denied: a.logs.denied, rate_limited: a.logs.rateLimited, failure: a.logs.failure } as Record<string, string>)[outcome] ?? outcome;
-const actorLabel = (actorType: string, a: AdminTranslations) => ({ admin: a.logs.actorAdmin, anonymous: a.logs.actorAnonymous } as Record<string, string>)[actorType] ?? actorType;
+const actorLabel = (actorType: string, a: AdminTranslations) => ({ admin: a.logs.actorAdmin, member: a.logs.actorMember, anonymous: a.logs.actorAnonymous } as Record<string, string>)[actorType] ?? actorType;
 const levelLabel = (level: string, a: AdminTranslations) => a.logs.levels[level as keyof AdminTranslations['logs']['levels']] ?? level;
 
 /** A `datetime-local` value as ISO 8601, in the browser's time zone. */

@@ -37,7 +37,7 @@
 #   backupsDir: backups
 
 # session:
-#   # How long an Admin sign-in lasts, in hours (1-168).
+#   # How long an Admin or member sign-in lasts, in hours (1-168).
 #   ttlHours: 12
 #   # Whether session cookies are marked Secure: auto (when the request came
 #   # over HTTPS; behind a proxy that needs server.trustProxy), true or false.
@@ -45,7 +45,7 @@
 
 # rateLimits:
 #   # At most max requests per client address in windowMinutes (SEC-7).
-#   # Admin sign-in and the Admin password change, each counted separately.
+#   # Admin and member sign-in and both password changes, each counted separately.
 #   login: { max: 10, windowMinutes: 15 }
 #   # First-run setup.
 #   setup: { max: 10, windowMinutes: 15 }

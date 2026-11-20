@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { categoryParam, findCategory, searchWithCategory } from './routes.js';
+import { categoryParam, findCategory, pageParam, searchForPage, searchWithCategory } from './routes.js';
 
 describe('player deep links (FE-4)', () => {
   const categories = [{ shortName: 'Space' }, { shortName: 'bio-1' }];
@@ -24,5 +24,13 @@ describe('player deep links (FE-4)', () => {
     assert.equal(searchWithCategory('?x=1&category=old', 'Space'), '?x=1&category=Space');
     assert.equal(searchWithCategory('?category=Space', null), '');
     assert.equal(searchWithCategory('?x=1&category=Space', null), '?x=1');
+  });
+
+  it('reads and writes the sign-in page (#17)', () => {
+    assert.equal(pageParam('?page=login'), 'login');
+    assert.equal(pageParam('?page=nope'), null);
+    assert.equal(pageParam('?category=x'), null);
+    assert.equal(searchForPage('login'), '?page=login');
+    assert.equal(searchForPage(null), '');
   });
 });

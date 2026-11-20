@@ -1,9 +1,10 @@
 import type { TSchema } from '@sinclair/typebox';
 import type { FastifyReply, FastifyRequest } from 'fastify';
-import type { PublicSettings } from '../src/lib/api.js';
+import type { MemberSession, PublicSettings } from '../src/lib/api.js';
 import { settingValues, type AppContext } from './context.js';
 import { backupRoutes } from './backupRoutes.js';
 import { logRoutes } from './logRoutes.js';
+import { memberRoutes } from './memberRoutes.js';
 import { quizRoutes } from './quizRoutes.js';
 import { readSettings } from './repository/settings.js';
 import * as S from './schemas.js';
@@ -18,15 +19,16 @@ import { currentSettings, updateSettings } from './settings.js';
 
 /**
  * - `none`: no credentials are checked (public reads).
- * - `csrf`: no session, but the CSRF header (first-run setup and Admin sign-in, SEC-5).
+ * - `csrf`: no session, but the CSRF header (first-run setup, Admin and member sign-in, SEC-5).
  * - `admin`: the Admin session cookie, and the CSRF header on every non-GET request (AUTH-9, SEC-5).
  *   Admin routes, and only they, live under `/api/admin/`.
- * The member mode arrives with member accounts (#17).
+ * - `member`: the member session cookie, and the CSRF header on every non-GET request (#17, the
+ *   AUTH-1 deviation). Neither cookie is ever accepted in place of the other.
  */
-export type RouteAuth = 'none' | 'csrf' | 'admin';
+export type RouteAuth = 'none' | 'csrf' | 'admin' | 'member';
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 /** One OpenAPI tag per route: `public`, `auth`, `admin`, or a resource name (API-11). */
-export type RouteTag = 'public' | 'auth' | 'admin';
+export type RouteTag = 'public' | 'auth' | 'admin' | 'members';
 /** Rate-limit buckets (SEC-7), each counted separately per route and client address; `rateLimits.*` in config.yaml. */
 export type RateLimitName = 'login' | 'setup' | 'adminUploads';
 
@@ -66,6 +68,8 @@ declare module 'fastify' {
   interface FastifyRequest {
     /** The signed-in Admin's username, set by the authentication hook on `admin` routes. */
     admin: string | null;
+    /** The signed-in member, set by the authentication hook on `member` routes (#17). */
+    member: MemberSession | null;
   }
 }
 
@@ -243,4 +247,4 @@ const coreRoutes: readonly RouteDefinition[] = [
   },
 ];
 
-export const apiRoutes: readonly RouteDefinition[] = [...coreRoutes, ...quizRoutes, ...logRoutes, ...backupRoutes];
+export const apiRoutes: readonly RouteDefinition[] = [...coreRoutes, ...quizRoutes, ...memberRoutes, ...logRoutes, ...backupRoutes];

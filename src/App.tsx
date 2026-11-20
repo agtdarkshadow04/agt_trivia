@@ -1,13 +1,14 @@
 import { useCallback, useEffect, useState } from 'react';
-import type { PublicCategory, PublicQuiz, PublicSettings, QuizLength } from './lib/api';
-import { getPublicSettings, getQuiz, listCategories } from './lib/playerApi';
+import type { MemberSession, PublicCategory, PublicQuiz, PublicSettings, QuizLength } from './lib/api';
+import { getMemberSession, getPublicSettings, getQuiz, listCategories } from './lib/playerApi';
 import { choose, isFinished, lockAnswer, nextQuestion, startSession, type QuizSession } from './lib/quizSession';
-import { categoryParam, findCategory, searchWithCategory } from './lib/routes';
+import { categoryParam, findCategory, pageParam, searchForPage, searchWithCategory, type Page } from './lib/routes';
 import { COMMON_TRANSLATIONS, formatTranslation } from './translations';
 import { CategoryList } from './components/CategoryList';
 import { useI18n } from './components/I18n';
 import { RefreshIcon } from './components/Icons';
 import { Layout } from './components/Layout';
+import { SignIn } from './components/MemberAccount';
 import { BackToCategories, LengthChoice, QuestionView, Results } from './components/QuizPlay';
 
 type Data =
@@ -47,6 +48,13 @@ export function App() {
   const [search, setSearch] = useState(() => window.location.search);
   const [play, setPlay] = useState<Play>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  // #17: the signed-in member; undefined until the session has been read.
+  const [member, setMember] = useState<MemberSession | null | undefined>(undefined);
+  const [status, setStatus] = useState('');
+
+  useEffect(() => {
+    getMemberSession().then(setMember, () => setMember(null));
+  }, []);
 
   const load = useCallback(async () => {
     setData({ status: 'loading' });
@@ -62,7 +70,7 @@ export function App() {
 
   // Back and Forward move between the list and the categories (FE-4).
   useEffect(() => {
-    const follow = () => { setSearch(window.location.search); setPlay(null); setNotice(null); };
+    const follow = () => { setSearch(window.location.search); setPlay(null); setNotice(null); setStatus(''); };
     window.addEventListener('popstate', follow);
     return () => window.removeEventListener('popstate', follow);
   }, []);
@@ -70,7 +78,8 @@ export function App() {
   const siteTitle = data.status === 'ready' ? data.settings.siteTitle : COMMON_TRANSLATIONS.product;
   useEffect(() => { document.title = siteTitle; }, [siteTitle]);
 
-  const code = categoryParam(search);
+  const page = pageParam(search);
+  const code = page ? null : categoryParam(search);
   const category = data.status === 'ready' ? findCategory(data.categories, code) : null;
   const playable = category !== null && category.questionCount > 0;
 
@@ -85,13 +94,23 @@ export function App() {
     if (!playable) setNotice(formatTranslation(category ? t.quiz.emptyCategory : t.quiz.unknownCategory, { code }));
   }, [data, code, category, playable, t]);
 
-  const navigate = useCallback((shortName: string | null) => {
-    const next = searchWithCategory(window.location.search, shortName);
+  const go = useCallback((next: string) => {
     window.history.pushState(null, '', `${window.location.pathname}${next}`);
     setSearch(next);
     setPlay(null);
     setNotice(null);
   }, []);
+  /** A category, or the list for null; a page such as the sign-in is left behind. */
+  const navigate = useCallback((shortName: string | null) => { setStatus(''); go(searchWithCategory('', shortName)); }, [go]);
+  const openPage = useCallback((target: Page) => { setStatus(''); go(searchForPage(target)); }, [go]);
+
+  // A signed-in member has nothing to do on the sign-in page (FE-4).
+  useEffect(() => {
+    if (page === 'login' && member) {
+      window.history.replaceState(window.history.state, '', window.location.pathname);
+      setSearch('');
+    }
+  }, [page, member]);
 
   const startQuiz = useCallback(async (target: PublicCategory, length: QuizLength) => {
     setPlay({ status: 'loading', length });
@@ -108,7 +127,11 @@ export function App() {
   ));
 
   let content;
-  if (data.status === 'loading') content = <LoadState message={t.quiz.loadingCategories} />;
+  if (page === 'login') {
+    content = member === null
+      ? <SignIn onSignedIn={(signedIn) => { setMember(signedIn); go(''); setStatus(formatTranslation(t.login.signedIn, { name: signedIn.displayName })); }} />
+      : <LoadState message={t.quiz.loadingCategories} />;
+  } else if (data.status === 'loading') content = <LoadState message={t.quiz.loadingCategories} />;
   else if (data.status === 'error') content = <LoadState message="" cause={data.cause} onRetry={() => void load()} />;
   else if (!playable) {
     content = <CategoryList categories={data.categories} notice={notice} onChoose={(chosen) => navigate(chosen.shortName)} />;
@@ -160,7 +183,16 @@ export function App() {
   }
 
   return (
-    <Layout siteTitle={siteTitle} supportUrl={data.status === 'ready' ? data.settings.supportUrl : null} onHome={() => navigate(null)}>
+    <Layout
+      siteTitle={siteTitle}
+      supportUrl={data.status === 'ready' ? data.settings.supportUrl : null}
+      member={member}
+      status={status}
+      onHome={() => navigate(null)}
+      onSignIn={() => openPage('login')}
+      onMemberChanged={setMember}
+      onSignedOut={() => { setMember(null); setStatus(t.login.signedOut); }}
+    >
       <div className="player">{content}</div>
     </Layout>
   );

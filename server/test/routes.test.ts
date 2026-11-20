@@ -4,7 +4,7 @@ import type { FastifyInstance } from 'fastify';
 import { buildApp, maxBodyBytes } from '../app.js';
 import { errorReply, HttpError, RateLimitedError } from '../http.js';
 import { apiRoutes } from '../routes.js';
-import { adminCookie, seedQuiz, testContext, totalChanges } from './helpers.js';
+import { adminCookie, createMember, memberCookie, seedQuiz, testContext, totalChanges } from './helpers.js';
 
 describe('the route table', () => {
   const context = testContext();
@@ -29,13 +29,16 @@ describe('the route table', () => {
     assert.equal(new Set(apiRoutes.map((route) => route.operationId)).size, apiRoutes.length);
     const cookie = await adminCookie(context);
     const { category } = await seedQuiz(context);
+    await createMember(context, 'route.tester');
+    const member = await memberCookie(context, 'route.tester');
+    const credentials = { admin: { cookie }, member: { cookie: member }, none: {}, csrf: {} };
     const queries: Record<string, string> = { '/export': '?format=jsonl', '/quiz': '?length=all' };
     for (const route of apiRoutes.filter((entry) => entry.method === 'GET')) {
       assert.equal(route.writesData, false, route.url);
       const before = totalChanges(context);
       const query = Object.entries(queries).find(([suffix]) => route.url.endsWith(suffix))?.[1] ?? '';
       const url = route.url.replace(':id', category.id);
-      const response = await app.inject({ url: `${url}${query}`, headers: route.auth === 'admin' ? { cookie } : {} });
+      const response = await app.inject({ url: `${url}${query}`, headers: credentials[route.auth] });
       assert.equal(response.statusCode, 200, route.url);
       assert.equal(totalChanges(context), before, `${route.url} writes nothing (BAK-8)`);
     }

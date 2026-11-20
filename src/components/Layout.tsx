@@ -1,9 +1,11 @@
 import { type MouseEvent, type ReactNode, useRef, useState } from 'react';
+import type { MemberSession } from '../lib/api';
 import { COMMON_TRANSLATIONS, formatTranslation } from '../translations';
 import { Dialog } from './Dialog';
 import { DisplaySettings } from './DisplaySettings';
 import { useI18n } from './I18n';
-import { SettingsIcon } from './Icons';
+import { LogInIcon, SettingsIcon, UserRoundIcon } from './Icons';
+import { AccountDialog } from './MemberAccount';
 import { MaintenanceNotice } from './MaintenanceNotice';
 
 /** I18N-4: the reader's language and text size; the player UI shows no times yet, so no time zone. */
@@ -19,25 +21,35 @@ function SettingsDialog({ onClose, returnFocusRef }: { onClose(): void; returnFo
 
 /**
  * The public page chrome (UI-7): the `site-header` with the brand lockup and
- * the round icon buttons, the maintenance notice (FE-5), `<main
- * id="main-content">`, and the `site-footer` with the Alliance links and the
- * support link. The brand returns to the category list.
+ * the round icon buttons (Sign in, or the signed-in member's account menu, and
+ * Settings), the maintenance notice (FE-5), the status of a sign-in or
+ * sign-out (A11Y-4), `<main id="main-content">`, and the `site-footer` with the
+ * Alliance links and the support link. The brand returns to the category list.
  */
-export function Layout({ siteTitle, supportUrl, onHome, children }: {
+export function Layout({ siteTitle, supportUrl, member, status, onHome, onSignIn, onMemberChanged, onSignedOut, children }: {
   siteTitle: string;
   /** `site.supportUrl`, once the public settings have loaded. */
   supportUrl: string | null;
+  /** The signed-in member; undefined while the session is being read. */
+  member: MemberSession | null | undefined;
+  status: string;
   onHome(): void;
+  onSignIn(): void;
+  onMemberChanged(member: MemberSession): void;
+  onSignedOut(): void;
   children: ReactNode;
 }) {
   const { t } = useI18n();
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [accountOpen, setAccountOpen] = useState(false);
   const settingsButton = useRef<HTMLButtonElement>(null);
-  const home = (event: MouseEvent<HTMLAnchorElement>) => {
+  const accountButton = useRef<HTMLButtonElement>(null);
+  const follow = (action: () => void) => (event: MouseEvent<HTMLAnchorElement>) => {
     if (event.metaKey || event.ctrlKey || event.shiftKey || event.button !== 0) return;
     event.preventDefault();
-    onHome();
+    action();
   };
+  const home = follow(onHome);
   return (
     <div className="app-shell">
       <a className="skip-link" href="#main-content">{t.common.skipToContent}</a>
@@ -51,6 +63,25 @@ export function Layout({ siteTitle, supportUrl, onHome, children }: {
             </span>
           </a>
           <nav className="header-actions" aria-label={t.layout.mainNavigation}>
+            {member && <span className="identity-badge">{member.displayName} · {t.roles[member.role]}</span>}
+            {member ? (
+              <button
+                ref={accountButton}
+                className="button button-icon"
+                type="button"
+                onClick={() => setAccountOpen(true)}
+                aria-label={t.layout.account}
+                title={t.layout.account}
+                aria-haspopup="dialog"
+                aria-expanded={accountOpen}
+              >
+                <UserRoundIcon />
+              </button>
+            ) : member === null && (
+              <a className="button button-icon" href="/?page=login" onClick={follow(onSignIn)} aria-label={t.layout.signIn} title={t.layout.signIn}>
+                <LogInIcon />
+              </a>
+            )}
             <button
               ref={settingsButton}
               className="button button-icon"
@@ -67,6 +98,7 @@ export function Layout({ siteTitle, supportUrl, onHome, children }: {
         </div>
       </header>
       <MaintenanceNotice />
+      <div className="status-region" role="status" aria-live="polite">{status && <p className="success-note">{status}</p>}</div>
       <main id="main-content" className="main-content" tabIndex={-1}>
         {children}
       </main>
@@ -80,6 +112,15 @@ export function Layout({ siteTitle, supportUrl, onHome, children }: {
         <p>{formatTranslation(t.layout.copyright, { year: new Date().getUTCFullYear(), alliance: COMMON_TRANSLATIONS.alliance })}</p>
       </footer>
       {settingsOpen && <SettingsDialog onClose={() => setSettingsOpen(false)} returnFocusRef={settingsButton} />}
+      {accountOpen && member && (
+        <AccountDialog
+          member={member}
+          returnFocusRef={accountButton}
+          onClose={() => setAccountOpen(false)}
+          onChanged={onMemberChanged}
+          onSignedOut={() => { setAccountOpen(false); onSignedOut(); }}
+        />
+      )}
     </div>
   );
 }

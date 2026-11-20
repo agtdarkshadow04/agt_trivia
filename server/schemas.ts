@@ -28,6 +28,7 @@ export const errorCodes = [
   'invalid_setup_password',
   'file_required',
   'csrf',
+  'forbidden',
   'not_found',
   'conflict',
   'defined_in_config',
@@ -187,7 +188,7 @@ export const ServerLogQuery = object({
 });
 
 export const AuditLogQuery = object({
-  actorType: Type.Optional(Type.Union([Type.Literal('admin'), Type.Literal('anonymous')])),
+  actorType: Type.Optional(Type.Union([Type.Literal('admin'), Type.Literal('member'), Type.Literal('anonymous')])),
   action: Type.Optional(Text(100)),
   outcome: Type.Optional(Type.Union(['success', 'denied', 'rate_limited', 'failure'].map((outcome) => Type.Literal(outcome)))),
   targetType: Type.Optional(Text(100)),
@@ -224,7 +225,7 @@ export const AuditLogEntry = object({
   at: Type.String({ format: 'date-time', description: 'The first time.' }),
   lastAt: Type.String({ format: 'date-time', description: 'The last time; later than `at` for coalesced entries.' }),
   count: Type.Integer({ description: 'Identical events coalesced into this entry (LOG-11).' }),
-  actorType: Type.Union([Type.Literal('admin'), Type.Literal('anonymous')]),
+  actorType: Type.Union([Type.Literal('admin'), Type.Literal('member'), Type.Literal('anonymous')]),
   actor: nullableText,
   ipHash: Type.Union([Type.String({ description: 'A pseudonymous address hash, never the address (LOG-12).' }), Type.Null()]),
   client: Type.Union([Type.Literal('web'), Type.Literal('api')]),
@@ -286,7 +287,7 @@ export const RestoreReport = object({
   createdAt: Type.String({ format: 'date-time' }),
   appVersion: Type.String(),
   schemaVersion: object({ backup: Type.Integer(), current: Type.Integer() }),
-  counts: object({ categories: Type.Integer(), questions: Type.Integer({ description: 'Of every status.' }), admin: Type.Integer(), settings: Type.Integer() }),
+  counts: object({ categories: Type.Integer(), questions: Type.Integer({ description: 'Of every status.' }), members: Type.Integer(), admin: Type.Integer(), settings: Type.Integer() }),
   adminUsername: Type.Union([Type.String(), Type.Null()]),
   ignoredSettings: Type.Array(Type.String(), { description: 'Settings the backup has that this config.yaml locks: dropped (CFG-8).' }),
   warningCodes: Type.Array(Type.String(), { description: '`no_admin`, `set_aside_not_deleted`.' }),
@@ -298,3 +299,59 @@ export const RestoreReport = object({
   }),
   preRestoreBackup: Type.Union([Type.String(), Type.Null()], { description: 'After a restore: the pre-restore backup\'s file name.' }),
 }, 'What the backup holds, and after a restore, what was done (BAK-3, BAK-4).');
+
+// --- Members (#17, the AUTH-1 deviation) -------------------------------------
+
+const MemberRoleSchema = Type.Union([Type.Literal('Player'), Type.Literal('Editor'), Type.Literal('Moderator')], {
+  description: 'Player: plays and keeps a score history. Editor: also writes questions. Moderator: also reviews questions and manages categories.',
+});
+
+const memberSessionFields = {
+  id: Type.String({ format: 'uuid' }),
+  username: Type.Union([Type.String(), Type.Null()], { description: 'Lowercase; null for an AGT member (#18).' }),
+  displayName: Type.String(),
+  role: MemberRoleSchema,
+  authSource: Type.Union([Type.Literal('local'), Type.Literal('agt_iam')]),
+};
+
+export const MemberSession = object(memberSessionFields, 'The signed-in member.');
+
+export const AdminMember = object({
+  ...memberSessionFields,
+  isActive: Type.Boolean({ description: 'An inactive member cannot sign in.' }),
+  createdAt: Type.String({ format: 'date-time' }),
+  updatedAt: Type.String({ format: 'date-time' }),
+}, 'A member account as the Admin sees it.');
+
+export const MemberResult = object({
+  member: AdminMember,
+  notices: Type.Array(Type.Ref('FieldError'), { description: 'Non-blocking warnings (API-2); always empty for members.' }),
+});
+
+export const MemberPage = object({
+  items: Type.Array(AdminMember),
+  nextCursor: Type.Union([Type.String(), Type.Null()]),
+}, 'Newest first (API-8).');
+
+export const MemberListQuery = object({
+  limit: Type.Optional(Type.String({ pattern: '^[1-9][0-9]{0,2}$', description: '1 to 200; 50 by default (API-8).' })),
+  cursor: Type.Optional(Type.String({ maxLength: 512, description: 'The `nextCursor` of the previous page (API-8).' })),
+  q: Type.Optional(Type.String({ maxLength: 120, description: 'Part of a username or display name, ignoring ASCII case.' })),
+});
+
+export const MemberIdParams = object({ id: Type.String({ description: 'The member ID (a UUIDv4); anything else answers 404.' }) });
+
+export const MemberCreateBody = object({
+  username: Type.String({ maxLength: 128, description: 'Trimmed and stored lowercase: 3 to 64 letters, digits, dots, underscores or hyphens.' }),
+  displayName: Type.String({ maxLength: 240, description: 'Trimmed; 1 to 120 characters.' }),
+  role: MemberRoleSchema,
+  password: Password,
+});
+
+export const MemberReplaceBody = object({
+  displayName: Type.String({ maxLength: 240, description: 'Trimmed; 1 to 120 characters.' }),
+  role: MemberRoleSchema,
+  isActive: Type.Boolean(),
+});
+
+export const MemberPasswordBody = object({ password: Password });

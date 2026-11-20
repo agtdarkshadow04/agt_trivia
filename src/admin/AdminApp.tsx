@@ -16,6 +16,7 @@ import {
 import { useAdminI18n } from './context';
 import type { AdminTranslations } from './i18n';
 import { LogPanel } from './LogPanel';
+import { MembersPanel } from './MembersPanel';
 import { SettingsPanel } from './SettingsPanel';
 
 type Phase =
@@ -25,9 +26,9 @@ type Phase =
   | { name: 'login'; notice?: Notice }
   | { name: 'dashboard'; session: AdminSession };
 
-/** UI-8, in order: the resource tabs (#17, #22), Settings, Server log, Audit log, Backup & restore, Account. */
-type Tab = 'settings' | 'serverLog' | 'auditLog' | 'backup' | 'account';
-const tabs: Tab[] = ['settings', 'serverLog', 'auditLog', 'backup', 'account'];
+/** UI-8, in order: the resource tabs (Members; Import arrives in #22), Settings, Server log, Audit log, Backup & restore, Account. */
+type Tab = 'members' | 'settings' | 'serverLog' | 'auditLog' | 'backup' | 'account';
+const tabs: Tab[] = ['members', 'settings', 'serverLog', 'auditLog', 'backup', 'account'];
 
 /** Why the sign-in screen is shown again. */
 type Notice = 'signedOut' | 'sessionEnded' | 'restored';
@@ -191,6 +192,7 @@ function Dashboard({ session, onSessionChange, onRestored }: { session: AdminSes
         ))}
       </div>
       <div className="admin-tab-panel" role="tabpanel" id={panelId(tab)} aria-labelledby={tabId(tab)} tabIndex={0}>
+        {tab === 'members' && <MembersPanel />}
         {tab === 'settings' && <SettingsPanel />}
         {tab === 'serverLog' && <LogPanel kind="server" />}
         {tab === 'auditLog' && <LogPanel kind="audit" />}

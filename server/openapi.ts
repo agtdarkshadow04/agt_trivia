@@ -2,7 +2,7 @@ import fastifySwagger from '@fastify/swagger';
 import type { FastifyInstance } from 'fastify';
 import type { RouteDefinition } from './routes.js';
 import { ErrorBodySchema, FieldErrorSchema, RestoreUploadDocument } from './schemas.js';
-import { adminSessionCookie } from './session.js';
+import { adminSessionCookie, memberSessionCookie } from './session.js';
 
 /** What each kind of route really requires (API-11, AUTH-9, SEC-5); every route uses one of these. */
 export const SECURITY = {
@@ -14,6 +14,10 @@ export const SECURITY = {
   adminRead: [{ sessionCookie: [] }],
   /** Admin writes, logout included. */
   adminWrite: [{ sessionCookie: [], csrfHeader: [] }],
+  /** Member reads (#17, AUTH-1 deviation). */
+  memberRead: [{ memberSessionCookie: [] }],
+  /** Member writes, logout included. */
+  memberWrite: [{ memberSessionCookie: [], csrfHeader: [] }],
 } as const;
 
 /** The `security` value of a route, from its auth mode. */
@@ -25,6 +29,8 @@ export function routeSecurity(route: Pick<RouteDefinition, 'auth' | 'method'>) {
       return SECURITY.csrfOnly;
     case 'admin':
       return route.method === 'GET' ? SECURITY.adminRead : SECURITY.adminWrite;
+    case 'member':
+      return route.method === 'GET' ? SECURITY.memberRead : SECURITY.memberWrite;
   }
 }
 
@@ -46,13 +52,15 @@ export function registerOpenApi(app: FastifyInstance, version: string) {
       components: {
         securitySchemes: {
           sessionCookie: { type: 'apiKey', in: 'cookie', name: adminSessionCookie, description: 'The Admin session.' },
+          memberSessionCookie: { type: 'apiKey', in: 'cookie', name: memberSessionCookie, description: 'A member session; never accepted on Admin routes, and the Admin session never on member routes.' },
           csrfHeader: { type: 'apiKey', in: 'header', name: 'x-agt-request', description: 'Must be "1".' },
         },
       },
       tags: [
         { name: 'public', description: 'Public reads that need no sign-in.' },
-        { name: 'auth', description: 'First-run setup, Admin sign-in, the session and the password.' },
+        { name: 'auth', description: 'First-run setup, Admin and member sign-in, the sessions and the passwords.' },
         { name: 'admin', description: 'The admin dashboard.' },
+        { name: 'members', description: "The Admin's management of member accounts (#17)." },
       ],
     },
     // A multipart route validates no parsed body; the document shows its form fields (BAK-1).

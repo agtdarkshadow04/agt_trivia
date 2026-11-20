@@ -52,7 +52,7 @@ export interface RestoreReport {
   createdAt: string;
   appVersion: string;
   schemaVersion: { backup: number; current: number };
-  counts: { categories: number; questions: number; admin: number; settings: number };
+  counts: { categories: number; questions: number; members: number; admin: number; settings: number };
   adminUsername: string | null;
   /** Dashboard settings the backup has that this installation's config.yaml locks: dropped (CFG-8). */
   ignoredSettings: string[];
@@ -245,6 +245,7 @@ export class BackupService {
     const sqlite = new BetterSqlite3(file);
     try {
       sqlite.prepare('DELETE FROM sessions').run();
+      sqlite.prepare('DELETE FROM member_sessions').run();
       sqlite.pragma('journal_mode = DELETE');
       sqlite.exec('VACUUM');
     } finally {
@@ -399,6 +400,7 @@ export class BackupService {
         counts: {
           categories: (sqlite.prepare('SELECT count(*) AS n FROM categories').get() as { n: number }).n,
           questions: (sqlite.prepare('SELECT count(*) AS n FROM questions').get() as { n: number }).n,
+          members: (sqlite.prepare('SELECT count(*) AS n FROM members').get() as { n: number }).n,
           admin: admin ? 1 : 0,
           settings: settings.filter((key) => (settingKeys as readonly string[]).includes(key)).length,
         },
@@ -484,6 +486,7 @@ export class BackupService {
           const present = locked.filter((key) => connection.prepare('SELECT 1 FROM settings WHERE key = ?').get(key));
           for (const key of locked) connection.prepare('DELETE FROM settings WHERE key = ?').run(key);
           connection.prepare('DELETE FROM sessions').run();
+          connection.prepare('DELETE FROM member_sessions').run();
           this.hooks.duringCommit?.();
           return present;
         }));

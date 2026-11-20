@@ -54,3 +54,6 @@
 .diff-added { color: #8cf58c; }
 .diff-removed { color: #ff9c99; }
 .diff-same { color: var(--muted); }
+
+/* #17: the Members tab. */
+.members-sections { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1.25rem; }

@@ -12,6 +12,37 @@ export interface Health {
   status: 'ok' | 'maintenance';
 }
 
+/** The member roles (#17), each with every power of the ones before it. */
+export const memberRoles = ['Player', 'Editor', 'Moderator'] as const;
+export type MemberRole = typeof memberRoles[number];
+
+/**
+ * Whether `role` has at least the powers of `minimum` (#17): Players play and
+ * keep a score history, Editors also write questions, Moderators also review
+ * them and manage categories. The server authorizes with this, never the UI.
+ */
+export function roleAtLeast(role: MemberRole, minimum: MemberRole) {
+  return memberRoles.indexOf(role) >= memberRoles.indexOf(minimum);
+}
+
+export type AuthSource = 'local' | 'agt_iam';
+
+/** `GET /api/member/session` (#17): the signed-in member. */
+export interface MemberSession {
+  id: string;
+  username: string | null;
+  displayName: string;
+  role: MemberRole;
+  authSource: AuthSource;
+}
+
+/** A member account as the Admin sees it (#17). */
+export interface AdminMember extends MemberSession {
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
 /** `GET /api/categories` (#15): a category as visitors see it. */
 export interface PublicCategory {
   id: string;

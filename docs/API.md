@@ -2,7 +2,7 @@
 
 The server's REST API lives under `/api/`. The complete, generated description is the OpenAPI 3.1 document at
 `GET /api/openapi.json` (API-11); this guide explains the conventions it follows. The API grows with the rebuild
-(#6): authoring, member accounts and score history arrive in their sub-issues.
+(#6): authoring and score history arrive in their sub-issues.
 
 ## Requests and responses
 
@@ -19,10 +19,16 @@ The server's REST API lives under `/api/`. The complete, generated description i
 - **The Admin** signs in with `POST /api/admin/login`, which sets the `agt_trivia_session` cookie (`HttpOnly`,
   `SameSite=Strict`, and `Secure` over HTTPS, `session.secureCookie`). Every `/api/admin/*` route except login needs
   it (`401 unauthorized` otherwise). No bearer token is accepted.
-- **CSRF:** every state-changing request to `/api/setup` and `/api/admin/*`, login and logout included, must carry
-  the header `x-agt-request: 1` (`403 csrf` otherwise). The browser client adds it.
-- **Rate limits:** first-run setup, Admin sign-in and the Admin password change allow `rateLimits.*` requests per
-  client address (10 per 15 minutes by default, each counted separately); then `429 rate_limited`.
+- **Members** (players, editors and moderators, #17) sign in with `POST /api/member/login`, which sets the
+  `agt_trivia_member_session` cookie, with the same attributes. Every `/api/member/*` route except login needs it.
+  **The two cookies never stand in for each other:** an Admin route ignores the member cookie and a member route
+  ignores the Admin's, so a Moderator is never the Admin and the Admin is never a member.
+- **CSRF:** every state-changing request to `/api/setup`, `/api/admin/*` and `/api/member/*`, sign-in and sign-out
+  included, must carry the header `x-agt-request: 1` (`403 csrf` otherwise). The browser client adds it.
+- **Rate limits:** first-run setup, Admin and member sign-in and both password changes allow `rateLimits.*` requests
+  per client address (10 per 15 minutes by default, each route counted separately); then `429 rate_limited`.
+- **Roles:** a Player plays and keeps a score history; an Editor also writes questions; a Moderator also reviews
+  them and manages categories. A member route the role does not allow answers `403 forbidden`.
 
 ## Routes
 
@@ -38,6 +44,15 @@ The server's REST API lives under `/api/`. The complete, generated description i
 | `POST /api/admin/logout` | Ends the session; `204` |
 | `GET /api/admin/session` | `{ username, version, setupPasswordStillSet }` |
 | `POST /api/admin/password` | `{ currentPassword, password }`: changes the password, ends every other session; `200 { username }` |
+| `POST /api/member/login` | `{ username, password }`: signs a member in (the username ignoring case); `200` the member: `{ id, username, displayName, role, authSource }` |
+| `POST /api/member/logout` | Ends the member session; `204` |
+| `GET /api/member/session` | The signed-in member |
+| `POST /api/member/password` | `{ currentPassword, password }`: changes a local member's password, ends their other sessions; `200` the member |
+| `GET /api/admin/members` | Member accounts, newest first: `{ items, nextCursor }` (API-8; `limit`, `cursor`, and `q` to search usernames and display names) |
+| `POST /api/admin/members` | `{ username, displayName, role, password }`: creates a local member; `201 { member, notices }` |
+| `PUT /api/admin/members/{id}` | `{ displayName, role, isActive }`; a role change or deactivation signs the member out; `200 { member, notices }` |
+| `POST /api/admin/members/{id}/password` | `{ password }`: sets a local member's password and signs them out; `200` the member |
+| `DELETE /api/admin/members/{id}` | Deletes the member and their sessions; their questions stay, without their ID; `204` |
 | `GET /api/admin/settings` | `{ settings }`: every dashboard setting with `value`, `source` (`config`, `dashboard` or `default`), `locked`, `default` and `description` |
 | `PUT /api/admin/settings` | `{ values: { key: value or null } }`: changes settings (`null` resets one); `200 { settings, notices }` |
 | `GET /api/admin/logs/server`, `GET /api/admin/logs/audit` | The server log and the audit log, newest first, with filters (`limit`, `cursor`) |
@@ -72,12 +87,13 @@ and `fields` lists field-level problems, each with a `field` (the request proper
 | `unknown_setting` | 400 | A settings update names a key that is not a dashboard setting | `{ key }` |
 | `invalid_setting` | 400 | A settings update has a value the setting does not allow | `{ key }` |
 | `file_required` | 400 | A restore upload without its `backup` file | — |
-| `unauthorized` | 401 | No valid Admin session | — |
+| `unauthorized` | 401 | No valid Admin session on an Admin route, or no valid member session on a member route | — |
 | `invalid_credentials` | 401 | Wrong username or password, or wrong current password | — |
 | `invalid_setup_password` | 401 | Wrong setup password | — |
 | `csrf` | 403 | A state-changing request without `x-agt-request: 1` | — |
+| `forbidden` | 403 | The member's role does not allow this, or an AGT member asks to change a password here | — |
 | `not_found` | 404 | Unknown route, or an unknown or invisible resource | — |
-| `conflict` | 409 | A backup or restore is already running, or the server stayed busy for 30 seconds; nothing was changed | — |
+| `conflict` | 409 | A backup or restore is already running, or the server stayed busy for 30 seconds, or a password is set for an AGT member; nothing was changed | — |
 | `defined_in_config` | 409 | A settings update names a key that `config.yaml` sets; nothing was changed | `{ key }` |
 | `setup_complete` | 410 | First-run setup after the Admin exists | — |
 | `file_too_large` | 413 | A backup upload larger than `backup.maxZipBytes` | `{ maxBytes }` |

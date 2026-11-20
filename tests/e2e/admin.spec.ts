@@ -33,7 +33,7 @@ test.describe('signed in', () => {
     await page.goto('/admin');
     await expect(page.getByText(/^Version \d+\.\d+\.\d+/)).toBeVisible();
     const settings = page.getByRole('tab', { name: 'Settings' });
-    await expect(page.getByRole('tab')).toHaveText(['Settings', /^Server log/, 'Audit log', 'Backup & restore', 'Account']);
+    await expect(page.getByRole('tab')).toHaveText(['Members', 'Settings', /^Server log/, 'Audit log', 'Backup & restore', 'Account']);
     await settings.focus();
     await page.keyboard.press('ArrowRight');
     await expect(page.getByRole('tab', { name: /Server log/ })).toBeFocused();
@@ -42,7 +42,7 @@ test.describe('signed in', () => {
     await expect(page.getByRole('tab', { name: 'Account' })).toHaveAttribute('aria-selected', 'true');
     await expect(page.getByRole('heading', { name: 'Account' })).toBeVisible();
     await page.keyboard.press('Home');
-    await expect(settings).toHaveAttribute('aria-selected', 'true');
+    await expect(page.getByRole('tab', { name: 'Members' })).toHaveAttribute('aria-selected', 'true');
   });
 
   test('changes settings, keeps config.yaml\'s read-only, and checks the quiz lengths (CFG-6..CFG-9)', async ({ page, request }) => {
@@ -189,7 +189,7 @@ test.describe('signed in', () => {
       await preferences(page, { fontScale: scale });
       for (const width of sizes) {
         await page.setViewportSize({ width, height: 800 });
-        for (const tab of ['Settings', 'Server log', 'Audit log', 'Backup & restore', 'Account']) {
+        for (const tab of ['Members', 'Settings', 'Server log', 'Audit log', 'Backup & restore', 'Account']) {
           await page.goto('/admin');
           await page.getByRole('tab', { name: new RegExp(`^${tab.replace('&', '\\&')}`) }).click();
           if (tab.endsWith('log')) await expect(page.getByRole('heading', { name: tab })).toBeVisible();

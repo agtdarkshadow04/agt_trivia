@@ -22,6 +22,7 @@ secrets in `.env`.
 - [Configuration reference](#configuration-reference)
 - [Admin dashboard](#admin-dashboard)
 - [Playing](#playing)
+- [Members and roles](#members-and-roles)
 - [Backup & restore](#backup--restore)
 - [Logs](#logs)
 - [Content safety](#content-safety)
@@ -203,9 +204,9 @@ Settings come from three places:
 | `storage.databaseFile` | `agt-trivia.sqlite` | The SQLite database, relative to `storage.dataDir` |
 | `storage.logDatabaseFile` | `logs.sqlite` | The log store (server log and audit log), relative to `storage.dataDir`; never in backups |
 | `storage.backupsDir` | `backups` | Pre-restore backups and the temporary files of backups and restores, relative to `storage.dataDir` |
-| `session.ttlHours` | `12` | How long an Admin sign-in lasts, in hours (1–168) |
+| `session.ttlHours` | `12` | How long an Admin or member sign-in lasts, in hours (1–168) |
 | `session.secureCookie` | `auto` | Whether the session cookie is `Secure`: `auto` (when the request came over HTTPS; behind a proxy that needs `server.trustProxy`), `true` or `false` |
-| `rateLimits.login` | 10 per 15 minutes | Admin sign-in and the Admin password change, each counted separately, per client address |
+| `rateLimits.login` | 10 per 15 minutes | Admin and member sign-in and both password changes, each counted separately, per client address |
 | `rateLimits.setup` | 10 per 15 minutes | First-run setup, per client address |
 | `rateLimits.adminUploads` | 120 per 15 minutes | Backup previews and restores, per client address |
 
@@ -242,6 +243,8 @@ app stops the server instead of being changed.
 The Admin signs in at `/admin`. The header shows the app version, a **Settings** button for the language, time zone
 and text size (stored in this browser and shared with the game), **View site** and **Sign out**. The tabs:
 
+- **Members** creates member accounts, and changes a member's display name, role and active flag, sets a new
+  password or deletes the account (see [Members and roles](#members-and-roles)).
 - **Settings** edits the [dashboard-editable keys](#dashboard-editable-keys). Settings defined in `config.yaml` are
   shown read-only, marked "Set in the configuration file".
 - **Server log** shows, filters, searches, exports and clears the server log (see [Logs](#logs)). While there are
@@ -250,7 +253,7 @@ and text size (stored in this browser and shared with the game), **View site** a
 - **Backup & restore** downloads a backup, and previews and restores one (see [Backup & restore](#backup--restore)).
 - **Account** changes the Admin password. This signs out every other Admin session.
 
-Members and Import arrive in #17 to #22.
+Import arrives in #22.
 
 ## Playing
 
@@ -280,7 +283,31 @@ Anonymous play happens entirely in the browser and saves nothing. The **Settings
 language and the text size (1× to 2×); they are stored in this browser and shared with the admin dashboard. The
 questions and categories themselves stay in English, in every language.
 
-Member accounts, writing and reviewing questions, and score history arrive in #17 to #21.
+Writing and reviewing questions, and score history arrive in #19 to #21.
+
+## Members and roles
+
+Besides the single **Admin**, who runs the installation, there are **members**: people with an account on the game.
+The Admin is not a member: it never plays, writes or reviews questions, and a member is never the Admin.
+Anonymous visitors can still play without an account.
+
+| Role | Can |
+| --- | --- |
+| **Player** | Play and keep a score history (#21) |
+| **Editor** | What a Player can, plus write questions and edit or delete their own until they are approved (#19) |
+| **Moderator** | What an Editor can, plus review (approve, reject, edit, unpublish, delete) any question and manage the categories (#19, #20) |
+
+There is no self-registration: the Admin creates member accounts in the **Members** tab, with a username (3 to 64
+lowercase letters, digits, dots, underscores or hyphens), a display name, a role and a first password. Signing in
+with an AGT account arrives in #18.
+
+Members sign in with the **Sign in** button in the game's header (`/?page=login`). Signed in, the header shows their
+display name and role, and an **Account** button that shows their account, changes their password and signs them
+out. Member sessions use their own cookie, which the admin dashboard never accepts, and last `session.ttlHours`.
+
+A member is signed out everywhere when they change their password, and when the Admin changes their role,
+deactivates them (an inactive member cannot sign in), sets a new password for them or deletes them. Deleting a
+member keeps the questions they wrote, without their name.
 
 ## Backup & restore
 
@@ -404,6 +431,7 @@ Contributor and AI-agent guidance is in [`AGENTS.md`](AGENTS.md); the rules the 
   2. Run `sqlite3 data/agt-trivia.sqlite "DELETE FROM sessions; DELETE FROM admin;"` (the path is
      `storage.dataDir`/`storage.databaseFile`).
   3. Set `AGT_TRIVIA_SETUP_PASSWORD` in `.env`, start the server and open `/admin`.
+- **A member forgot their password:** the Admin sets a new one in the **Members** tab (Edit, Set a new password).
 - **"Too many attempts. Try again in N seconds."** Sign-in, the password change and setup are rate limited per
   client address (`rateLimits.*`). Behind a reverse proxy, set `server.trustProxy` to the proxy's address, or every
   visitor shares the proxy's address and one limit.

@@ -1,8 +1,22 @@
 /**
  * The player UI's deep links (FE-4): query parameters on `/`, never paths.
  * `?category=<shortName>` opens a category, matched ignoring case like 1.x;
- * an unknown code falls back to the category list.
+ * an unknown code falls back to the category list. `?page=login` is the
+ * member sign-in (#17).
  */
+
+/** The pages besides the game itself. */
+export type Page = 'login';
+
+/** The `page` parameter, or null for the game (an unknown page is the game too). */
+export function pageParam(search: string): Page | null {
+  return new URLSearchParams(search).get('page') === 'login' ? 'login' : null;
+}
+
+/** The address of a page: only `page` is kept, so a page never carries a category along. */
+export function searchForPage(page: Page | null): string {
+  return page ? `?page=${page}` : '';
+}
 
 export interface CategoryCode {
   shortName: string;

@@ -215,6 +215,6 @@ describe('categories and questions in backups (BAK-2, BAK-3)', () => {
       headers: { cookie, 'x-agt-request': '1', 'content-type': `multipart/form-data; boundary=${boundary}` },
     });
     assert.equal(preview.statusCode, 200, preview.body);
-    assert.deepEqual(preview.json().counts, { categories: 1, questions: 5, admin: 1, settings: 0 });
+    assert.deepEqual(preview.json().counts, { categories: 1, questions: 5, members: 0, admin: 1, settings: 0 });
   });
 });
