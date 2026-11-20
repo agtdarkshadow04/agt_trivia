@@ -1,4 +1,5 @@
 import type { CategoryBody } from '../src/lib/api.js';
+import { fieldError } from '../src/lib/errors.js';
 import { CategoryService } from './categories.js';
 import type { RouteDefinition } from './routes.js';
 import * as S from './schemas.js';
@@ -54,6 +55,24 @@ export const categoryRoutes: readonly RouteDefinition[] = [
       const { category, changed } = new CategoryService(context, request.member!).replace((request.params as { id: string }).id, version, body);
       request.audit = { targetType: 'category', targetId: category.id, details: { shortName: category.shortName, changed } };
       return { category, notices: [] };
+    },
+  },
+  {
+    method: 'POST',
+    url: '/api/member/categories/:id/move-questions',
+    auth: 'member',
+    writesData: true,
+    operationId: 'moveCategoryQuestions',
+    tag: 'categories',
+    summary: "Move every question of a category to another category.",
+    description: 'Moderators only, at the version of the category the questions leave. Questions of every status move, each with a new version; saved results keep their category. The category can then be deleted.',
+    schema: { params: S.CategoryIdParams, body: S.CategoryMoveBody, response: { 200: S.CategoryMoveResult } },
+    handler: (context, request) => {
+      const { targetCategoryId, version } = request.body as { targetCategoryId: string; version: number };
+      const { source, target, moved, duplicates } = new CategoryService(context, request.member!).moveQuestions((request.params as { id: string }).id, version, targetCategoryId);
+      request.audit = { targetType: 'category', targetId: source.id, details: { shortName: source.shortName, to: target.id, toShortName: target.shortName, moved } };
+      const notices = duplicates ? [fieldError('targetCategoryId', 'duplicate', `${duplicates} moved questions have the same text as questions ${target.name} already had.`, { count: duplicates })] : [];
+      return { source, target, moved, notices };
     },
   },
   {

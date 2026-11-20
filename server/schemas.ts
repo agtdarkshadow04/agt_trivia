@@ -535,6 +535,18 @@ const categoryFields = {
 
 export const CategoryCreateBody = object(categoryFields);
 export const CategoryReplaceBody = object({ ...categoryFields, version: Type.Integer({ minimum: 1, description: 'The category version that was read; `409 conflict` when it has changed since.' }) });
+export const CategoryMoveBody = object({
+  targetCategoryId: Type.String({ maxLength: 64, description: 'The category that gets every question of this one; another existing category.' }),
+  version: Type.Integer({ minimum: 1, description: 'The version of the category the questions leave, as read; `409 conflict` when it has changed since.' }),
+});
+
+export const CategoryMoveResult = object({
+  source: ManagedCategory,
+  target: ManagedCategory,
+  moved: Type.Integer({ description: 'How many questions moved, of any status.' }),
+  notices: Type.Array(Type.Ref('FieldError'), { description: 'Non-blocking warnings (API-2): `targetCategoryId` `duplicate` with `params.count` when moved questions have the same text as questions the target already had.' }),
+});
+
 export const CategoryDeleteQuery = object({ version: Type.String({ pattern: '^[1-9][0-9]{0,9}$', description: 'The category version that was read; `409 conflict` when it has changed since.' }) });
 
 // --- Member score history (#21) ------------------------------------------------

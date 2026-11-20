@@ -77,7 +77,14 @@ Moderators manage categories; every other member gets `403 forbidden`. Short nam
 code `duplicate`. Descriptions have 1 to 300 characters and priorities are whole numbers from 0 to 100. A replace or
 delete carries the `version` that was read (`409 conflict` otherwise). A category with questions of any status cannot
 be deleted (`409 category_not_empty`, with `params.count`), so no question is ever left without a category: move the
-questions with `PUT /api/member/questions/{id}` or delete them first. A new short name breaks old `?category=` links.
+questions (all at once, below, or one by one with `PUT /api/member/questions/{id}`) or delete them first. A new short
+name breaks old `?category=` links.
+
+`POST /api/member/categories/{id}/move-questions` (#47) moves every question of a category, whatever its status, to
+`targetCategoryId`, at the category's `version` (`409 conflict` otherwise), so it can be deleted. The target must be
+another existing category (`targetCategoryId` `required` or `not_allowed`). Each moved question gets a new `version`,
+so someone editing it is asked to reload; members' saved results keep the old category. Moved questions whose text a
+question of the target already has are counted in a `targetCategoryId` `duplicate` notice (`params.count`).
 
 ## Score history (#21)
 
@@ -152,6 +159,7 @@ twice adds nothing. The audit log records the action, the files and the counts, 
 | `GET /api/member/categories` | Every category in display order, `[{ id, shortName, name, description, priority, questionCounts: { draft, pending, approved, rejected }, version, createdAt, updatedAt }]` (Moderators, #20). A plain array (API-8) |
 | `POST /api/member/categories` | `{ shortName, name, description, priority }`: creates a category; `201 { category, notices }` |
 | `PUT /api/member/categories/{id}` | The same fields and `version`: replaces the category; `200 { category, notices }` |
+| `POST /api/member/categories/{id}/move-questions` | `{ targetCategoryId, version }`: moves every question of the category to another one (Moderators, #47); `200 { source, target, moved, notices }` |
 | `DELETE /api/member/categories/{id}?version=` | Deletes a category without questions (`409 category_not_empty` otherwise); `204` |
 | `POST /api/member/results` | `{ categoryId, length, attemptToken, answers: [{ questionId, choiceIds }] }`: grades a finished quiz and saves it in the member's history (#21); `201 { result, skippedQuestionIds, notices }`, or `200` with the saved result when the attempt was already saved (#45; `attemptToken` is optional until 3.0.0, deprecated without). A result is `{ id, categoryId, categoryName, length, score, total, percent, finishedAt }`; `percent` is rounded, but 100 only for a perfect score and 0 only for none right |
 | `GET /api/member/results` | The member's own results, newest first: `{ items, nextCursor }` (API-8; `limit`, `cursor`, `categoryId`) |

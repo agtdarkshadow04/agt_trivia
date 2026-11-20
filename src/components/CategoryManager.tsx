@@ -1,20 +1,22 @@
 import { type FormEvent, useCallback, useEffect, useId, useState } from 'react';
 import type { CategoryBody, ManagedCategory, MemberQuestionStatus } from '../lib/api';
-import { createCategory, deleteCategory, listManagedCategories, replaceCategory } from '../lib/playerApi';
-import { categoryErrors, categoryLimits } from '../lib/validation';
+import { ApiError } from '../lib/client';
+import { createCategory, deleteCategory, listManagedCategories, moveCategoryQuestions, replaceCategory } from '../lib/playerApi';
+import { categoryErrors, categoryLimits, errorsOf, moveTargetError } from '../lib/validation';
 import { formatTranslation } from '../translations';
 import { ConfirmDialog, Dialog } from './Dialog';
-import { formErrors, noFormErrors, TextAreaField, TextField } from './Field';
+import { formErrors, noFormErrors, SelectField, TextAreaField, TextField } from './Field';
 import { useI18n } from './I18n';
-import { PencilIcon, PlusIcon, TrashIcon } from './Icons';
+import { ArrowRightIcon, PencilIcon, PlusIcon, TrashIcon } from './Icons';
 import { useViewHeading } from './useViewHeading';
 
 /**
  * `?page=categories` (#20): Moderators list the categories in the order
  * players see them, with their questions counted by status, and create, edit
  * and delete them. A category with questions cannot be deleted
- * (`409 category_not_empty`); changing a short name breaks old links, which
- * the edit dialog says.
+ * (`409 category_not_empty`) until its questions are moved, all at once, to
+ * another category (#47); changing a short name breaks old links, which the
+ * edit dialog says.
  */
 
 type ListState =
@@ -113,6 +115,65 @@ function CategoryDialog({ category, onSaved, onClose }: {
   );
 }
 
+const questionTotal = (category: ManagedCategory) => statuses.reduce((sum, status) => sum + category.questionCounts[status], 0);
+
+/** Moves every question of `category` to another category (#47). */
+function MoveDialog({ category, categories, onMoved, onClose }: {
+  category: ManagedCategory;
+  categories: ManagedCategory[];
+  onMoved(message: string, notice: string): void;
+  onClose(): void;
+}) {
+  const { t, number } = useI18n();
+  const id = useId();
+  const [targetId, setTargetId] = useState('');
+  const [errors, setErrors] = useState(noFormErrors);
+  const [busy, setBusy] = useState(false);
+
+  async function submit(event: FormEvent) {
+    event.preventDefault();
+    // FE-6: the server's own check first.
+    const problems = errorsOf(moveTargetError(category.id, targetId));
+    setErrors(formErrors(problems, t));
+    if (problems.length) return;
+    setBusy(true);
+    try {
+      const result = await moveCategoryQuestions(category.id, category.version, targetId);
+      const duplicates = result.notices.find((notice) => notice.code === 'duplicate');
+      onMoved(
+        formatTranslation(t.categories.moved, { count: number(result.moved), name: result.target.name }),
+        duplicates ? formatTranslation(t.categories.movedDuplicates, { count: number(Number(duplicates.params?.count ?? 0)), name: result.target.name }) : '',
+      );
+    } catch (cause) {
+      setErrors(formErrors(cause, t));
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Dialog
+      title={formatTranslation(t.categories.moveTitle, { name: category.name })}
+      eyebrow={t.categories.eyebrow}
+      description={formatTranslation(t.categories.moveText, { count: number(questionTotal(category)) })}
+      onClose={() => { if (!busy) onClose(); }}
+      footer={(
+        <>
+          <button className="button button-primary" type="submit" form={id} disabled={busy}>{t.categories.move}</button>
+          <button className="button button-secondary" type="button" disabled={busy} onClick={onClose}>{t.common.cancel}</button>
+        </>
+      )}
+    >
+      {errors.form && <p className="error-note" role="alert">{errors.form}</p>}
+      <form id={id} className="stack-form" noValidate onSubmit={(event) => void submit(event)}>
+        <SelectField label={t.fields.targetCategoryId} value={targetId} required onChange={(event) => setTargetId(event.target.value)} error={errors.fields.targetCategoryId}>
+          <option value="">{t.categories.chooseTarget}</option>
+          {categories.filter((other) => other.id !== category.id).map((other) => <option key={other.id} value={other.id} lang="en">{other.name}</option>)}
+        </SelectField>
+      </form>
+    </Dialog>
+  );
+}
+
 export function CategoryManager({ onChanged }: {
   /** After every change, so the game's category list follows. */
   onChanged(): void;
@@ -122,8 +183,12 @@ export function CategoryManager({ onChanged }: {
   const [list, setList] = useState<ListState>({ status: 'loading' });
   const [editing, setEditing] = useState<ManagedCategory | 'new' | null>(null);
   const [deleting, setDeleting] = useState<ManagedCategory | null>(null);
+  const [moving, setMoving] = useState<ManagedCategory | null>(null);
+  /** A category whose delete was refused because it has questions: the error offers to move them (#47). */
+  const [refused, setRefused] = useState<ManagedCategory | null>(null);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
+  const [notice, setNotice] = useState('');
   const [actionError, setActionError] = useState('');
 
   const load = useCallback(async () => {
@@ -135,9 +200,11 @@ export function CategoryManager({ onChanged }: {
   }, []);
   useEffect(() => { void load(); }, [load]);
 
-  function done(text: string) {
+  function done(text: string, noticeText = '') {
     setMessage(text);
+    setNotice(noticeText);
     setActionError('');
+    setRefused(null);
     onChanged();
     void load();
   }
@@ -150,8 +217,10 @@ export function CategoryManager({ onChanged }: {
       setDeleting(null);
       done(t.categories.deleted);
     } catch (cause) {
+      setRefused(cause instanceof ApiError && cause.code === 'category_not_empty' ? deleting : null);
       setDeleting(null);
       setMessage('');
+      setNotice('');
       setActionError(error(cause));
       void load();
     } finally {
@@ -171,14 +240,32 @@ export function CategoryManager({ onChanged }: {
           type="button"
           aria-haspopup="dialog"
           aria-expanded={editing === 'new'}
-          onClick={() => { setMessage(''); setActionError(''); setEditing('new'); }}
+          onClick={() => { setMessage(''); setNotice(''); setActionError(''); setRefused(null); setEditing('new'); }}
         >
           <PlusIcon />{t.categories.newCategory}
         </button>
       </div>
       <p className="workshop-intro">{t.categories.text}</p>
-      <div role="status" className="workshop-status">{message && <p className="success-note">{message}</p>}</div>
-      {actionError && <p className="error-note" role="alert">{actionError}</p>}
+      <div role="status" className="workshop-status">
+        {message && <p className="success-note">{message}</p>}
+        {notice && <p className="admin-notice">{notice}</p>}
+      </div>
+      {actionError && (
+        <div className="action-error">
+          <p className="error-note" role="alert">{actionError}</p>
+          {refused && (
+            <button
+              className="button button-secondary button-with-icon"
+              type="button"
+              aria-haspopup="dialog"
+              aria-expanded={moving?.id === refused.id}
+              onClick={() => setMoving(refused)}
+            >
+              <ArrowRightIcon />{t.categories.move}
+            </button>
+          )}
+        </div>
+      )}
       {list.status === 'loading' && <p className="loading-note" role="status">{t.common.loading}</p>}
       {list.status === 'error' && (
         <div role="alert">
@@ -209,16 +296,27 @@ export function CategoryManager({ onChanged }: {
                     type="button"
                     aria-haspopup="dialog"
                     aria-expanded={editing !== 'new' && editing?.id === category.id}
-                    onClick={() => { setMessage(''); setActionError(''); setEditing(category); }}
+                    onClick={() => { setMessage(''); setNotice(''); setActionError(''); setRefused(null); setEditing(category); }}
                   >
                     <PencilIcon />{t.authoring.actions.edit}
                   </button>
+                  {questionTotal(category) > 0 && list.items.length > 1 && (
+                    <button
+                      className="button button-secondary button-with-icon"
+                      type="button"
+                      aria-haspopup="dialog"
+                      aria-expanded={moving?.id === category.id}
+                      onClick={() => { setMessage(''); setNotice(''); setActionError(''); setRefused(null); setMoving(category); }}
+                    >
+                      <ArrowRightIcon />{t.categories.move}
+                    </button>
+                  )}
                   <button
                     className="button button-danger button-with-icon"
                     type="button"
                     aria-haspopup="dialog"
                     aria-expanded={deleting?.id === category.id}
-                    onClick={() => { setMessage(''); setActionError(''); setDeleting(category); }}
+                    onClick={() => { setMessage(''); setNotice(''); setActionError(''); setRefused(null); setDeleting(category); }}
                   >
                     <TrashIcon />{t.authoring.actions.delete}
                   </button>
@@ -233,6 +331,15 @@ export function CategoryManager({ onChanged }: {
           category={editing === 'new' ? null : editing}
           onClose={() => setEditing(null)}
           onSaved={(_category, text) => { setEditing(null); done(text); }}
+        />
+      )}
+      {moving && list.status === 'ready' && (
+        <MoveDialog
+          // The latest copy: its version and counts may have changed since the delete was refused.
+          category={list.items.find((item) => item.id === moving.id) ?? moving}
+          categories={list.items}
+          onClose={() => setMoving(null)}
+          onMoved={(text, noticeText) => { setMoving(null); done(text, noticeText); }}
         />
       )}
       {deleting && (

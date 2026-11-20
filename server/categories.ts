@@ -1,7 +1,7 @@
 import type { ManagedCategory, MemberSession } from '../src/lib/api.js';
 import { isUuidV4, roleAtLeast } from '../src/lib/api.js';
 import { fieldError } from '../src/lib/errors.js';
-import { categoryErrors, normalizeCategory, type CategoryInput } from '../src/lib/validation.js';
+import { categoryErrors, moveTargetError, normalizeCategory, sameText, type CategoryInput } from '../src/lib/validation.js';
 import type { AppContext } from './context.js';
 import { HttpError } from './http.js';
 import * as repo from './repository/categories.js';
@@ -29,8 +29,16 @@ export interface CategoryChange {
   changed: string[];
 }
 
+export interface QuestionMove {
+  source: ManagedCategory;
+  target: ManagedCategory;
+  moved: number;
+  /** How many moved questions have the same text as a question the target already had (a notice, API-2). */
+  duplicates: number;
+}
+
 export class CategoryService {
-  constructor(private readonly context: AppContext, member: MemberSession, private readonly now: () => Date = () => new Date()) {
+  constructor(private readonly context: AppContext, private readonly member: MemberSession, private readonly now: () => Date = () => new Date()) {
     if (!roleAtLeast(member.role, 'Moderator')) throw new HttpError(403, 'forbidden', 'Only Moderators manage categories.');
   }
 
@@ -79,6 +87,29 @@ export class CategoryService {
     if (!repo.updateCategory(this.db, current.id, version, normalized, this.now())) conflict();
     const changed = (['shortName', 'name', 'description', 'priority'] as const).filter((field) => current[field] !== normalized[field]);
     return { category: this.managed(repo.getCategory(this.db, current.id)!), changed };
+  }
+
+  /**
+   * Moves every question of a category, any status, to another one (#47), at
+   * the source's `version`. The target must exist and differ (`targetCategoryId`
+   * `required` or `not_allowed`). Moving none is fine.
+   */
+  moveQuestions(id: string, version: number, targetId: string): QuestionMove {
+    const source = this.existing(id);
+    if (source.version !== version) conflict();
+    const problem = moveTargetError(source.id, targetId);
+    const target = problem ? null : isUuidV4(targetId.trim()) ? repo.getCategory(this.db, targetId.trim().toLowerCase()) : null;
+    if (problem || !target) {
+      throw new HttpError(400, 'validation_failed', 'Choose another existing category.', {
+        fields: [problem ?? fieldError('targetCategoryId', 'not_allowed', 'Choose an existing category.')],
+      });
+    }
+    const existing = repo.categoryPrompts(this.db, target.id);
+    const moving = repo.categoryPrompts(this.db, source.id);
+    const duplicates = moving.filter((prompt) => existing.some((other) => sameText(other, prompt))).length;
+    const moved = this.db.transaction(() => repo.moveCategoryQuestions(this.db, source.id, target.id, this.member.id, this.now()));
+    const counts = repo.categoryStatusCounts(this.db);
+    return { source: this.managed(repo.getCategory(this.db, source.id)!, counts), target: this.managed(repo.getCategory(this.db, target.id)!, counts), moved, duplicates };
   }
 
   delete(id: string, version: number): repo.Category {

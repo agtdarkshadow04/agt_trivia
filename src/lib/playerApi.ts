@@ -140,3 +140,12 @@ export function listReports(cursor: string | null = null) {
 export const closeReport = (id: string, version: number, verb: 'resolve' | 'dismiss', resolutionNote: string) => (
   apiRequest<QuestionReport>(`/api/member/reports/${encodeURIComponent(id)}/${verb}`, { method: 'POST', body: { version, resolutionNote } })
 );
+
+// --- Moving a category's questions (#47) -----------------------------------------------
+
+export const moveCategoryQuestions = (id: string, version: number, targetCategoryId: string) => (
+  apiRequest<{ source: ManagedCategory; target: ManagedCategory; moved: number; notices: FieldError[] }>(
+    `/api/member/categories/${encodeURIComponent(id)}/move-questions`,
+    { method: 'POST', body: { targetCategoryId, version } },
+  )
+);

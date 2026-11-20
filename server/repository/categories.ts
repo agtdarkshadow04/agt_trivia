@@ -121,3 +121,20 @@ export function deleteCategory(db: Database, id: string, version: number) {
   assertDataWrite();
   return db.connection.prepare('DELETE FROM categories WHERE id = ? AND version = ?').run(id, version).changes === 1;
 }
+
+/** The prompts of a category's questions, any status (#47). */
+export function categoryPrompts(db: Database, id: string): string[] {
+  return (db.connection.prepare('SELECT prompt FROM questions WHERE category_id = ?').all(id) as { prompt: string }[]).map((row) => row.prompt);
+}
+
+/**
+ * Moves every question of `fromId` to `toId` (#47), whatever its status, in
+ * one statement: each moved question gets a new version, `modified_by` and
+ * `updated_at`, so an editor holding an old copy is told to reload. Saved
+ * results keep their category. Returns how many moved.
+ */
+export function moveCategoryQuestions(db: Database, fromId: string, toId: string, memberId: string, now = new Date()) {
+  assertDataWrite();
+  return db.connection.prepare('UPDATE questions SET category_id = ?, version = version + 1, modified_by = ?, updated_at = ? WHERE category_id = ?')
+    .run(toId, memberId, now.toISOString(), fromId).changes;
+}
