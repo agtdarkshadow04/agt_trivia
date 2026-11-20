@@ -147,7 +147,7 @@ export function LogPanel({ kind }: { kind: LogKind }) {
         <TextFilter label={a.logs.to} name="to" type="datetime-local" value={draft.to ?? ''} onChange={set('to')} />
         <TextFilter label={a.logs.search} name="q" value={draft.q ?? ''} onChange={set('q')} />
         <div className="form-actions">
-          <button className="button button-secondary" type="submit" disabled={busy}><SearchIcon />{a.logs.apply}</button>
+          <button className="button button-secondary button-with-icon" type="submit" disabled={busy}><SearchIcon />{a.logs.apply}</button>
         </div>
       </form>
       <div className="form-actions log-actions">
@@ -157,9 +157,9 @@ export function LogPanel({ kind }: { kind: LogKind }) {
             <option value="csv">{a.logs.csv}</option>
           </select>
         </label>
-        <button className="button button-secondary" type="button" onClick={() => void download()}><DownloadIcon />{a.logs.export}</button>
+        <button className="button button-secondary button-with-icon" type="button" onClick={() => void download()}><DownloadIcon />{a.logs.export}</button>
         {kind === 'server' && (
-          <button className="button button-danger" type="button" aria-haspopup="dialog" aria-expanded={confirmClear} onClick={() => { setConfirmClear(true); setNotice(''); }}><TrashIcon />{a.logs.clear}</button>
+          <button className="button button-danger button-with-icon" type="button" aria-haspopup="dialog" aria-expanded={confirmClear} onClick={() => { setConfirmClear(true); setNotice(''); }}><TrashIcon />{a.logs.clear}</button>
         )}
       </div>
       {kind === 'server' && confirmClear && (
