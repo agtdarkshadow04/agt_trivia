@@ -29,8 +29,11 @@ export const errorCodes = [
   'file_required',
   'csrf',
   'forbidden',
+  'iam_disabled',
+  'app_access_denied',
   'not_found',
   'conflict',
+  'managed_by_iam',
   'defined_in_config',
   'setup_complete',
   'file_too_large',
@@ -39,8 +42,11 @@ export const errorCodes = [
   'archive_rejected',
   'rate_limited',
   'internal',
+  'iam_bad_gateway',
   'setup_password_missing',
+  'iam_unavailable',
   'maintenance',
+  'iam_timeout',
 ] as const;
 
 const Params = Type.Record(Type.String(), Type.Union([Type.String(), Type.Number(), Type.Boolean()]), {
@@ -72,6 +78,7 @@ export const PublicSettings = object({
   supportUrl: Type.String({ description: '`site.supportUrl`.' }),
   quizShortLength: Type.Integer({ description: '`quiz.shortLength`: questions in a short quiz.' }),
   quizLongLength: Type.Integer({ description: '`quiz.longLength`: questions in a long quiz.' }),
+  agtSignIn: Type.Boolean({ description: 'Members can sign in with their AGT account: `iam.enabled` is on and AGT IAM is configured (#18).' }),
 }, 'The settings the player UI needs (CFG-10); nothing sensitive.');
 
 // --- Categories and the public quiz (#15) -----------------------------------
@@ -129,6 +136,11 @@ export const Credentials = object({
   password: Type.String({ maxLength: 1024 }),
 });
 
+export const IamCredentials = object({
+  travellerName: Type.String({ minLength: 1, maxLength: 84, description: 'The AGT Traveller Name.' }),
+  password: Type.String({ minLength: 1, maxLength: 1024, description: 'The AGT password; sent only to AGT IAM, never stored or logged.' }),
+});
+
 export const PasswordChange = object({
   currentPassword: Type.String({ maxLength: 1024 }),
   password: Password,
@@ -158,7 +170,15 @@ export const SettingState = object({
   description: Type.String(),
 });
 
-export const SettingsList = object({ settings: Type.Array(SettingState) });
+export const IamStatus = object({
+  enabled: Type.Boolean({ description: 'The effective `iam.enabled` setting.' }),
+  available: Type.Boolean({ description: 'Enabled and configured: members can sign in with their AGT account.' }),
+  missing: Type.Array(Type.Union([Type.Literal('baseUrl'), Type.Literal('appId'), Type.Literal('apiKey')]), {
+    description: 'What AGT sign-in still needs: `iam.baseUrl` or `iam.appId` in config.yaml, or AGT_TRIVIA_IAM_API_KEY in .env.',
+  }),
+}, 'The AGT sign-in status (#18).');
+
+export const SettingsList = object({ settings: Type.Array(SettingState), iam: IamStatus });
 
 export const SettingsUpdate = object({
   values: Type.Record(Type.String(), Type.Union([SettingValue, Type.Null()]), { description: 'New values by key; `null` resets a key to its default.' }),
@@ -166,6 +186,7 @@ export const SettingsUpdate = object({
 
 export const SettingsResult = object({
   settings: Type.Array(SettingState),
+  iam: IamStatus,
   notices: Type.Array(Type.Ref('FieldError'), { description: 'Non-blocking warnings (API-2); always empty for settings.' }),
 });
 
@@ -319,6 +340,8 @@ export const MemberSession = object(memberSessionFields, 'The signed-in member.'
 export const AdminMember = object({
   ...memberSessionFields,
   isActive: Type.Boolean({ description: 'An inactive member cannot sign in.' }),
+  travellerId: Type.Union([Type.String(), Type.Null()], { description: "An AGT member's AGT traveller ID (#18); null for a local member." }),
+  iamPermission: Type.Union([Type.String(), Type.Null()], { description: "An AGT member's AGT IAM tier at their last sign-in; null for a local member." }),
   createdAt: Type.String({ format: 'date-time' }),
   updatedAt: Type.String({ format: 'date-time' }),
 }, 'A member account as the Admin sees it.');

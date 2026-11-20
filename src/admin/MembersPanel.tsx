@@ -82,6 +82,7 @@ function EditMember({ member, onClose, onSaved, returnFocusRef }: {
   const [passwordErrors, setPasswordErrors] = useState(noFormErrors);
   const [busy, setBusy] = useState(false);
   const name = member.username ?? member.displayName;
+  const managed = member.authSource === 'agt_iam';
 
   async function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -117,9 +118,25 @@ function EditMember({ member, onClose, onSaved, returnFocusRef }: {
   return (
     <Dialog title={formatTranslation(a.members.editTitle, { name })} eyebrow={a.tabs.members} onClose={onClose} returnFocusRef={returnFocusRef}>
       {errors.form && <p className="error-note" role="alert">{errors.form}</p>}
+      {managed && <p className="admin-notice">{a.members.agtManaged}</p>}
       <form className="stack-form" noValidate onSubmit={(event) => void save(event)}>
-        <TextField label={a.members.displayName} name="displayName" defaultValue={member.displayName} required error={errors.fields.displayName} />
-        <RoleField defaultValue={member.role} error={errors.fields.role} />
+        {managed ? (
+          <>
+            <input type="hidden" name="displayName" value={member.displayName} />
+            <input type="hidden" name="role" value={member.role} />
+            <dl className="account-details">
+              <div><dt>{a.members.displayName}</dt><dd>{member.displayName}</dd></div>
+              <div><dt>{a.members.role}</dt><dd>{a.roles[member.role]}</dd></div>
+              <div><dt>{a.members.travellerId}</dt><dd>{member.travellerId}</dd></div>
+              <div><dt>{a.members.iamPermission}</dt><dd>{member.iamPermission ?? '—'}</dd></div>
+            </dl>
+          </>
+        ) : (
+          <>
+            <TextField label={a.members.displayName} name="displayName" defaultValue={member.displayName} required error={errors.fields.displayName} />
+            <RoleField defaultValue={member.role} error={errors.fields.role} />
+          </>
+        )}
         <label className="check-field">
           <input type="checkbox" name="isActive" defaultChecked={member.isActive} />
           {t.fields.isActive}
@@ -217,7 +234,7 @@ export function MembersPanel() {
               <tbody>
                 {members.map((member) => (
                   <tr key={member.id}>
-                    <td>{member.username ?? <span className="log-muted">{a.members.agtBadge}</span>}</td>
+                    <td>{member.username ?? <span className="log-muted">{a.members.agtBadge}{member.iamPermission ? ` · ${member.iamPermission}` : ''}</span>}</td>
                     <td>{member.displayName}</td>
                     <td>{a.roles[member.role]}</td>
                     <td>{member.isActive ? a.members.active : a.members.inactive}</td>

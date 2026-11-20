@@ -51,12 +51,15 @@ test('plays a short quiz with single- and multi-answer questions, then replays a
   await expectAccessible(page, 'length choice');
   await page.getByRole('button', { name: /Short quiz/ }).click();
 
+  // The quiz order is random: the multi-answer question is answered right, and of the two single-answer
+  // ones the first right and the second wrong, whatever their positions, so the score is always 2 of 3.
+  let singleAnsweredRight = false;
   for (let number = 1; number <= 3; number += 1) {
     await expect(page.getByText(`Question ${number} of 3`)).toBeVisible();
     await expect(page.getByRole('button', { name: 'Lock answer' })).toBeDisabled();
-    // The multi-answer question is answered right, the others: the first right, the second wrong.
     const multi = await page.getByText('Select every correct answer').isVisible();
-    const right = multi || number === 1;
+    const right = multi || !singleAnsweredRight;
+    if (!multi && right) singleAnsweredRight = true;
     if (number === 1) await expectAccessible(page, 'question');
     await answer(page, right);
     const feedback = page.getByRole('status').filter({ hasText: right ? 'Correct!' : 'Not quite' });
@@ -69,7 +72,6 @@ test('plays a short quiz with single- and multi-answer questions, then replays a
     await page.getByRole('button', { name: number === 3 ? 'View results' : 'Next question' }).click();
   }
 
-  // The answers given: right, then the second right only if it was the multi-answer one.
   const results = page.getByRole('heading', { level: 1 });
   await expect(results).toBeFocused();
   const ring = page.getByRole('img', { name: /of 3 correct/ });

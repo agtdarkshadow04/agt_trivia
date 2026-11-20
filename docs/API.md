@@ -35,7 +35,7 @@ The server's REST API lives under `/api/`. The complete, generated description i
 | Method and path | Purpose |
 | --- | --- |
 | `GET /api/health` | `{ "status": "ok" }` when the server and its database answer (SRV-11) |
-| `GET /api/settings/public` | The settings the player UI needs: `siteTitle`, `supportUrl`, `quizShortLength`, `quizLongLength` (CFG-10) |
+| `GET /api/settings/public` | The settings the player UI needs: `siteTitle`, `supportUrl`, `quizShortLength`, `quizLongLength`, and `agtSignIn` (AGT sign-in is on and configured) (CFG-10) |
 | `GET /api/categories` | Every category, `[{ id, shortName, name, description, priority, questionCount }]`, lower `priority` first, then by name; `questionCount` counts approved questions. A plain array (API-8) |
 | `GET /api/categories/{id}/quiz?length=short\|long\|all` | A random quiz: `{ category, length, questions }`, with `quiz.shortLength`, `quiz.longLength` or all approved questions (fewer when the category has fewer). Each question is `{ id, prompt, choices: [{ id, text }], correctChoiceIds, authorCredit }`, choices in the author's order; more than one correct choice makes it a multi-answer question. An unknown or malformed `id` answers `404 not_found` |
 | `GET /api/setup/status` | `{ adminExists, setupPasswordConfigured }` (AUTH-5) |
@@ -45,16 +45,17 @@ The server's REST API lives under `/api/`. The complete, generated description i
 | `GET /api/admin/session` | `{ username, version, setupPasswordStillSet }` |
 | `POST /api/admin/password` | `{ currentPassword, password }`: changes the password, ends every other session; `200 { username }` |
 | `POST /api/member/login` | `{ username, password }`: signs a member in (the username ignoring case); `200` the member: `{ id, username, displayName, role, authSource }` |
+| `POST /api/member/iam/login` | `{ travellerName, password }`: signs a member in with their AGT account through AGT IAM (#18); the first sign-in creates the member, every sign-in sets the role from the AGT tier. The password goes only to AGT IAM; `200` the member |
 | `POST /api/member/logout` | Ends the member session; `204` |
 | `GET /api/member/session` | The signed-in member |
 | `POST /api/member/password` | `{ currentPassword, password }`: changes a local member's password, ends their other sessions; `200` the member |
 | `GET /api/admin/members` | Member accounts, newest first: `{ items, nextCursor }` (API-8; `limit`, `cursor`, and `q` to search usernames and display names) |
 | `POST /api/admin/members` | `{ username, displayName, role, password }`: creates a local member; `201 { member, notices }` |
-| `PUT /api/admin/members/{id}` | `{ displayName, role, isActive }`; a role change or deactivation signs the member out; `200 { member, notices }` |
+| `PUT /api/admin/members/{id}` | `{ displayName, role, isActive }`; a role change or deactivation signs the member out; for an AGT member only `isActive` may change (`409 managed_by_iam`); `200 { member, notices }` |
 | `POST /api/admin/members/{id}/password` | `{ password }`: sets a local member's password and signs them out; `200` the member |
 | `DELETE /api/admin/members/{id}` | Deletes the member and their sessions; their questions stay, without their ID; `204` |
-| `GET /api/admin/settings` | `{ settings }`: every dashboard setting with `value`, `source` (`config`, `dashboard` or `default`), `locked`, `default` and `description` |
-| `PUT /api/admin/settings` | `{ values: { key: value or null } }`: changes settings (`null` resets one); `200 { settings, notices }` |
+| `GET /api/admin/settings` | `{ settings, iam }`: `iam` is the AGT sign-in status `{ enabled, available, missing }`, and `settings` every dashboard setting with `value`, `source` (`config`, `dashboard` or `default`), `locked`, `default` and `description` |
+| `PUT /api/admin/settings` | `{ values: { key: value or null } }`: changes settings (`null` resets one); `200 { settings, iam, notices }`. Switching `iam.enabled` off signs every AGT member out |
 | `GET /api/admin/logs/server`, `GET /api/admin/logs/audit` | The server log and the audit log, newest first, with filters (`limit`, `cursor`) |
 | `GET /api/admin/logs/server/export`, `GET /api/admin/logs/audit/export` | The same entries as JSON Lines or CSV (`format=jsonl` or `csv`) |
 | `GET /api/admin/logs/server/summary`, `POST /api/admin/logs/server/seen` | Unseen warnings and errors, and marking them seen |
@@ -91,9 +92,12 @@ and `fields` lists field-level problems, each with a `field` (the request proper
 | `invalid_credentials` | 401 | Wrong username or password, or wrong current password | — |
 | `invalid_setup_password` | 401 | Wrong setup password | — |
 | `csrf` | 403 | A state-changing request without `x-agt-request: 1` | — |
+| `iam_disabled` | 403 | AGT sign-in while `iam.enabled` is off | — |
+| `app_access_denied` | 403 | AGT IAM does not authorize the traveller for this app (or gives the tier `NOACCESS` or `NONE`); nothing was created | — |
 | `forbidden` | 403 | The member's role does not allow this, or an AGT member asks to change a password here | — |
 | `not_found` | 404 | Unknown route, or an unknown or invisible resource | — |
-| `conflict` | 409 | A backup or restore is already running, or the server stayed busy for 30 seconds, or a password is set for an AGT member; nothing was changed | — |
+| `conflict` | 409 | A backup or restore is already running, or the server stayed busy for 30 seconds; nothing was changed | — |
+| `managed_by_iam` | 409 | The Admin changes an AGT member's name, role or password: AGT IAM sets those; only activate, deactivate or delete | — |
 | `defined_in_config` | 409 | A settings update names a key that `config.yaml` sets; nothing was changed | `{ key }` |
 | `setup_complete` | 410 | First-run setup after the Admin exists | — |
 | `file_too_large` | 413 | A backup upload larger than `backup.maxZipBytes` | `{ maxBytes }` |
@@ -102,8 +106,11 @@ and `fields` lists field-level problems, each with a `field` (the request proper
 | `archive_rejected` | 422 | The backup archive failed a check; nothing was changed. `params.reason` says which: `too_large`, `not_zip`, `unsafe_zip`, `missing_manifest`, `invalid_manifest`, `not_a_backup`, `newer_format`, `unlisted_file`, `missing_file`, `checksum_mismatch`, `invalid_database`, `disallowed_entry`, `newer_schema`, `schema_mismatch`, `missing_tables`, `invalid_admin` | `{ reason }` |
 | `rate_limited` | 429 | Too many requests; the `Retry-After` header says when to retry | `{ retryAfterSeconds }` |
 | `internal` | 500 | An unexpected error; the server log has the details | — |
+| `iam_bad_gateway` | 502 | AGT IAM could not be reached or answered unexpectedly | — |
 | `setup_password_missing` | 503 | First-run setup, but `AGT_TRIVIA_SETUP_PASSWORD` is not set | — |
+| `iam_unavailable` | 503 | AGT sign-in is on but not fully configured, or AGT IAM refused this app (see the server log) | — |
 | `maintenance` | 503 | A restore is running or has failed, or a write waited 30 seconds for a backup; `Retry-After: 10` | `{ retryAfterSeconds }` |
+| `iam_timeout` | 504 | AGT IAM did not answer within `iam.timeoutSeconds` | — |
 
 Field codes: `required`, `too_long` (`{ max }`), `too_short` (`{ min }`), `out_of_range` (`{ min?, max? }`),
 `too_many` (`{ max }`), `too_few` (`{ min }`, a list with too few items), `invalid_format`, `invalid_url`,

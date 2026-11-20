@@ -129,7 +129,7 @@ export function App() {
   let content;
   if (page === 'login') {
     content = member === null
-      ? <SignIn onSignedIn={(signedIn) => { setMember(signedIn); go(''); setStatus(formatTranslation(t.login.signedIn, { name: signedIn.displayName })); }} />
+      ? <SignIn agtSignIn={data.status === 'ready' && data.settings.agtSignIn} onSignedIn={(signedIn) => { setMember(signedIn); go(''); setStatus(formatTranslation(t.login.signedIn, { name: signedIn.displayName })); }} />
       : <LoadState message={t.quiz.loadingCategories} />;
   } else if (data.status === 'loading') content = <LoadState message={t.quiz.loadingCategories} />;
   else if (data.status === 'error') content = <LoadState message="" cause={data.cause} onRetry={() => void load()} />;

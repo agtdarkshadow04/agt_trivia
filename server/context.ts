@@ -31,6 +31,8 @@ export interface AppContext {
   readonly logs: LogStore;
   /** `AGT_TRIVIA_SETUP_PASSWORD`, or null when it is unset or empty (AUTH-5). Never stored. */
   readonly setupPassword: string | null;
+  /** `AGT_TRIVIA_IAM_API_KEY` for AGT sign-in (#18), or null. Never logged, stored or returned. */
+  readonly iamApiKey: string | null;
   /** The app version from `package.json` (VER-2). */
   readonly version: string;
   /** Tests only: failures injected into backups and restores (TEST-4). */

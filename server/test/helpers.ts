@@ -20,6 +20,8 @@ export interface TestContextOptions {
   timings?: Partial<OperationTimings>;
   /** A database file in the data directory instead of `:memory:`, for backups and restores (BAK-4). */
   file?: boolean;
+  /** AGT_TRIVIA_IAM_API_KEY (#18). */
+  iamApiKey?: string | null;
 }
 
 export type TestContext = AppContext & { close(): void };
@@ -48,6 +50,7 @@ export function testContext(config = '', options: TestContextOptions = {}): Test
     logs,
     operations: new OperationLock({ drainMs: 30_000, writeWaitMs: 30_000, pollMs: 5, ...options.timings }),
     setupPassword: options.setupPassword === undefined ? testSetupPassword : options.setupPassword,
+    iamApiKey: options.iamApiKey ?? null,
     version: '0.0.0-test',
     close: () => {
       db.close();

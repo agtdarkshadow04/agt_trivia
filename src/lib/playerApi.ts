@@ -32,3 +32,8 @@ export const memberSignOut = () => apiRequest<void>('/api/member/logout', { meth
 export const changeMemberPassword = (currentPassword: string, password: string) => (
   apiRequest<MemberSession>('/api/member/password', { method: 'POST', body: { currentPassword, password } })
 );
+
+/** AGT sign-in (#18): the password goes only to AGT IAM, through the server. */
+export const memberIamSignIn = (travellerName: string, password: string) => (
+  apiRequest<MemberSession>('/api/member/iam/login', { method: 'POST', body: { travellerName, password } })
+);

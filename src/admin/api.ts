@@ -120,10 +120,17 @@ function restoreForm(action: 'preview' | 'restore', file: File) {
 export const previewBackup = (file: File) => adminRequest<RestoreReport>('/api/admin/restore', { method: 'POST', body: restoreForm('preview', file) });
 export const restoreBackup = (file: File) => adminRequest<RestoreReport>('/api/admin/restore', { method: 'POST', body: restoreForm('restore', file) });
 
-export const listSettings = () => adminRequest<{ settings: SettingState[] }>('/api/admin/settings');
+/** AGT sign-in (#18): on, usable, and what the server still needs. */
+export interface IamStatus {
+  enabled: boolean;
+  available: boolean;
+  missing: ('baseUrl' | 'appId' | 'apiKey')[];
+}
+
+export const listSettings = () => adminRequest<{ settings: SettingState[]; iam: IamStatus }>('/api/admin/settings');
 
 export const updateSettings = (values: Record<string, SettingValue | null>) => (
-  adminRequest<{ settings: SettingState[] }>('/api/admin/settings', { method: 'PUT', body: { values } })
+  adminRequest<{ settings: SettingState[]; iam: IamStatus }>('/api/admin/settings', { method: 'PUT', body: { values } })
 );
 
 // --- Logs (LOG-18) -------------------------------------------------------------

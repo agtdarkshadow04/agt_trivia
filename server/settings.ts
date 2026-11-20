@@ -4,6 +4,7 @@ import { isSettingKey, validSetting, type SettingKey } from './config.js';
 import { lockedSettingKeys, settingStates, settingValues, type AppContext, type SettingState } from './context.js';
 import { HttpError } from './http.js';
 import { readSettings, writeSettings } from './repository/settings.js';
+import { deleteIamMemberSessions } from './repository/members.js';
 
 /** The dashboard settings (CFG-6..CFG-8): the states the Settings tab shows, and its updates. */
 
@@ -59,6 +60,8 @@ export function updateSettings(context: AppContext, values: Readonly<Record<stri
   }
 
   writeSettings(context.db, values);
+  // Switching AGT sign-in off ends every AGT member's session at once (AUTH-4, #18).
+  if (!after['iam.enabled']) deleteIamMemberSessions(context.db.connection);
   const changes = (Object.keys(values) as SettingKey[])
     .filter((key) => before[key] !== after[key])
     .map((key) => ({ key, from: before[key], to: after[key] }));
