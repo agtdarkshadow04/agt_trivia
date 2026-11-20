@@ -4,11 +4,11 @@
  * an unknown code falls back to the category list. `?page=login` is the
  * member sign-in (#17); `?page=questions` and `?page=review` are the question
  * workshop and the review queue (#19); `?page=categories` is the Moderators'
- * category management (#20).
+ * category management (#20); `?page=scores` is a member's score history (#21).
  */
 
 /** The pages besides the game itself. */
-export const pages = ['login', 'questions', 'review', 'categories'] as const;
+export const pages = ['login', 'questions', 'review', 'categories', 'scores'] as const;
 export type Page = typeof pages[number];
 
 /** The `page` parameter, or null for the game (an unknown page is the game too). */

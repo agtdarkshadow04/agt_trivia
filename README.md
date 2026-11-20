@@ -290,10 +290,27 @@ An unknown or empty category falls back to the list with a notice. Back and Forw
 categories.
 
 Anonymous play happens entirely in the browser and saves nothing. The **Settings** button in the header sets the
-language and the text size (1× to 2×); they are stored in this browser and shared with the admin dashboard. The
+language, the time zone (for the dates in [score history](#score-history)) and the text size (1× to 2×); they are stored in this browser and shared with the admin dashboard. The
 questions and categories themselves stay in English, in every language.
 
-Score history arrives in #21.
+### Score history
+
+Signed-in members, whatever their role, keep their results. When a member finishes a quiz, the results screen sends
+their answers to the server at once ("Saved to your history", with **Try again** if saving fails). The server grades
+them itself against the category's approved questions, so a score can't be made up in the browser; answers to
+questions that were unapproved or deleted while the quiz was played are left out, and the results screen says how
+many. Anonymous players see an invitation to sign in instead, and nothing is stored for them.
+
+**My scores** (the trophy button in the header, `/?page=scores`) shows, per category, how often the member played,
+their best and average percentage and when they last played, and their history, newest first, with dates in the
+language and time zone of their settings.
+
+What is stored, per finished quiz: the member, the category (and its name at the time), the quiz length, the score
+and the number of questions, the time it was finished, and for each question whether the answer was right, never the
+answers chosen. Nobody else sees a member's results, not even Moderators or the Admin in the dashboard; they are in
+backups like the rest of the data. **Clear history** on My scores deletes all of a member's results, and deleting a
+member deletes theirs. A deleted category's results stay in the history under its old name. There are no
+leaderboards.
 
 ## Writing and reviewing questions
 
@@ -345,7 +362,7 @@ Anonymous visitors can still play without an account.
 
 | Role | Can |
 | --- | --- |
-| **Player** | Play and keep a score history (#21) |
+| **Player** | Play and keep a score history |
 | **Editor** | What a Player can, plus write questions and submit them, and edit or delete their own until they are approved |
 | **Moderator** | What an Editor can, plus review (approve, reject, edit, unpublish, delete) any question, their own included, and manage the categories |
 

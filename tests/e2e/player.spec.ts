@@ -154,7 +154,7 @@ test('shows a load error with a retry (FE-5)', async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'Choose a category' })).toBeVisible();
 });
 
-test('the settings dialog changes the language and text size (I18N-4, A11Y-2, A11Y-6)', async ({ page }) => {
+test('the settings dialog changes the language, time zone and text size (I18N-4, A11Y-2, A11Y-6)', async ({ page }) => {
   await page.goto('/');
   const opener = page.getByRole('button', { name: 'Settings', exact: true });
   await expectDialogBehaviour(page, opener, 'Settings');
@@ -162,7 +162,8 @@ test('the settings dialog changes the language and text size (I18N-4, A11Y-2, A1
   // The dialog is found by its role: its title follows the language.
   const dialog = page.getByRole('dialog');
   await expect(dialog).toHaveAccessibleName('Settings');
-  await expect(dialog.getByLabel('Time zone')).toHaveCount(0);
+  // The time zone formats the score history's dates (#21).
+  await expect(dialog.getByLabel('Time zone')).toHaveValue('auto');
   await expectAccessible(page, 'settings dialog');
   await dialog.getByLabel('Language').selectOption('fr');
   await expect(page.locator('html')).toHaveAttribute('lang', 'fr');

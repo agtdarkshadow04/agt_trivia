@@ -13,6 +13,7 @@ import { SignIn } from './components/MemberAccount';
 import { BackToCategories, LengthChoice, QuestionView, Results } from './components/QuizPlay';
 import { QuestionWorkshop } from './components/QuestionWorkshop';
 import { CategoryManager } from './components/CategoryManager';
+import { SaveResult, ScoresPage } from './components/ScoreHistory';
 
 type Data =
   | { status: 'loading' }
@@ -130,7 +131,10 @@ export function App() {
   // A signed-in member has nothing to do on the sign-in page, and only Editors and Moderators have question
   // pages (Moderators the review queue); anyone else goes back to the game (FE-4).
   const allowedPage = page === null || member === undefined
-    || (page === 'login' ? member === null : page === 'questions' ? member !== null && canAuthor(member.role) : member?.role === 'Moderator');
+    || (page === 'login' ? member === null
+      : page === 'scores' ? member !== null
+        : page === 'questions' ? member !== null && canAuthor(member.role)
+          : member?.role === 'Moderator');
   useEffect(() => {
     if (!allowedPage) {
       window.history.replaceState(window.history.state, '', window.location.pathname);
@@ -159,6 +163,8 @@ export function App() {
     content = data.status === 'ready'
       ? <QuestionWorkshop mode={page} member={member} categories={data.categories} onChanged={() => { refreshCounts(); void reloadCategories(); }} />
       : data.status === 'error' ? <LoadState message="" cause={data.cause} onRetry={() => void load()} /> : <LoadState message={t.common.loading} />;
+  } else if (page === 'scores' && member) {
+    content = <ScoresPage />;
   } else if (page === 'categories' && member) {
     content = <CategoryManager onChanged={() => void reloadCategories()} />;
   } else if (page === 'login') {
@@ -198,7 +204,11 @@ export function App() {
       </>
     );
   } else if (isFinished(play.session)) {
-    content = <Results category={category} session={play.session} onReplay={() => void startQuiz(category, play.length)} onAnother={() => navigate(null)} />;
+    content = (
+      <Results category={category} session={play.session} onReplay={() => void startQuiz(category, play.length)} onAnother={() => navigate(null)}>
+        <SaveResult member={member} categoryId={category.id} length={play.length} answers={play.session.answers} onSignIn={() => openPage('login')} />
+      </Results>
+    );
   } else {
     content = (
       <>

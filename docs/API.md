@@ -2,7 +2,7 @@
 
 The server's REST API lives under `/api/`. The complete, generated description is the OpenAPI 3.1 document at
 `GET /api/openapi.json` (API-11); this guide explains the conventions it follows. The API grows with the rebuild
-(#6): score history and the category and import tools arrive in their sub-issues.
+(#6): the sheet import arrives in its sub-issue (#22).
 
 ## Requests and responses
 
@@ -66,6 +66,23 @@ delete carries the `version` that was read (`409 conflict` otherwise). A categor
 be deleted (`409 category_not_empty`, with `params.count`), so no question is ever left without a category: move the
 questions with `PUT /api/member/questions/{id}` or delete them first. A new short name breaks old `?category=` links.
 
+## Score history (#21)
+
+Every member, whatever their role, keeps their own results, and only they can read or clear them: the routes act on
+the signed-in member and take no member ID. `POST /api/member/results` carries the chosen choice IDs of each question
+played, never a score. The server grades them against the category's approved questions as they are now:
+
+- Each question may be answered once (`answers.N` `duplicate`), each choice chosen once, and every choice must be one
+  of the question's (`not_allowed`). An empty `choiceIds` counts as wrong; a multi-answer question counts only with
+  exactly its correct choices.
+- A question approved in another category is refused (`answers.N` `not_allowed`). A question that is no longer
+  approved, or no longer exists, is left out of the score and listed in `skippedQuestionIds`; when nothing is left,
+  the answer is `409 conflict` and nothing is saved.
+- There are 1 to as many answers as the category has approved questions (`answers` `too_few` or `too_many`); an
+  unknown category answers `404`.
+
+The audit log records a saved result with its category, length, score and total, never the answers (LOG-14).
+
 ## Routes
 
 | Method and path | Purpose |
@@ -99,6 +116,10 @@ questions with `PUT /api/member/questions/{id}` or delete them first. A new shor
 | `POST /api/member/categories` | `{ shortName, name, description, priority }`: creates a category; `201 { category, notices }` |
 | `PUT /api/member/categories/{id}` | The same fields and `version`: replaces the category; `200 { category, notices }` |
 | `DELETE /api/member/categories/{id}?version=` | Deletes a category without questions (`409 category_not_empty` otherwise); `204` |
+| `POST /api/member/results` | `{ categoryId, length, answers: [{ questionId, choiceIds }] }`: grades a finished quiz and saves it in the member's history (#21); `201 { result, skippedQuestionIds, notices }`. A result is `{ id, categoryId, categoryName, length, score, total, percent, finishedAt }` |
+| `GET /api/member/results` | The member's own results, newest first: `{ items, nextCursor }` (API-8; `limit`, `cursor`, `categoryId`) |
+| `DELETE /api/member/results` | Clears the member's own history; `204` |
+| `GET /api/member/stats` | Per category that still exists: `[{ categoryId, categoryName, plays, bestPercent, averagePercent, lastPlayedAt }]`, the most recently played first |
 | `GET /api/admin/members` | Member accounts, newest first: `{ items, nextCursor }` (API-8; `limit`, `cursor`, and `q` to search usernames and display names) |
 | `POST /api/admin/members` | `{ username, displayName, role, password }`: creates a local member; `201 { member, notices }` |
 | `PUT /api/admin/members/{id}` | `{ displayName, role, isActive }`; a role change or deactivation signs the member out; for an AGT member only `isActive` may change (`409 managed_by_iam`); `200 { member, notices }` |

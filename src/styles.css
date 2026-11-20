@@ -237,3 +237,16 @@ img { max-width: 100%; }
 .category-counts div { display: flex; gap: 0.4rem; }
 .category-counts dt { color: var(--muted); font-size: 0.8rem; }
 .category-counts dd { margin: 0; color: var(--text); font-weight: 900; }
+
+/* Member score history (#21). */
+.result-save { display: grid; justify-items: start; gap: 0.75rem; margin-top: 0.5rem; }
+.result-save p { margin: 0; }
+.player h2.scores-heading { margin: 0.5rem 0 0; font-size: 1.1rem; letter-spacing: 0.08em; }
+.score-history { display: grid; gap: 0.6rem; margin: 0; padding: 0; list-style: none; }
+.score-entry { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 2fr) minmax(0, 2fr); align-items: center; gap: 0.5rem 1rem; padding: 0.85rem 1rem; border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--surface); overflow-wrap: anywhere; }
+.score-entry-category { color: #fff; font-weight: 800; }
+.score-entry-score { color: var(--agt-orange); font-weight: 800; }
+.score-entry time { color: var(--muted); font-size: 0.85rem; }
+@media (max-width: 760px) {
+  .score-entry { grid-template-columns: minmax(0, 1fr); }
+}

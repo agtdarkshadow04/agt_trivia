@@ -6,8 +6,8 @@ import { changePreference, useI18n } from './I18n';
 
 /**
  * The language, time zone and text-size controls (I18N-4, A11Y-6), shared by
- * the public settings dialog and the admin preferences. The player UI shows no
- * times yet, so it leaves the time zone out (`timeZone={false}`).
+ * the public settings dialog and the admin preferences. A page that shows no
+ * times can leave the time zone out (`timeZone={false}`).
  */
 export function DisplaySettings({ timeZone = true }: { timeZone?: boolean }) {
   const { t, preferences } = useI18n();

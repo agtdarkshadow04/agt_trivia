@@ -6,6 +6,7 @@ import { backupRoutes } from './backupRoutes.js';
 import { logRoutes } from './logRoutes.js';
 import { memberRoutes } from './memberRoutes.js';
 import { categoryRoutes } from './categoryRoutes.js';
+import { resultRoutes } from './resultRoutes.js';
 import { questionRoutes } from './questionRoutes.js';
 import { quizRoutes } from './quizRoutes.js';
 import { readSettings } from './repository/settings.js';
@@ -31,7 +32,7 @@ import { currentSettings, updateSettings } from './settings.js';
 export type RouteAuth = 'none' | 'csrf' | 'admin' | 'member';
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 /** One OpenAPI tag per route: `public`, `auth`, `admin`, or a resource name (API-11). */
-export type RouteTag = 'public' | 'auth' | 'admin' | 'members' | 'questions' | 'categories';
+export type RouteTag = 'public' | 'auth' | 'admin' | 'members' | 'questions' | 'categories' | 'results';
 /** Rate-limit buckets (SEC-7), each counted separately per route and client address; `rateLimits.*` in config.yaml. */
 export type RateLimitName = 'login' | 'setup' | 'adminUploads';
 
@@ -262,4 +263,4 @@ const coreRoutes: readonly RouteDefinition[] = [
   },
 ];
 
-export const apiRoutes: readonly RouteDefinition[] = [...coreRoutes, ...quizRoutes, ...memberRoutes, ...questionRoutes, ...categoryRoutes, ...logRoutes, ...backupRoutes];
+export const apiRoutes: readonly RouteDefinition[] = [...coreRoutes, ...quizRoutes, ...memberRoutes, ...questionRoutes, ...categoryRoutes, ...resultRoutes, ...logRoutes, ...backupRoutes];

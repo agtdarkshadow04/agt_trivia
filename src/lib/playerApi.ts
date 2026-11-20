@@ -1,4 +1,4 @@
-import type { CategoryBody, ManagedCategory, MemberQuestion, MemberQuestionStatus, MemberSession, PublicCategory, PublicQuiz, PublicSettings, QuestionBody, QuestionCounts, QuestionPage, QuizLength } from './api.js';
+import type { CategoryBody, CategoryStats, ManagedCategory, QuizResultRecord, MemberQuestion, MemberQuestionStatus, MemberSession, PublicCategory, PublicQuiz, PublicSettings, QuestionBody, QuestionCounts, QuestionPage, QuizLength } from './api.js';
 import type { FieldError } from './errors.js';
 import { ApiError, apiRequest } from './client.js';
 
@@ -101,3 +101,25 @@ export const replaceCategory = (id: string, version: number, body: CategoryBody)
 export const deleteCategory = (id: string, version: number) => (
   apiRequest<void>(`/api/member/categories/${encodeURIComponent(id)}?version=${version}`, { method: 'DELETE' })
 );
+
+// --- Member score history (#21) ----------------------------------------------------
+
+/** Sends a finished quiz's answers; the server grades them and keeps the result. */
+export const saveResult = (categoryId: string, length: QuizLength, answers: readonly { questionId: string; choiceIds: readonly string[] }[]) => (
+  apiRequest<{ result: QuizResultRecord; skippedQuestionIds: string[]; notices: FieldError[] }>('/api/member/results', {
+    method: 'POST',
+    body: { categoryId, length, answers },
+  })
+);
+
+export function listResults(query: { categoryId?: string; cursor?: string | null } = {}) {
+  const params = new URLSearchParams();
+  if (query.categoryId) params.set('categoryId', query.categoryId);
+  if (query.cursor) params.set('cursor', query.cursor);
+  const search = params.toString();
+  return apiRequest<{ items: QuizResultRecord[]; nextCursor: string | null }>(`/api/member/results${search ? `?${search}` : ''}`);
+}
+
+export const getMemberStats = () => apiRequest<CategoryStats[]>('/api/member/stats');
+
+export const clearResults = () => apiRequest<void>('/api/member/results', { method: 'DELETE' });
