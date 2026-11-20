@@ -6,6 +6,11 @@ All notable changes to AGT Galactic Trivia are documented in this file. The form
 
 ## [2.1.0] - Unreleased
 
+### Added
+
+- **Review your answers** on the results screen: every question of the quiz in the order played, with your answer, the
+  correct one, and whether it was right. It works without signing in, and nothing is sent to the server (#44).
+
 ### Changed
 
 - A category offers only the quiz lengths that differ: with no more questions than a short quiz it offers only the

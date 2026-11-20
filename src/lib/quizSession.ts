@@ -95,3 +95,33 @@ export function quizResult(session: QuizSession): QuizResult {
   const total = session.questions.length;
   return { score: session.score, total, percent: scorePercent(session.score, total), rank: rankFor(session.score, total) };
 }
+
+/** One played question as the end-of-quiz review shows it (#44). */
+export interface ReviewItem {
+  questionId: string;
+  prompt: string;
+  /** The chosen and the correct answers' texts, in the order they were shown. */
+  chosen: string[];
+  correct: string[];
+  right: boolean;
+}
+
+/**
+ * Every locked answer with its question, in the order played (#44): what the
+ * player chose, the correct answers, and whether it was right. Built from the
+ * session alone, so anonymous play can review too; nothing is sent anywhere.
+ */
+export function reviewAnswers(session: QuizSession): ReviewItem[] {
+  return session.answers.flatMap((answer) => {
+    const question = session.questions.find((candidate) => candidate.id === answer.questionId);
+    if (!question) return [];
+    const texts = (ids: readonly string[]) => question.choices.filter((choice) => ids.includes(choice.id)).map((choice) => choice.text);
+    return [{
+      questionId: question.id,
+      prompt: question.prompt,
+      chosen: texts(answer.choiceIds),
+      correct: texts(question.correctChoiceIds),
+      right: isCorrectSelection(answer.choiceIds, question.correctChoiceIds),
+    }];
+  });
+}

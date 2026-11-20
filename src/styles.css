@@ -160,6 +160,14 @@ img { max-width: 100%; }
 .score-ring-text small { color: var(--muted); font-size: 1rem; }
 .results-copy { display: grid; gap: 1rem; min-width: 0; }
 .results-copy p:not(.eyebrow) { margin: 0; color: var(--text); line-height: 1.6; overflow-wrap: anywhere; }
+.answer-review { grid-column: 1 / -1; justify-self: stretch; min-width: 0; text-align: start; border-top: 1px solid var(--line); padding-top: 1rem; }
+.answer-review summary { cursor: pointer; color: #fff; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; }
+.review-list { display: grid; gap: 0.75rem; margin: 1rem 0 0; padding: 0; list-style: none; }
+.review-item { display: grid; gap: 0.4rem; min-width: 0; padding: 1rem; border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--surface-raised); }
+.review-item p { margin: 0; color: var(--text); line-height: 1.5; overflow-wrap: anywhere; }
+.review-item .review-item-meta { color: var(--muted); font-size: 0.75rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; }
+.review-item .review-item-prompt { color: #fff; font-weight: 700; }
+.review-item .answer-state { grid-column: auto; }
 
 @media (max-width: 760px) {
   .site-footer { align-items: flex-start; flex-direction: column; }

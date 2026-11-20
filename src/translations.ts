@@ -145,6 +145,8 @@ const en = {
     resultText: "You completed {{category}} with a score of {{percent}}.",
     replay: "Replay category",
     chooseAnother: "Choose another",
+    reviewAnswers: "Review your answers",
+    reviewChosen: "You chose: {{answers}}",
   },
   ranks: {
     atlasArchivist: "Atlas Archivist",
@@ -473,6 +475,8 @@ const fr: Translations = {
     resultText: "Vous avez terminé {{category}} avec un score de {{percent}}.",
     replay: "Rejouer la catégorie",
     chooseAnother: "En choisir une autre",
+    reviewAnswers: "Revoir vos réponses",
+    reviewChosen: "Vous avez choisi : {{answers}}",
   },
   ranks: {
     atlasArchivist: "Archiviste de l'Atlas",
@@ -799,6 +803,8 @@ const de: Translations = {
     resultText: "Sie haben {{category}} mit {{percent}} abgeschlossen.",
     replay: "Kategorie erneut spielen",
     chooseAnother: "Andere wählen",
+    reviewAnswers: "Ihre Antworten ansehen",
+    reviewChosen: "Ihre Wahl: {{answers}}",
   },
   ranks: {
     atlasArchivist: "Atlas-Archivar",
@@ -1125,6 +1131,8 @@ const es: Translations = {
     resultText: "Completaste {{category}} con una puntuación de {{percent}}.",
     replay: "Repetir la categoría",
     chooseAnother: "Elegir otra",
+    reviewAnswers: "Revisa tus respuestas",
+    reviewChosen: "Elegiste: {{answers}}",
   },
   ranks: {
     atlasArchivist: "Archivista del Atlas",
@@ -1451,6 +1459,8 @@ const pt: Translations = {
     resultText: "Você concluiu {{category}} com uma pontuação de {{percent}}.",
     replay: "Jogar a categoria de novo",
     chooseAnother: "Escolher outra",
+    reviewAnswers: "Revise suas respostas",
+    reviewChosen: "Você escolheu: {{answers}}",
   },
   ranks: {
     atlasArchivist: "Arquivista do Atlas",
@@ -1777,6 +1787,8 @@ const it: Translations = {
     resultText: "Hai completato {{category}} con un punteggio del {{percent}}.",
     replay: "Rigioca la categoria",
     chooseAnother: "Scegline un'altra",
+    reviewAnswers: "Rivedi le tue risposte",
+    reviewChosen: "Hai scelto: {{answers}}",
   },
   ranks: {
     atlasArchivist: "Archivista dell'Atlas",
@@ -2103,6 +2115,8 @@ const th: Translations = {
     resultText: "คุณทำ {{category}} เสร็จด้วยคะแนน {{percent}}",
     replay: "เล่นหมวดหมู่นี้อีกครั้ง",
     chooseAnother: "เลือกหมวดหมู่อื่น",
+    reviewAnswers: "ทบทวนคำตอบของคุณ",
+    reviewChosen: "คุณเลือก: {{answers}}",
   },
   ranks: {
     atlasArchivist: "ผู้เก็บบันทึกแห่งแอตลาส",
@@ -2429,6 +2443,8 @@ const zh: Translations = {
     resultText: "你完成了 {{category}}，得分 {{percent}}。",
     replay: "重玩此类别",
     chooseAnother: "选择其他类别",
+    reviewAnswers: "查看你的答案",
+    reviewChosen: "你的选择：{{answers}}",
   },
   ranks: {
     atlasArchivist: "阿特拉斯档案员",
@@ -2755,6 +2771,8 @@ const hi: Translations = {
     resultText: "आपने {{category}} {{percent}} स्कोर के साथ पूरा किया।",
     replay: "श्रेणी फिर से खेलें",
     chooseAnother: "दूसरी चुनें",
+    reviewAnswers: "अपने उत्तर देखें",
+    reviewChosen: "आपने चुना: {{answers}}",
   },
   ranks: {
     atlasArchivist: "एटलस अभिलेखपाल",
@@ -3081,6 +3099,8 @@ const ja: Translations = {
     resultText: "{{category}} を {{percent}} のスコアで完了しました。",
     replay: "このカテゴリーをもう一度",
     chooseAnother: "別のカテゴリーを選ぶ",
+    reviewAnswers: "回答を振り返る",
+    reviewChosen: "あなたの選択：{{answers}}",
   },
   ranks: {
     atlasArchivist: "アトラスの記録係",
