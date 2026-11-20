@@ -34,6 +34,7 @@ export const errorCodes = [
   'not_found',
   'conflict',
   'managed_by_iam',
+  'category_not_empty',
   'defined_in_config',
   'setup_complete',
   'file_too_large',
@@ -448,3 +449,35 @@ export const QuestionReplaceBody = object({ ...questionContent, version: Version
 export const QuestionVersionBody = object({ version: Version });
 export const QuestionRejectBody = object({ version: Version, reviewNote: Type.String({ maxLength: 4000, description: 'Required, trimmed; 1 to 1000 characters. The author sees it.' }) });
 export const QuestionDeleteQuery = object({ version: Type.String({ pattern: '^[1-9][0-9]{0,9}$', description: 'The question version that was read; `409 conflict` when it has changed since.' }) });
+
+// --- Category management (#20) --------------------------------------------------
+
+export const ManagedCategory = object({
+  id: Type.String({ format: 'uuid' }),
+  shortName: Type.String({ description: 'Letters, digits and `-`; the `?category=` link of the player UI.' }),
+  name: Type.String(),
+  description: Type.String(),
+  priority: Type.Integer({ description: '0 to 100; lower first, then by name.' }),
+  questionCounts: object({ draft: Type.Integer(), pending: Type.Integer(), approved: Type.Integer(), rejected: Type.Integer() }, 'The category\'s questions by status.'),
+  version: Type.Integer({ minimum: 1 }),
+  createdAt: Type.String({ format: 'date-time' }),
+  updatedAt: Type.String({ format: 'date-time' }),
+}, 'A category as Moderators manage it.');
+
+export const ManagedCategoryList = Type.Array(ManagedCategory, { description: 'Every category in display order: lower priority first, then by name (API-8: a plain array, bounded by moderator effort).' });
+
+export const CategoryResult = object({
+  category: ManagedCategory,
+  notices: Type.Array(Type.Ref('FieldError'), { description: 'Non-blocking warnings (API-2); always empty for categories.' }),
+});
+
+const categoryFields = {
+  shortName: Type.String({ maxLength: 64, description: 'Trimmed; 1 to 16 letters, digits and `-`, unique ignoring case. Changing it breaks old `?category=` links.' }),
+  name: Type.String({ maxLength: 400, description: 'Trimmed; 1 to 100 characters, unique ignoring case.' }),
+  description: Type.String({ maxLength: 1200, description: 'Trimmed; 1 to 300 characters.' }),
+  priority: Type.Integer({ description: '0 to 100; lower comes first.' }),
+};
+
+export const CategoryCreateBody = object(categoryFields);
+export const CategoryReplaceBody = object({ ...categoryFields, version: Type.Integer({ minimum: 1, description: 'The category version that was read; `409 conflict` when it has changed since.' }) });
+export const CategoryDeleteQuery = object({ version: Type.String({ pattern: '^[1-9][0-9]{0,9}$', description: 'The category version that was read; `409 conflict` when it has changed since.' }) });

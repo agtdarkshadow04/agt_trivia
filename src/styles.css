@@ -230,3 +230,10 @@ img { max-width: 100%; }
   .question-workspace { grid-template-columns: minmax(0, 1fr); }
 }
 .preview-intro { margin: 0 0 0.75rem; color: var(--muted); font-size: 0.8rem; }
+
+/* Category management (#20). */
+.category-description { margin: 0; color: var(--text); line-height: 1.5; }
+.category-counts { display: flex; flex-wrap: wrap; gap: 0.5rem 1.25rem; margin: 0; }
+.category-counts div { display: flex; gap: 0.4rem; }
+.category-counts dt { color: var(--muted); font-size: 0.8rem; }
+.category-counts dd { margin: 0; color: var(--text); font-weight: 900; }

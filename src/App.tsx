@@ -12,6 +12,7 @@ import { Layout } from './components/Layout';
 import { SignIn } from './components/MemberAccount';
 import { BackToCategories, LengthChoice, QuestionView, Results } from './components/QuizPlay';
 import { QuestionWorkshop } from './components/QuestionWorkshop';
+import { CategoryManager } from './components/CategoryManager';
 
 type Data =
   | { status: 'loading' }
@@ -158,6 +159,8 @@ export function App() {
     content = data.status === 'ready'
       ? <QuestionWorkshop mode={page} member={member} categories={data.categories} onChanged={() => { refreshCounts(); void reloadCategories(); }} />
       : data.status === 'error' ? <LoadState message="" cause={data.cause} onRetry={() => void load()} /> : <LoadState message={t.common.loading} />;
+  } else if (page === 'categories' && member) {
+    content = <CategoryManager onChanged={() => void reloadCategories()} />;
   } else if (page === 'login') {
     content = member === null
       ? <SignIn agtSignIn={data.status === 'ready' && data.settings.agtSignIn} onSignedIn={(signedIn) => { setMember(signedIn); go(''); setStatus(formatTranslation(t.login.signedIn, { name: signedIn.displayName })); }} />

@@ -6,7 +6,7 @@ import { COMMON_TRANSLATIONS, formatTranslation } from '../translations';
 import { Dialog } from './Dialog';
 import { DisplaySettings } from './DisplaySettings';
 import { useI18n } from './I18n';
-import { ClipboardCheckIcon, LogInIcon, PencilIcon, SettingsIcon, UserRoundIcon } from './Icons';
+import { ClipboardCheckIcon, FolderIcon, LogInIcon, PencilIcon, SettingsIcon, UserRoundIcon } from './Icons';
 import { AccountDialog } from './MemberAccount';
 import { MaintenanceNotice } from './MaintenanceNotice';
 
@@ -86,6 +86,11 @@ export function Layout({ siteTitle, supportUrl, member, status, reviewCount, onH
                 </a>
                 {reviewCount ? <span className="count-badge" aria-hidden="true">{reviewCount > 99 ? `${number(99)}+` : number(reviewCount)}</span> : null}
               </span>
+            )}
+            {member && member.role === 'Moderator' && (
+              <a className="button button-icon" href="/?page=categories" onClick={follow(() => onOpenPage('categories'))} aria-label={t.layout.categories} title={t.layout.categories}>
+                <FolderIcon />
+              </a>
             )}
             {member ? (
               <button

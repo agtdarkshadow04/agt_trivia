@@ -3,11 +3,12 @@
  * `?category=<shortName>` opens a category, matched ignoring case like 1.x;
  * an unknown code falls back to the category list. `?page=login` is the
  * member sign-in (#17); `?page=questions` and `?page=review` are the question
- * workshop and the review queue (#19).
+ * workshop and the review queue (#19); `?page=categories` is the Moderators'
+ * category management (#20).
  */
 
 /** The pages besides the game itself. */
-export const pages = ['login', 'questions', 'review'] as const;
+export const pages = ['login', 'questions', 'review', 'categories'] as const;
 export type Page = typeof pages[number];
 
 /** The `page` parameter, or null for the game (an unknown page is the game too). */

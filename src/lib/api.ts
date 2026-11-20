@@ -132,3 +132,25 @@ export interface QuestionBody {
   /** Moderators only; left out, it is the author's display name (new) or stays (changed). */
   authorCredit?: string | null;
 }
+
+// --- Category management (#20) ----------------------------------------------------
+
+/** A category as Moderators manage it: its questions counted by status, and its version. */
+export interface ManagedCategory {
+  id: string;
+  shortName: string;
+  name: string;
+  description: string;
+  priority: number;
+  questionCounts: Record<MemberQuestionStatus, number>;
+  version: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CategoryBody {
+  shortName: string;
+  name: string;
+  description: string;
+  priority: number;
+}

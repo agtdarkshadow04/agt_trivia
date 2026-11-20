@@ -57,6 +57,15 @@ Editors write questions and submit them for review; Moderators approve or reject
 - The audit log records each change with the question ID, its status and the names of the changed fields, never the
   question's text or the review note (LOG-14).
 
+## Category management (#20)
+
+Moderators manage categories; every other member gets `403 forbidden`. Short names (1 to 16 letters, digits and
+`-`) and names (1 to 100 characters) are unique ignoring case: a clash is a `validation_failed` field error with the
+code `duplicate`. Descriptions have 1 to 300 characters and priorities are whole numbers from 0 to 100. A replace or
+delete carries the `version` that was read (`409 conflict` otherwise). A category with questions of any status cannot
+be deleted (`409 category_not_empty`, with `params.count`), so no question is ever left without a category: move the
+questions with `PUT /api/member/questions/{id}` or delete them first. A new short name breaks old `?category=` links.
+
 ## Routes
 
 | Method and path | Purpose |
@@ -86,6 +95,10 @@ Editors write questions and submit them for review; Moderators approve or reject
 | `POST /api/member/questions/{id}/approve` | `{ version }`: pending → approved, in the public quiz (Moderators); `200` the question |
 | `POST /api/member/questions/{id}/reject` | `{ version, reviewNote }`: pending → rejected, with a required note for the author (Moderators); `200` the question |
 | `POST /api/member/questions/{id}/unpublish` | `{ version }`: approved → draft (Moderators); `200` the question |
+| `GET /api/member/categories` | Every category in display order, `[{ id, shortName, name, description, priority, questionCounts: { draft, pending, approved, rejected }, version, createdAt, updatedAt }]` (Moderators, #20). A plain array (API-8) |
+| `POST /api/member/categories` | `{ shortName, name, description, priority }`: creates a category; `201 { category, notices }` |
+| `PUT /api/member/categories/{id}` | The same fields and `version`: replaces the category; `200 { category, notices }` |
+| `DELETE /api/member/categories/{id}?version=` | Deletes a category without questions (`409 category_not_empty` otherwise); `204` |
 | `GET /api/admin/members` | Member accounts, newest first: `{ items, nextCursor }` (API-8; `limit`, `cursor`, and `q` to search usernames and display names) |
 | `POST /api/admin/members` | `{ username, displayName, role, password }`: creates a local member; `201 { member, notices }` |
 | `PUT /api/admin/members/{id}` | `{ displayName, role, isActive }`; a role change or deactivation signs the member out; for an AGT member only `isActive` may change (`409 managed_by_iam`); `200 { member, notices }` |
@@ -133,7 +146,8 @@ and `fields` lists field-level problems, each with a `field` (the request proper
 | `app_access_denied` | 403 | AGT IAM does not authorize the traveller for this app (or gives the tier `NOACCESS` or `NONE`); nothing was created | — |
 | `forbidden` | 403 | The member's role does not allow this (a Player on a question route, an Editor changing an approved question), or an AGT member asks to change a password here | — |
 | `not_found` | 404 | Unknown route, or an unknown or invisible resource | — |
-| `conflict` | 409 | The question changed since it was read (another `version` or status), a backup or restore is already running, or the server stayed busy for 30 seconds; nothing was changed | — |
+| `category_not_empty` | 409 | The category still has questions (`params.count`, of any status); move or delete them first | `count` |
+| `conflict` | 409 | The question or category changed since it was read (another `version`, or a question's status), a backup or restore is already running, or the server stayed busy for 30 seconds; nothing was changed | — |
 | `managed_by_iam` | 409 | The Admin changes an AGT member's name, role or password: AGT IAM sets those; only activate, deactivate or delete | — |
 | `defined_in_config` | 409 | A settings update names a key that `config.yaml` sets; nothing was changed | `{ key }` |
 | `setup_complete` | 410 | First-run setup after the Admin exists | — |

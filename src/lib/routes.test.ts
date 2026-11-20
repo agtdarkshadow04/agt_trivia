@@ -33,6 +33,7 @@ describe('player deep links (FE-4)', () => {
     assert.equal(searchForPage('login'), '?page=login');
     assert.equal(pageParam('?page=questions'), 'questions');
     assert.equal(pageParam('?page=review'), 'review');
+    assert.equal(pageParam('?page=categories'), 'categories');
     assert.equal(pageParam('?page=REVIEW'), null);
     assert.equal(searchForPage('review'), '?page=review');
     assert.equal(searchForPage(null), '');
