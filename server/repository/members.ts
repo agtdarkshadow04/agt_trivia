@@ -128,13 +128,17 @@ export function updateMemberPassword(db: Database, id: string, passwordHash: str
 /**
  * Deletes a member: their sessions go with them (`ON DELETE CASCADE`), and the
  * questions they wrote, approved or changed keep everything but the member's
- * ID (#15), in the same transaction.
+ * ID (#15), and so do the reports they sent or resolved (#46), in the same
+ * transaction.
  */
 export function deleteMember(db: Database, id: string) {
   assertDataWrite();
   db.transaction((sqlite) => {
     for (const column of ['created_by', 'approved_by', 'modified_by'] as const) {
       sqlite.prepare(`UPDATE questions SET ${column} = NULL WHERE ${column} = ?`).run(id);
+    }
+    for (const column of ['member_id', 'resolved_by'] as const) {
+      sqlite.prepare(`UPDATE question_reports SET ${column} = NULL WHERE ${column} = ?`).run(id);
     }
     sqlite.prepare('DELETE FROM members WHERE id = ?').run(id);
   });

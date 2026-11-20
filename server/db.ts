@@ -9,6 +9,7 @@ import agtIamMembersMigration from './migrations/0005_agt_iam_members.sql';
 import questionAuthoringMigration from './migrations/0006_question_authoring.sql';
 import quizResultsMigration from './migrations/0007_quiz_results.sql';
 import quizAttemptsMigration from './migrations/0008_quiz_attempts.sql';
+import questionReportsMigration from './migrations/0009_question_reports.sql';
 
 /**
  * The SQLite database (DATA-1, DATA-5): one file in `storage.dataDir`, opened
@@ -38,13 +39,14 @@ export const MIGRATIONS: readonly Migration[] = [
   { version: 6, name: '0006_question_authoring', sql: questionAuthoringMigration },
   { version: 7, name: '0007_quiz_results', sql: quizResultsMigration },
   { version: 8, name: '0008_quiz_attempts', sql: quizAttemptsMigration },
+  { version: 9, name: '0009_question_reports', sql: questionReportsMigration },
 ];
 
 /** The schema version this build creates and supports. */
 export const SCHEMA_VERSION = MIGRATIONS[MIGRATIONS.length - 1].version;
 
 /** Every table of the main database; a restored database must have them all (DATA-5, BAK-3). */
-export const EXPECTED_TABLES: readonly string[] = ['settings', 'admin', 'sessions', 'categories', 'questions', 'question_choices', 'members', 'member_sessions', 'quiz_results', 'quiz_result_answers', 'app_secrets'];
+export const EXPECTED_TABLES: readonly string[] = ['settings', 'admin', 'sessions', 'categories', 'questions', 'question_choices', 'members', 'member_sessions', 'quiz_results', 'quiz_result_answers', 'app_secrets', 'question_reports'];
 
 export class SchemaTooNewError extends Error {
   constructor(readonly found: number, readonly supported: number) {

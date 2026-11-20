@@ -49,6 +49,7 @@ export const errorCodes = [
   'maintenance',
   'iam_timeout',
   'attempt_invalid',
+  'report_exists',
 ] as const;
 
 const Params = Type.Record(Type.String(), Type.Union([Type.String(), Type.Number(), Type.Boolean()]), {
@@ -434,6 +435,7 @@ const statusCounts = object({ draft: Type.Integer(), pending: Type.Integer(), ap
 export const QuestionCounts = object({
   mine: statusCounts,
   reviewQueue: Type.Union([Type.Integer(), Type.Null()], { description: 'Every pending question, for Moderators; null for Editors.' }),
+  openReports: Type.Union([Type.Integer(), Type.Null()], { description: 'Every open question report, for Moderators; null for Editors (#46).' }),
 });
 
 export const QuestionIdParams = object({ id: Type.String({ description: 'The question ID (a UUIDv4); anything else, or a question the member may not see, answers 404.' }) });
@@ -455,6 +457,53 @@ export const QuestionReplaceBody = object({ ...questionContent, version: Version
 export const QuestionVersionBody = object({ version: Version });
 export const QuestionRejectBody = object({ version: Version, reviewNote: Type.String({ maxLength: 4000, description: 'Required, trimmed; 1 to 1000 characters. The author sees it.' }) });
 export const QuestionDeleteQuery = object({ version: Type.String({ pattern: '^[1-9][0-9]{0,9}$', description: 'The question version that was read; `409 conflict` when it has changed since.' }) });
+
+// --- Question reports (#46) ------------------------------------------------------
+
+const ReportStatusSchema = Type.Union([Type.Literal('open'), Type.Literal('resolved'), Type.Literal('dismissed')]);
+
+export const QuestionReport = object({
+  id: Type.String({ format: 'uuid' }),
+  questionId: Type.String({ format: 'uuid' }),
+  questionPrompt: Type.String(),
+  questionStatus: QuestionStatusSchema,
+  categoryId: Type.String({ format: 'uuid' }),
+  categoryName: Type.String(),
+  reason: Type.Union(['wrong_answer', 'unclear', 'typo', 'outdated', 'other'].map((reason) => Type.Literal(reason))),
+  note: Type.String({ description: "The member's details; empty when there are none." }),
+  status: ReportStatusSchema,
+  reportedBy: Type.Union([Type.String({ format: 'uuid' }), Type.Null()], { description: 'The reporting member; null once deleted.' }),
+  reportedByName: Type.Union([Type.String(), Type.Null()], { description: "The reporting member's display name, or null." }),
+  resolvedByName: Type.Union([Type.String(), Type.Null()], { description: 'The Moderator who resolved or dismissed it, or null.' }),
+  resolvedAt: Type.Union([Type.String({ format: 'date-time' }), Type.Null()]),
+  resolutionNote: Type.String({ description: "The Moderator's note for the record; empty when there is none." }),
+  version: Type.Integer({ minimum: 1 }),
+  createdAt: Type.String({ format: 'date-time' }),
+  updatedAt: Type.String({ format: 'date-time' }),
+}, "A member's report of a problem with a question (#46).");
+
+export const ReportCreateBody = object({
+  reason: Type.String({ maxLength: 32, description: '`wrong_answer`, `unclear`, `typo`, `outdated` or `other`.' }),
+  note: Type.String({ maxLength: 2000, description: 'Trimmed; at most 500 characters; required for `other`.' }),
+});
+
+export const ReportCloseBody = object({
+  version: Type.Integer({ minimum: 1, description: 'The report version that was read; `409 conflict` when it has changed or is no longer open.' }),
+  resolutionNote: Type.String({ maxLength: 2000, description: 'Trimmed; at most 500 characters; may be empty. Never shown to the reporting member.' }),
+});
+
+export const ReportPage = object({
+  items: Type.Array(QuestionReport),
+  nextCursor: Type.Union([Type.String(), Type.Null()]),
+}, 'Oldest first (API-8).');
+
+export const ReportListQuery = object({
+  status: Type.Optional(ReportStatusSchema),
+  limit: Type.Optional(Type.String({ pattern: '^[1-9][0-9]{0,2}$', description: '1 to 200; 50 by default (API-8).' })),
+  cursor: Type.Optional(Type.String({ maxLength: 512, description: 'The `nextCursor` of the previous page (API-8).' })),
+});
+
+export const ReportIdParams = object({ id: Type.String({ description: 'The report ID (a UUIDv4); anything else answers 404.' }) });
 
 // --- Category management (#20) --------------------------------------------------
 

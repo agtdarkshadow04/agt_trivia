@@ -11,6 +11,7 @@ import { ConfirmDialog, Dialog } from './Dialog';
 import { formErrors, noFormErrors, SelectField, TextAreaField, TextField } from './Field';
 import { useI18n } from './I18n';
 import { ArrowLeftIcon, CheckCircleIcon, PencilIcon, PlusIcon, RotateCcwIcon, SendIcon, TrashIcon, XCircleIcon } from './Icons';
+import { ReportsPanel } from './QuestionReports';
 import { useViewHeading } from './useViewHeading';
 
 /**
@@ -534,6 +535,7 @@ export function QuestionWorkshop({ mode, member, categories, onChanged }: {
           onRejected={() => { setRejecting(null); done(t.authoring.rejected); }}
         />
       )}
+      {review && <ReportsPanel onChanged={onChanged} />}
       {deleting && (
         <ConfirmDialog
           title={t.authoring.deleteTitle}

@@ -4,6 +4,7 @@ import { isUuidV4, roleAtLeast } from './api.js';
 import {
   adminUsernameError, categoryErrors, displayNameError, memberUsernameError, normalizeMemberUsername, confirmationError, errorsOf, newPasswordError, normalizeCategory, normalizeQuestion,
   questionErrors, questionNotices, quizLengthsError, requiredError, type CategoryInput, type QuestionInput,
+  normalizeReport, reportInputErrors, resolutionNoteError,
 } from './validation.js';
 
 describe('shared validators', () => {
@@ -147,5 +148,25 @@ describe('member accounts (#17)', () => {
     assert.equal(displayNameError(' ')?.code, 'required');
     assert.equal(displayNameError('🚀'.repeat(120)), null);
     assert.equal(displayNameError('x'.repeat(121))?.code, 'too_long');
+  });
+});
+
+describe('question reports (#46)', () => {
+  const codes = (input: { reason: string; note: string }) => reportInputErrors(input).map((error) => [error.field, error.code]);
+
+  it('needs a known reason, and details only for "other"', () => {
+    assert.deepEqual(codes({ reason: 'typo', note: '' }), []);
+    assert.deepEqual(codes({ reason: '', note: '' }), [['reason', 'required']]);
+    assert.deepEqual(codes({ reason: 'boring', note: '' }), [['reason', 'not_allowed']]);
+    assert.deepEqual(codes({ reason: 'other', note: '  ' }), [['note', 'required']]);
+    assert.deepEqual(codes({ reason: 'other', note: 'The image is missing.' }), []);
+  });
+
+  it('limits the notes to 500 characters, counted in code points, and trims the stored note', () => {
+    assert.deepEqual(codes({ reason: 'unclear', note: '🚀'.repeat(500) }), []);
+    assert.deepEqual(codes({ reason: 'unclear', note: 'x'.repeat(501) }), [['note', 'too_long']]);
+    assert.equal(resolutionNoteError(''), null);
+    assert.equal(resolutionNoteError('y'.repeat(501))?.code, 'too_long');
+    assert.deepEqual(normalizeReport({ reason: 'typo', note: '  spaced  ' }), { reason: 'typo', note: 'spaced' });
   });
 });

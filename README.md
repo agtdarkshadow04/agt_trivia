@@ -377,6 +377,20 @@ are approved.
 If two people change the same question at once, the second change is refused with a message to reload, and
 nothing is overwritten. Players and visitors never see drafts, submitted or rejected questions, or review notes.
 
+### Reporting a problem with a question
+
+Signed-in members, whatever their role, can **Report a problem** with a question while they play it, or from
+**Review your answers** at the end of the quiz: a reason (the marked answer is wrong, the question is unclear, a
+spelling or typing mistake, out of date, or something else) and optional details, which "something else" needs. A
+member has at most one open report per question. Visitors can't report: that would need a proof-of-work check
+against spam.
+
+Moderators find the open reports under **Reported questions** on the Review queue page, oldest first, with the
+question, its category, the reason, the details and who sent it; the header's count includes them. They fix or
+unpublish the question under **My questions**, then **Mark resolved** the report, or **Dismiss** it, with an
+optional note for the record. The member who sent it is not told. A report goes when its question is deleted, and
+keeps no name once its member is deleted.
+
 ### Categories
 
 Moderators manage the categories on the **Categories** page (the folder button in the header,
@@ -398,9 +412,9 @@ Anonymous visitors can still play without an account.
 
 | Role | Can |
 | --- | --- |
-| **Player** | Play and keep a score history |
+| **Player** | Play, keep a score history, and report a problem with a question |
 | **Editor** | What a Player can, plus write questions and submit them, and edit or delete their own until they are approved |
-| **Moderator** | What an Editor can, plus review (approve, reject, edit, unpublish, delete) any question, their own included, and manage the categories |
+| **Moderator** | What an Editor can, plus review (approve, reject, edit, unpublish, delete) any question, their own included, handle question reports, and manage the categories |
 
 There is no self-registration: the Admin creates member accounts in the **Members** tab, with a username (3 to 64
 lowercase letters, digits, dots, underscores or hyphens), a display name, a role and a first password. Members

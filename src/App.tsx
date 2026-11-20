@@ -88,7 +88,8 @@ export function App() {
   const memberRole = member?.role ?? null;
   const refreshCounts = useCallback(() => {
     if (memberRole !== 'Moderator') { setReviewCount(null); return; }
-    getQuestionCounts().then((counts) => setReviewCount(counts.reviewQueue), () => setReviewCount(null));
+    // #46: open reports wait for a Moderator too.
+    getQuestionCounts().then((counts) => setReviewCount((counts.reviewQueue ?? 0) + (counts.openReports ?? 0)), () => setReviewCount(null));
   }, [memberRole]);
   useEffect(() => { refreshCounts(); }, [refreshCounts, memberId]);
 
@@ -205,7 +206,7 @@ export function App() {
     );
   } else if (isFinished(play.session)) {
     content = (
-      <Results category={category} session={play.session} onReplay={() => void startQuiz(category, play.length)} onAnother={() => navigate(null)}>
+      <Results category={category} session={play.session} reportable={Boolean(member)} onReplay={() => void startQuiz(category, play.length)} onAnother={() => navigate(null)}>
         <SaveResult member={member} categoryId={category.id} length={play.length} attemptToken={play.quiz.attempt.token} answers={play.session.answers} onSignIn={() => openPage('login')} />
       </Results>
     );
@@ -218,6 +219,7 @@ export function App() {
         <QuestionView
           category={category}
           session={play.session}
+          reportable={Boolean(member)}
           onChoose={(choiceId, checked) => update((session) => choose(session, choiceId, checked))}
           onLock={() => update(lockAnswer)}
           onNext={() => update(nextQuestion)}

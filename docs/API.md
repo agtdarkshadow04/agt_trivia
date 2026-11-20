@@ -56,6 +56,20 @@ Editors write questions and submit them for review; Moderators approve or reject
 - The audit log records each change with the question ID, its status and the names of the changed fields, never the
   question's text or the review note (LOG-14).
 
+## Question reports (#46)
+
+Any signed-in member can report a problem with an **approved** question (any other status, or an unknown ID, answers
+`404`, as if it did not exist): a `reason` (`wrong_answer`, `unclear`, `typo`, `outdated` or `other`) and a `note` of
+at most 500 characters, which `other` needs (`reason` `required` or `not_allowed`, `note` `required` or `too_long`).
+A member has at most one open report per question (`409 report_exists`). Reports are never anonymous, so they need
+no ALTCHA (ALT-1).
+
+Only Moderators list reports (oldest first, `status` `open` by default) and close them: `resolve` or `dismiss` an
+open report at the `version` that was read, with an optional `resolutionNote` (`409 conflict` when it changed or is
+no longer open). The reporting member is not told. A report is deleted with its question; deleting a member keeps
+their reports without their ID or name. The audit log records a report with its question and reason and whether a
+note was given, never the notes (LOG-14).
+
 ## Category management (#20)
 
 Moderators manage categories; every other member gets `403 forbidden`. Short names (1 to 16 letters, digits and
@@ -123,7 +137,7 @@ twice adds nothing. The audit log records the action, the files and the counts, 
 | `GET /api/member/session` | The signed-in member |
 | `POST /api/member/password` | `{ currentPassword, password }`: changes a local member's password, ends their other sessions; `200` the member |
 | `GET /api/member/questions` | Questions, newest first: `{ items, nextCursor }` (API-8; `limit`, `cursor`, `status`, `categoryId`, `q` to search the text, `mine=true`). Editors see only their own; Moderators every question. Each is `{ id, categoryId, prompt, status, choices: [{ id, text, isCorrect }], authorCredit, reviewNote, createdBy, createdByName, approvedAt, version, createdAt, updatedAt }` (#19) |
-| `GET /api/member/question-counts` | `{ mine: { draft, pending, approved, rejected }, reviewQueue }`: the member's own questions by status, and for Moderators the number of pending questions (`null` for Editors) |
+| `GET /api/member/question-counts` | `{ mine: { draft, pending, approved, rejected }, reviewQueue, openReports }`: the member's own questions by status, and for Moderators the number of pending questions and of open question reports (#46; both `null` for Editors) |
 | `GET /api/member/questions/{id}` | One question. A question an Editor did not write answers `404` |
 | `POST /api/member/questions` | `{ categoryId, prompt, choices: [{ text, isCorrect }], authorCredit? }`: a new draft; `201 { question, notices }` |
 | `PUT /api/member/questions/{id}` | The same fields and `version`: replaces the question; a rejected one becomes a draft; `200 { question, notices }` |
@@ -131,6 +145,9 @@ twice adds nothing. The audit log records the action, the files and the counts, 
 | `POST /api/member/questions/{id}/submit` | `{ version }`: draft or rejected → pending; `200` the question |
 | `POST /api/member/questions/{id}/approve` | `{ version }`: pending → approved, in the public quiz (Moderators); `200` the question |
 | `POST /api/member/questions/{id}/reject` | `{ version, reviewNote }`: pending → rejected, with a required note for the author (Moderators); `200` the question |
+| `POST /api/member/questions/{id}/reports` | `{ reason, note }`: reports a problem with an approved question (any member, #46); `201` the report |
+| `GET /api/member/reports` | Question reports, oldest first: `{ items, nextCursor }` (API-8; `status`, `limit`, `cursor`), Moderators only. Each is `{ id, questionId, questionPrompt, questionStatus, categoryId, categoryName, reason, note, status, reportedBy, reportedByName, resolvedByName, resolvedAt, resolutionNote, version, createdAt, updatedAt }` |
+| `POST /api/member/reports/{id}/resolve`, `POST /api/member/reports/{id}/dismiss` | `{ version, resolutionNote }`: closes an open report as `resolved` or `dismissed` (Moderators); `200` the report |
 | `POST /api/member/questions/{id}/unpublish` | `{ version }`: approved → draft (Moderators); `200` the question |
 | `GET /api/member/categories` | Every category in display order, `[{ id, shortName, name, description, priority, questionCounts: { draft, pending, approved, rejected }, version, createdAt, updatedAt }]` (Moderators, #20). A plain array (API-8) |
 | `POST /api/member/categories` | `{ shortName, name, description, priority }`: creates a category; `201 { category, notices }` |
@@ -189,6 +206,7 @@ and `fields` lists field-level problems, each with a `field` (the request proper
 | `app_access_denied` | 403 | AGT IAM does not authorize the traveller for this app (or gives the tier `NOACCESS` or `NONE`); nothing was created | — |
 | `forbidden` | 403 | The member's role does not allow this (a Player on a question route, an Editor changing an approved question), or an AGT member asks to change a password here | — |
 | `not_found` | 404 | Unknown route, or an unknown or invisible resource | — |
+| `report_exists` | 409 | The member already has an open report on this question; nothing was saved | — |
 | `category_not_empty` | 409 | The category still has questions (`params.count`, of any status); move or delete them first | `count` |
 | `conflict` | 409 | The question or category changed since it was read (another `version`, or a question's status), a backup or restore is already running, or the server stayed busy for 30 seconds; nothing was changed | — |
 | `managed_by_iam` | 409 | The Admin changes an AGT member's name, role or password: AGT IAM sets those; only activate, deactivate or delete | — |
