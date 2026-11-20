@@ -24,7 +24,7 @@ export interface LeaderboardEntry {
 
 export interface PublicLeaderboard {
   category: PublicCategory;
-  /** Results count from a long or full quiz with at least this many answers. */
+  /** Results count from a quiz of any length with at least this many answers (#60). */
   minimumAnswers: number;
   entries: LeaderboardEntry[];
 }

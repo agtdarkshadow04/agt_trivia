@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { PublicCategory, PublicLeaderboard } from '../lib/api';
 import { ApiError } from '../lib/client';
-import { getLeaderboard } from '../lib/playerApi';
+import { getLeaderboard, getMemberPreferences } from '../lib/playerApi';
 import { formatTranslation } from '../translations';
 import { useI18n } from './I18n';
 import { RefreshIcon } from './Icons';
@@ -22,6 +22,12 @@ export function Leaderboard({ category, signedIn, onPlay }: { category: PublicCa
   const { t, error, number, percent } = useI18n();
   const heading = useViewHeading(`leaderboard:${category.id}`);
   const [state, setState] = useState<BoardState>({ status: 'loading' });
+  // #60: the opt-in hint is only for members who have not opted in; null while unknown.
+  const [optedIn, setOptedIn] = useState<boolean | null>(null);
+  useEffect(() => {
+    if (!signedIn) { setOptedIn(null); return; }
+    getMemberPreferences().then((preferences) => setOptedIn(preferences.leaderboardOptIn), () => setOptedIn(null));
+  }, [signedIn]);
 
   const load = useCallback(async () => {
     setState({ status: 'loading' });
@@ -78,7 +84,7 @@ export function Leaderboard({ category, signedIn, onPlay }: { category: PublicCa
               </table>
             </div>
           )}
-          {signedIn && <p className="field-help">{t.leaderboard.joinHint}</p>}
+          {signedIn && optedIn === false && <p className="field-help">{t.leaderboard.joinHint}</p>}
         </>
       )}
     </section>

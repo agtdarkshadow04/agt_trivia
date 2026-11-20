@@ -42,16 +42,17 @@ async function signIn(page: Page, username: string) {
   await expect(page.getByRole('heading', { name: 'Choose a category' })).toBeVisible();
 }
 
-/** Plays Space's full quiz (12 questions), every answer right, until the result is saved. */
-async function playSpace(page: Page) {
+/** Plays Space's short (10 questions) or full (12) quiz, every answer right, until the result is saved. */
+async function playSpace(page: Page, length: 'Short' | 'Full') {
+  const total = length === 'Short' ? 10 : 12;
   await page.goto('/?category=space');
-  await page.getByRole('button', { name: /Full quiz/ }).click();
-  for (let number = 1; number <= 12; number += 1) {
-    await expect(page.getByText(`Question ${number} of 12`)).toBeVisible();
+  await page.getByRole('button', { name: new RegExp(`${length} quiz`) }).click();
+  for (let number = 1; number <= total; number += 1) {
+    await expect(page.getByText(`Question ${number} of ${total}`)).toBeVisible();
     const multi = await page.getByText('Select every correct answer').isVisible();
     for (const option of await page.getByRole(multi ? 'checkbox' : 'radio', { name: /^[A-D]?\s*(Also right|Right)/ }).all()) await option.check();
     await page.getByRole('button', { name: 'Lock answer' }).click();
-    await page.getByRole('button', { name: number === 12 ? 'View results' : 'Next question' }).click();
+    await page.getByRole('button', { name: number === total ? 'View results' : 'Next question' }).click();
   }
   await expect(page.getByRole('status').filter({ hasText: 'Saved to your history.' })).toBeVisible();
 }
@@ -85,7 +86,7 @@ test.describe('with leaderboards on', () => {
     await admin.close();
   });
 
-  test('a member who opts in appears by display name after a full quiz; one who did not, never', async ({ browser }) => {
+  test('a member who opts in appears by display name after a short quiz; one who did not, never', async ({ browser }) => {
     const ranker = await (await browser.newContext()).newPage();
     const watched = await watchPage(ranker);
     await signIn(ranker, 'e2e.ranker');
@@ -100,11 +101,12 @@ test.describe('with leaderboards on', () => {
     await expect(account.getByRole('status').filter({ hasText: 'You now appear on the leaderboards.' })).toBeVisible();
     await expect(optIn).toBeChecked();
     await account.getByRole('button', { name: 'Close' }).click();
-    await playSpace(ranker);
+    // #60: the Short quiz, the first length offered, counts like any quiz of at least quiz.shortLength questions.
+    await playSpace(ranker, 'Short');
 
     const other = await (await browser.newContext()).newPage();
     await signIn(other, 'e2e.private');
-    await playSpace(other);
+    await playSpace(other, 'Full');
 
     // The board, from the category's length choice.
     await ranker.goto('/?category=space');
@@ -116,6 +118,10 @@ test.describe('with leaderboards on', () => {
     await expect(row).toContainText('100%');
     await expect(ranker.getByRole('rowheader', { name: 'Traveller e2e.private' })).toHaveCount(0);
     await expect(ranker.getByText('at least 10 questions')).toBeVisible();
+    // #60: the opt-in hint is only for members who have not opted in.
+    await expect(ranker.getByText('To appear here, turn on')).toHaveCount(0);
+    await other.goto('/?category=space&view=leaderboard');
+    await expect(other.getByText('To appear here, turn on “Show me on leaderboards” in your account.')).toBeVisible();
     await expectAccessible(ranker, 'leaderboard');
     // Play this category goes back to the length choice.
     await ranker.getByRole('button', { name: 'Play this category' }).click();

@@ -61,8 +61,8 @@ Editors write questions and submit them for review; Moderators approve or reject
 `GET /api/categories/{id}/leaderboard` is public while `leaderboards.enabled` is on (`403 leaderboards_closed`
 otherwise; `404` for an unknown category). It lists at most `leaderboards.size` active members who chose to appear,
 `{ rank, displayName, bestPercent, plays }` each: nothing else about them, no ID or username (API-3). Only results
-saved with an `attemptToken` (#45) count, of a `long` or `all` quiz with at least `minimumAnswers` answers
-(`quiz.shortLength`, or every approved question of a smaller category). Members rank by their best percentage, then
+saved with an `attemptToken` (#45) count, of any length with at least `minimumAnswers` answers (`quiz.shortLength`,
+or every approved question of a smaller category; #60). Members rank by their best percentage, then
 by more plays, then by who reached it first. Members choose with `PUT /api/member/preferences`
 (`{ leaderboardOptIn }`, off by default); turning it off takes them off every board at once.
 

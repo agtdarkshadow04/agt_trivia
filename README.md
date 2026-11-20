@@ -358,10 +358,10 @@ quiz itself. A link to a board while they are off says that leaderboards are tur
 
 Only members who turn on **Show me on leaderboards** in their account menu appear, and only by their **display name**,
 with their best percentage and how many results count; turning it off takes them off every board at once. **Their
-display name becomes public**, which the account menu says. Inactive members never appear. A result counts when it was
-a long or full quiz of at least `quiz.shortLength` questions (every question of a smaller category) and was saved
-from the quiz the server drew (a signed attempt), so hand-made or short results never place anyone. Members are
-ranked by their best percentage, then by more results, then by who reached it first; `leaderboards.size` sets how
+display name becomes public**, which the account menu says. Inactive members never appear. A result counts when it had
+at least `quiz.shortLength` questions (every question of a smaller category), whatever the quiz length, and was saved
+from the quiz the server drew (a signed attempt), so hand-made results or very small draws never place anyone. Members
+are ranked by their best percentage, then by more results, then by who reached it first; `leaderboards.size` sets how
 many are shown. To take an unwanted name off the boards, the Admin renames or deactivates the member.
 
 ## Writing and reviewing questions
