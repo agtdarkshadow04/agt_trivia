@@ -276,7 +276,7 @@ export function AdminApp() {
             <SettingsIcon />
           </button>
           <a className="button button-secondary" href="/">{a.app.viewSite}</a>
-          {session && <button className="button button-secondary" type="button" onClick={() => void leave()}><LogOutIcon />{a.app.signOut}</button>}
+          {session && <button className="button button-secondary button-with-icon" type="button" onClick={() => void leave()}><LogOutIcon />{a.app.signOut}</button>}
         </div>
       </header>
       <MaintenanceNotice />

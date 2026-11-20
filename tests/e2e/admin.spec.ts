@@ -174,6 +174,23 @@ test.describe('signed in', () => {
     await expect(page.getByRole('region', { name: 'Audit log' }).getByRole('row').filter({ hasText: 'clearServerLog' })).toBeVisible();
   });
 
+  test('buttons with an icon and a label keep the icon at text size (FE-7)', async ({ page }) => {
+    // Without .button-with-icon an icon keeps its 24 px SVG size and sits against the label (#39).
+    const unsized = page.locator('.button:not(.button-icon):not(.button-with-icon):has(svg.icon)');
+    await page.goto('/admin');
+    for (const tab of ['Members', 'Settings', 'Server log', 'Audit log', 'Import', 'Backup & restore', 'Account']) {
+      await page.getByRole('tab', { name: new RegExp(`^${tab.replace('&', '\\&')}`) }).click();
+      await expect(page.getByRole('tabpanel')).toBeVisible();
+      await page.waitForLoadState('networkidle');
+      await expect(unsized, tab).toHaveCount(0);
+    }
+    const signOut = page.getByRole('button', { name: 'Sign out' });
+    const icon = signOut.locator('svg.icon');
+    const [iconBox, buttonBox] = [await icon.boundingBox(), await signOut.boundingBox()];
+    expect(iconBox!.height).toBeLessThan(20);
+    expect(iconBox!.y + iconBox!.height / 2).toBeCloseTo(buttonBox!.y + buttonBox!.height / 2, 0);
+  });
+
   test('every locale renders the dashboard with no missing text', async ({ page }) => {
     for (const language of ['de', 'th', 'zh', 'hi', 'ja', 'pt']) {
       await preferences(page, { language });

@@ -57,8 +57,8 @@ function PreviewDetails({ preview }: { preview: RestoreReport }) {
           )}
           {config.content !== null && (
             <div className="form-actions">
-              <button className="button button-secondary" type="button" onClick={() => saveFile(new Blob([config.content!], { type: 'text/yaml' }), 'config.from-backup.yaml')}>
-                <DownloadIcon /> {a.backup.downloadConfig}
+              <button className="button button-secondary button-with-icon" type="button" onClick={() => saveFile(new Blob([config.content!], { type: 'text/yaml' }), 'config.from-backup.yaml')}>
+                <DownloadIcon />{a.backup.downloadConfig}
               </button>
             </div>
           )}
@@ -146,8 +146,8 @@ export function BackupPanel({ onRestored }: { onRestored(): void }) {
         <h2 id="backup-download-title">{a.backup.downloadTitle}</h2>
         <p className="field-help">{a.backup.downloadHelp}</p>
         <div className="form-actions">
-          <button className="button button-primary" disabled={busy} type="button" onClick={() => void download()}>
-            <DownloadIcon /> {a.backup.download}
+          <button className="button button-primary button-with-icon" disabled={busy} type="button" onClick={() => void download()}>
+            <DownloadIcon />{a.backup.download}
           </button>
         </div>
       </section>
@@ -164,7 +164,7 @@ export function BackupPanel({ onRestored }: { onRestored(): void }) {
             />
           </label>
           <div className="form-actions">
-            <button className="button button-secondary" disabled={busy || !file} type="submit"><EyeIcon /> {a.backup.preview}</button>
+            <button className="button button-secondary button-with-icon" disabled={busy || !file} type="submit"><EyeIcon />{a.backup.preview}</button>
           </div>
         </form>
       </section>
@@ -177,8 +177,8 @@ export function BackupPanel({ onRestored }: { onRestored(): void }) {
             {a.backup.understand}
           </label>
           <div className="form-actions">
-            <button className="button button-danger" disabled={busy || !confirmed} type="button" onClick={() => void restore()}>
-              <UploadIcon /> {a.backup.restore}
+            <button className="button button-danger button-with-icon" disabled={busy || !confirmed} type="button" onClick={() => void restore()}>
+              <UploadIcon />{a.backup.restore}
             </button>
           </div>
         </section>

@@ -4,6 +4,14 @@ All notable changes to AGT Galactic Trivia are documented in this file. The form
 [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/), and the project uses
 [Semantic Versioning](https://semver.org/) as the AGT Web Application Specification requires (§21).
 
+## [2.0.1] - Unreleased
+
+### Fixed
+
+- The admin dashboard's buttons with an icon and a label (Sign out, the log filters, export and clear, the import's
+  and backup's preview, download, import and restore) showed the icon at full size against the text; it is now
+  text-sized and spaced like the rest of the app (#39, #40).
+
 ## [2.0.0] - 2026-11-20
 
 ### Upgrade notes

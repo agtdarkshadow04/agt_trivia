@@ -124,7 +124,7 @@ export function ImportPanel() {
           ))}
           <p className="field-help">{a.import.fileHelp}</p>
           <div className="form-actions">
-            <button className="button button-secondary" disabled={busy || !chosen} type="submit"><EyeIcon /> {a.import.preview}</button>
+            <button className="button button-secondary button-with-icon" disabled={busy || !chosen} type="submit"><EyeIcon />{a.import.preview}</button>
           </div>
         </form>
       </section>
@@ -137,7 +137,7 @@ export function ImportPanel() {
             <>
               <p>{a.import.noProblems}</p>
               <div className="form-actions">
-                <button className="button button-primary" disabled={busy} type="button" onClick={() => void run('import')}><UploadIcon /> {a.import.import}</button>
+                <button className="button button-primary button-with-icon" disabled={busy} type="button" onClick={() => void run('import')}><UploadIcon />{a.import.import}</button>
               </div>
             </>
           )}
