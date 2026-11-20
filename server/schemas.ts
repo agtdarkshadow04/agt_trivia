@@ -106,7 +106,7 @@ export const QuizQuery = object({ length: QuizLength });
 export const PublicQuestion = object({
   id: Type.String({ format: 'uuid' }),
   prompt: Type.String(),
-  choices: Type.Array(object({ id: Type.String({ format: 'uuid' }), text: Type.String() }), { description: "2 to 4 answers, in the author's order." }),
+  choices: Type.Array(object({ id: Type.String({ format: 'uuid' }), text: Type.String() }), { description: '2 to 4 answers, shuffled anew for every quiz.' }),
   correctChoiceIds: Type.Array(Type.String({ format: 'uuid' }), { description: 'One ID, or several for a multi-answer question. Anonymous play is graded in the browser, as in 1.x.' }),
   authorCredit: Type.Union([Type.String(), Type.Null()], { description: 'The "Submitted by" credit, or null.' }),
 }, 'An approved question as visitors see it (API-3): never its review note or the members who wrote or approved it.');

@@ -63,7 +63,7 @@ export type QuizLength = 'short' | 'long' | 'all';
 export interface PublicQuestion {
   id: string;
   prompt: string;
-  /** 2 to 4 answers, in the author's order. */
+  /** 2 to 4 answers, shuffled anew for every quiz (#41). */
   choices: { id: string; text: string }[];
   /** More than one for a multi-answer question. */
   correctChoiceIds: string[];

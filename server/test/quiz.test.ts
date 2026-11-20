@@ -137,10 +137,11 @@ describe('the public quiz reads (API-3)', () => {
     const response = await app.inject(`/api/categories/${seeded.category.id}/quiz?length=all`);
     const [question] = response.json().questions;
     const stored = seeded.questions.find((entry) => entry.id === question.id)!;
-    assert.deepEqual(question, {
+    const byId = (first: { id: string }, second: { id: string }) => first.id.localeCompare(second.id);
+    assert.deepEqual({ ...question, choices: [...question.choices].sort(byId) }, {
       id: stored.id,
       prompt: stored.prompt,
-      choices: stored.choices.map((choice) => ({ id: choice.id, text: choice.text })),
+      choices: stored.choices.map((choice) => ({ id: choice.id, text: choice.text })).sort(byId),
       correctChoiceIds: [stored.choices[0].id],
       authorCredit: null,
     });
@@ -149,7 +150,7 @@ describe('the public quiz reads (API-3)', () => {
     }
   });
 
-  it('gives a multi-answer question every correct choice, in the author\'s order', async () => {
+  it('gives a multi-answer question every correct choice', async () => {
     const question = await withDataWrite(context.operations, () => insertQuestion(context.db, {
       ...sampleQuestion(seeded.category.id, 'Gas giants?'),
       authorCredit: 'A traveller',
@@ -157,8 +158,8 @@ describe('the public quiz reads (API-3)', () => {
     }));
     const quiz = (await app.inject(`/api/categories/${seeded.category.id}/quiz?length=all`)).json();
     const served = quiz.questions.find((entry: { id: string }) => entry.id === question.id);
-    assert.deepEqual(served.choices.map((choice: { text: string }) => choice.text), ['Jupiter', 'Mars', 'Saturn']);
-    assert.deepEqual(served.correctChoiceIds, [question.choices[0].id, question.choices[2].id]);
+    assert.deepEqual(served.choices.map((choice: { text: string }) => choice.text).sort(), ['Jupiter', 'Mars', 'Saturn']);
+    assert.deepEqual([...served.correctChoiceIds].sort(), [question.choices[0].id, question.choices[2].id].sort());
     assert.equal(served.authorCredit, 'A traveller');
   });
 
@@ -167,6 +168,23 @@ describe('the public quiz reads (API-3)', () => {
     const last = publicQuiz(context, seeded.category.id, 'short', () => 0.999).questions.map((question) => question.id);
     assert.notDeepEqual(first, last);
     assert.equal(publicQuiz(context, seeded.category.id, 'all').questions.length, 5);
+  });
+
+  it('shuffles the choices anew for every quiz, keeping their IDs and the correct ones (#41)', async () => {
+    const question = await withDataWrite(context.operations, () => insertQuestion(context.db, {
+      ...sampleQuestion(seeded.category.id, 'Which comes first?'),
+      choices: [{ text: 'One', isCorrect: true }, { text: 'Two', isCorrect: false }, { text: 'Three', isCorrect: false }, { text: 'Four', isCorrect: false }],
+    }));
+    const served = (random: () => number) => publicQuiz(context, seeded.category.id, 'all', random).questions.find((entry) => entry.id === question.id)!;
+    const stored = question.choices.map((choice) => ({ id: choice.id, text: choice.text }));
+    // With a random() of 0 Fisher–Yates moves every choice: none stays where the author put it.
+    const shuffled = served(() => 0);
+    assert.notDeepEqual(shuffled.choices, stored);
+    shuffled.choices.forEach((choice, index) => assert.notEqual(choice.id, stored[index].id));
+    assert.deepEqual([...shuffled.choices].sort((a, b) => a.id.localeCompare(b.id)), [...stored].sort((a, b) => a.id.localeCompare(b.id)));
+    assert.deepEqual(shuffled.correctChoiceIds, [question.choices[0].id]);
+    // Different draws give different orders.
+    assert.notDeepEqual(served(() => 0).choices, served(() => 0.999).choices);
   });
 
   it('answers 404 for an unknown or malformed category, and accepts an uppercase ID', async () => {

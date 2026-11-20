@@ -11,6 +11,9 @@ All notable changes to AGT Galactic Trivia are documented in this file. The form
 - The admin dashboard's buttons with an icon and a label (Sign out, the log filters, export and clear, the import's
   and backup's preview, download, import and restore) showed the icon at full size against the text; it is now
   text-sized and spaced like the rest of the app (#39, #40).
+- A quiz showed every question's answers in the order they were written, and the 1.x sheet often lists the correct
+  answer first, so "A" was right far more often than chance. The answers are now shuffled each time a quiz is drawn
+  (#41).
 
 ## [2.0.0] - 2026-11-20
 
