@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { displayPercent, isCorrectSelection, questionsForQuiz, rankFor, scorePercent, shuffle, sortCategories } from './quiz.js';
+import { availableLengths, displayPercent, isCorrectSelection, questionsForQuiz, rankFor, scorePercent, shuffle, sortCategories } from './quiz.js';
 
 describe('quiz helpers', () => {
   it('sorts by ascending priority and then by name', () => {
@@ -71,5 +71,16 @@ describe('quiz helpers', () => {
     assert.equal(displayPercent(100), 100);
     assert.equal(displayPercent(0), 0);
     assert.equal(displayPercent(74.5), 75);
+  });
+
+  it('offers only the quiz lengths that differ, and always the full quiz (#43)', () => {
+    assert.deepEqual(availableLengths(6, 10, 30), ['all']);
+    assert.deepEqual(availableLengths(10, 10, 30), ['all'], 'a short quiz of 10 is the full one');
+    assert.deepEqual(availableLengths(11, 10, 30), ['short', 'all']);
+    assert.deepEqual(availableLengths(20, 10, 30), ['short', 'all']);
+    assert.deepEqual(availableLengths(30, 10, 30), ['short', 'all'], 'a long quiz of 30 is the full one');
+    assert.deepEqual(availableLengths(31, 10, 30), ['short', 'long', 'all']);
+    assert.deepEqual(availableLengths(0, 10, 30), ['all']);
+    assert.deepEqual(availableLengths(3, 1, 2), ['short', 'long', 'all']);
   });
 });

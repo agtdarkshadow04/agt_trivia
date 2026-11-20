@@ -41,15 +41,17 @@ test('lists the categories in order, with the empty one disabled', async ({ page
   expect(await watched.violations()).toEqual([]);
 });
 
-test('plays a short quiz with single- and multi-answer questions, then replays and chooses another', async ({ page }) => {
+test('plays a quiz with single- and multi-answer questions, then replays and chooses another', async ({ page }) => {
   const watched = await watchPage(page);
   await page.goto('/');
   await page.getByRole('button', { name: /Biology/ }).click();
   await expect(page).toHaveURL(/\?category=bio$/);
   await expect(page.getByRole('heading', { name: 'Choose quiz length' })).toBeFocused();
   await expect(page.getByText('Questions available: 3')).toBeVisible();
+  // #43: with 3 questions a short or long quiz would be the full one, so only the full quiz is offered.
+  await expect(page.getByRole('button', { name: /(Short|Long) quiz/ })).toHaveCount(0);
   await expectAccessible(page, 'length choice');
-  await page.getByRole('button', { name: /Short quiz/ }).click();
+  await page.getByRole('button', { name: /Full quiz/ }).click();
 
   // The quiz order is random: the multi-answer question is answered right, and of the two single-answer
   // ones the first right and the second wrong, whatever their positions, so the score is always 2 of 3.
@@ -96,7 +98,7 @@ test('plays with the keyboard alone (A11Y-5)', async ({ page }) => {
   await page.goto('/?category=bio');
   await page.getByRole('heading', { name: 'Choose quiz length' }).focus();
   await page.keyboard.press('Tab');
-  await expect(page.getByRole('button', { name: /Short quiz/ })).toBeFocused();
+  await expect(page.getByRole('button', { name: /Full quiz/ })).toBeFocused();
   await page.keyboard.press('Enter');
   for (let number = 1; number <= 3; number += 1) {
     await expect(page.getByText(`Question ${number} of 3`)).toBeVisible();
@@ -135,9 +137,15 @@ test('follows deep links, ignoring case, and falls back to the list (FE-4)', asy
   await expect(page.getByRole('heading', { name: 'Choose a category' })).toBeVisible();
   await page.goForward();
   await expect(page.getByRole('heading', { name: 'Choose quiz length' })).toBeVisible();
-  // A long quiz has quiz.longLength questions (30 by default), here all 12.
-  await page.getByRole('button', { name: /Long quiz/ }).click();
-  await expect(page.getByText('Question 1 of 12')).toBeVisible();
+  // #43: Space's 12 questions give a short quiz of 10 (quiz.shortLength) and the full 12; a long quiz of
+  // quiz.longLength (30) would be the full one, so it is not offered.
+  const lengths = page.getByRole('listitem').getByRole('button');
+  await expect(lengths).toHaveCount(2);
+  await expect(lengths.nth(0)).toContainText('Short quiz');
+  await expect(lengths.nth(0)).toContainText('Questions: up to 10');
+  await expect(lengths.nth(1)).toContainText('Full quiz');
+  await page.getByRole('button', { name: /Short quiz/ }).click();
+  await expect(page.getByText('Question 1 of 10')).toBeVisible();
 });
 
 test('shows a load error with a retry (FE-5)', async ({ page }) => {
@@ -190,10 +198,10 @@ test('every view fits every width, and 300 px at 2× text (UI-12, A11Y-6)', asyn
   const views: [string, (page: Page) => Promise<void>][] = [
     ['category list', async () => { await page.goto('/'); }],
     ['length choice', async () => { await page.goto('/?category=bio'); }],
-    ['question', async () => { await page.goto('/?category=bio'); await page.getByRole('button', { name: /Short quiz/ }).click(); await answer(page, false); }],
+    ['question', async () => { await page.goto('/?category=bio'); await page.getByRole('button', { name: /Full quiz/ }).click(); await answer(page, false); }],
     ['results', async () => {
       await page.goto('/?category=bio');
-      await page.getByRole('button', { name: /Short quiz/ }).click();
+      await page.getByRole('button', { name: /Full quiz/ }).click();
       for (let number = 1; number <= 3; number += 1) {
         await answer(page, true);
         await page.getByRole('button', { name: number === 3 ? 'View results' : 'Next question' }).click();

@@ -1,3 +1,5 @@
+import type { QuizLength } from './api.js';
+
 /**
  * Quiz logic without a DOM (FE-8), ported from the 1.x static app
  * (`src/lib/quiz.js`). The player UI (#16) builds on it.
@@ -14,6 +16,21 @@ export function sortCategories<T extends SortableCategory>(categories: readonly 
     (first, second) => first.priority - second.priority
       || first.name.localeCompare(second.name, undefined, { sensitivity: 'base' }),
   );
+}
+
+/**
+ * The quiz lengths worth offering for a category of `count` approved
+ * questions (#43): a length only when it gives fewer questions than the next
+ * longer one, and always the full quiz (quiz.longLength is always more than
+ * quiz.shortLength, CFG-8). With 6 questions and lengths 10/30
+ * that is only `all`; with 20, `short` and `all`; with 40, all three.
+ */
+export function availableLengths(count: number, shortLength: number, longLength: number): QuizLength[] {
+  const lengths: QuizLength[] = [];
+  if (shortLength < count) lengths.push('short');
+  if (longLength < count) lengths.push('long');
+  lengths.push('all');
+  return lengths;
 }
 
 /** A shuffled copy (Fisher–Yates); the input is left as it is. */
