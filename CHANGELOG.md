@@ -9,7 +9,8 @@ All notable changes to AGT Galactic Trivia are documented in this file. The form
 ### Upgrade notes
 
 - 2.0.0 replaces the static AWS Amplify app and its published Google Sheet with a self-hosted server. There is
-  nothing to upgrade in place: install 2.0.0 as the README describes, then import the sheet's data. The release
+  nothing to upgrade in place: install 2.0.0 as the README describes, then bring the sheet's categories and questions
+  in on the dashboard's **Import** tab. The release
   notes below grow with each part of the rebuild (#6).
 - Node.js 26 and npm 11.20 or newer within npm 11 are required.
 
@@ -81,6 +82,10 @@ All notable changes to AGT Galactic Trivia are documented in this file. The form
   server. **My scores** (`/?page=scores`) shows their plays, best and average percentage per category and their
   results, newest first; only they can see it, and **Clear history** deletes it. The Settings dialog now also sets
   the time zone for these dates (#21).
+- **Import** tab in the admin dashboard: upload the 1.x Google Sheet's `validCategories` and `pendingQuestions` tabs
+  as CSV, preview what would be added and every row that needs fixing (with its file, row and column), and import it
+  all in one go. Existing categories and questions are skipped, so importing again adds nothing; the files are never
+  kept. The README shows how to download the tabs from Google Sheets (#22).
 
 ### Changed
 

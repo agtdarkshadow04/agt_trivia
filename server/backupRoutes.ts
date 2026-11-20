@@ -117,7 +117,7 @@ export const backupRoutes: readonly RouteDefinition[] = [
     auth: 'admin',
     // The restore takes the operation lock itself, which a data write's count would block (BAK-4, BAK-8).
     writesData: false,
-    multipart: true,
+    multipart: S.RestoreUploadDocument,
     rateLimit: 'adminUploads',
     operationId: 'restoreBackup',
     tag: 'admin',

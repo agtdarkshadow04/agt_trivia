@@ -1,5 +1,6 @@
 import type { AdminMember, MemberRole } from '../lib/api';
 import { ApiError, apiFetch, apiRequest, attachmentName, type RequestOptions } from '../lib/client';
+import type { FieldError } from '../lib/errors';
 
 /**
  * The admin dashboard's API calls, all through `apiRequest()` (FE-2). A `401`
@@ -227,3 +228,23 @@ export const setMemberPassword = (id: string, password: string) => (
 );
 
 export const deleteMember = (id: string) => adminRequest<void>(`/api/admin/members/${encodeURIComponent(id)}`, { method: 'DELETE' });
+
+// --- The sheet import (#22) -------------------------------------------------------
+
+/** What an import of the 1.x sheet does, or did. */
+export interface ImportReport {
+  action: 'preview' | 'import';
+  imported: boolean;
+  categories: { create: number; skip: number };
+  questions: { create: number; skip: number; approved: number; pending: number };
+  /** Every bad row: `field` is the file, `params.row` the sheet row and `params.column` the column. */
+  problems: FieldError[];
+}
+
+export function importSheet(action: 'preview' | 'import', files: { categories: File | null; questions: File | null }) {
+  const form = new FormData();
+  form.append('action', action);
+  if (files.categories) form.append('categories', files.categories);
+  if (files.questions) form.append('questions', files.questions);
+  return adminRequest<ImportReport>('/api/admin/import', { method: 'POST', body: form });
+}
