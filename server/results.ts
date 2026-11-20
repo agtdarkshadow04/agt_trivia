@@ -2,6 +2,7 @@ import type { MemberSession, QuizLength } from '../src/lib/api.js';
 import { isUuidV4 } from '../src/lib/api.js';
 import { fieldError, type FieldError } from '../src/lib/errors.js';
 import { displayPercent, isCorrectSelection, scorePercent } from '../src/lib/quiz.js';
+import { questionsDigest, verifyAttempt } from './attempts.js';
 import type { AppContext } from './context.js';
 import { HttpError } from './http.js';
 import { getCategory } from './repository/categories.js';
@@ -24,6 +25,8 @@ export interface SubmittedAnswer {
 export interface ResultSubmission {
   categoryId: string;
   length: QuizLength;
+  /** The drawn quiz's signed attempt (#45); optional until 3.0.0, deprecated without. */
+  attemptToken?: string;
   answers: SubmittedAnswer[];
 }
 
@@ -79,11 +82,37 @@ export class ResultService {
    * must belong to the category; at most as many answers as the category has
    * approved questions. Returns the stored result and the IDs of the questions
    * that were left out because they are no longer approved.
+   *
+   * With an `attemptToken` (#45) the answers must be exactly the attempt's
+   * questions, in the order drawn, for its category and length, within a day;
+   * an attempt already saved by this member returns that result again
+   * (`repeated`), and one saved by another member is a `409 conflict`.
    */
-  submit(submission: ResultSubmission) {
+  submit(submission: ResultSubmission): { result: MemberResult; skippedQuestionIds: string[]; repeated: boolean } {
     const categoryId = submission.categoryId.toLowerCase();
     const category = isUuidV4(categoryId) ? getCategory(this.db, categoryId) : null;
     if (!category) throw new HttpError(404, 'not_found', 'No such category.');
+    let attemptId: string | null = null;
+    if (submission.attemptToken !== undefined) {
+      const verified = verifyAttempt(this.db, submission.attemptToken, this.now());
+      if ('problem' in verified) {
+        throw new HttpError(400, 'attempt_invalid', verified.problem === 'expired'
+          ? 'The quiz was drawn more than a day ago; play it again to save a result.'
+          : 'The attempt token was not issued by this server.', { params: { reason: verified.problem } });
+      }
+      const { claims } = verified;
+      const answered = submission.answers.map((answer) => answer.questionId);
+      if (claims.categoryId !== category.id || claims.length !== submission.length
+        || claims.questionCount !== answered.length || claims.questionsDigest !== questionsDigest(answered)) {
+        throw new HttpError(400, 'attempt_invalid', 'The answers are not those of the quiz the attempt was drawn for.', { params: { reason: 'mismatch' } });
+      }
+      const saved = repo.getResultByAttempt(this.db, claims.attemptId);
+      if (saved) {
+        if (saved.memberId !== this.member.id) throw new HttpError(409, 'conflict', 'This quiz attempt was already saved.');
+        return { result: toMemberResult(saved), skippedQuestionIds: [], repeated: true };
+      }
+      attemptId = claims.attemptId;
+    }
     const approved = new Map(approvedQuestions(this.db, category.id).map((question) => [question.id, question]));
     const problems: FieldError[] = [];
     if (submission.answers.length === 0) problems.push(fieldError('answers', 'too_few', 'A result needs at least one answer.', { min: 1 }));
@@ -121,9 +150,9 @@ export class ResultService {
     if (problems.length) throw new HttpError(400, 'validation_failed', 'The result is not valid.', { fields: problems });
     if (!graded.length) throw new HttpError(409, 'conflict', 'None of the questions is approved any more; nothing was saved.');
     const stored = repo.insertResult(this.db, {
-      memberId: this.member.id, categoryId: category.id, categoryName: category.name, length: submission.length, answers: graded,
+      memberId: this.member.id, categoryId: category.id, categoryName: category.name, length: submission.length, attemptId, answers: graded,
     }, this.now());
-    return { result: toMemberResult(stored), skippedQuestionIds: skipped };
+    return { result: toMemberResult(stored), skippedQuestionIds: skipped, repeated: false };
   }
 
   list(query: { categoryId?: string; limit?: number; cursor?: string }) {

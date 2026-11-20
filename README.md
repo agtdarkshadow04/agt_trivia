@@ -334,7 +334,8 @@ Signed-in members, whatever their role, keep their results. When a member finish
 their answers to the server at once ("Saved to your history", with **Try again** if saving fails). The server grades
 them itself against the category's approved questions, so a score can't be made up in the browser; answers to
 questions that were unapproved or deleted while the quiz was played are left out, and the results screen says how
-many. Anonymous players see an invitation to sign in instead, and nothing is stored for them.
+many. Every quiz the server draws carries a signed attempt: the result must answer exactly the questions drawn,
+within a day, and each quiz is saved once, so **Try again** after a lost answer never saves it twice. Anonymous players see an invitation to sign in instead, and nothing is stored for them.
 
 **My scores** (the trophy button in the header, `/?page=scores`) shows, per category, how often the member played,
 their best and average percentage and when they last played, and their history, newest first, with dates in the
@@ -457,7 +458,7 @@ The **Backup & restore** tab of the dashboard downloads a backup and restores on
 `agt-trivia-backup-<time>.zip`, with:
 
 - `database.sqlite`: a consistent copy of the database (the Admin account and the dashboard settings; categories,
-  questions, members and their score histories), without sessions;
+  questions, members and their score histories; the generated key that signs quiz attempts), without sessions;
 - `config.yaml`, when the server has one;
 - `manifest.json`: the app and schema versions, the time, and each file's size and SHA-256 checksum.
 

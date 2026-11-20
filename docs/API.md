@@ -79,6 +79,13 @@ played, never a score. The server grades them against the category's approved qu
   the answer is `409 conflict` and nothing is saved.
 - There are 1 to as many answers as the category has approved questions (`answers` `too_few` or `too_many`); an
   unknown category answers `404`.
+- `attemptToken` (#45) is the `attempt.token` of the quiz `GET /api/categories/{id}/quiz` drew: an HMAC the server
+  signs with a generated key (`app_secrets`, SEC-8) over the attempt ID, the category, the length, the drawn questions
+  in order and an expiry a day later. Drawing a quiz stores nothing. With the token, the result's `categoryId`,
+  `length` and question IDs, in the order drawn, must match it (`400 attempt_invalid`, `params.reason` `invalid`,
+  `expired` or `mismatch`). An attempt is saved once: sending it again answers `200` with the saved result (and no
+  `skippedQuestionIds`), and another member sending it gets `409 conflict`. **A result without `attemptToken` is
+  deprecated**: it is still graded and saved as before, but 3.0.0 will refuse it (VER-10).
 
 The audit log records a saved result with its category, length, score and total, never the answers (LOG-14).
 
@@ -103,7 +110,7 @@ twice adds nothing. The audit log records the action, the files and the counts, 
 | `GET /api/health` | `{ "status": "ok" }` when the server and its database answer (SRV-11) |
 | `GET /api/settings/public` | The settings the player UI needs: `siteTitle`, `supportUrl`, `quizShortLength`, `quizLongLength`, and `agtSignIn` (AGT sign-in is on and configured) (CFG-10) |
 | `GET /api/categories` | Every category, `[{ id, shortName, name, description, priority, questionCount }]`, lower `priority` first, then by name; `questionCount` counts approved questions. A plain array (API-8) |
-| `GET /api/categories/{id}/quiz?length=short\|long\|all` | A random quiz: `{ category, length, questions }`, with `quiz.shortLength`, `quiz.longLength` or all approved questions (fewer when the category has fewer). Each question is `{ id, prompt, choices: [{ id, text }], correctChoiceIds, authorCredit }`, choices shuffled anew for every quiz (each keeps its ID); more than one correct choice makes it a multi-answer question. An unknown or malformed `id` answers `404 not_found` |
+| `GET /api/categories/{id}/quiz?length=short\|long\|all` | A random quiz: `{ category, length, questions, attempt }`, with `quiz.shortLength`, `quiz.longLength` or all approved questions (fewer when the category has fewer). Each question is `{ id, prompt, choices: [{ id, text }], correctChoiceIds, authorCredit }`, choices shuffled anew for every quiz (each keeps its ID); more than one correct choice makes it a multi-answer question. `attempt` is `{ id, token, expiresAt }`, the signed attempt a member's result sends back (#45). An unknown or malformed `id` answers `404 not_found` |
 | `GET /api/setup/status` | `{ adminExists, setupPasswordConfigured }` (AUTH-5) |
 | `POST /api/setup` | `{ setupPassword, username, password }`: creates the Admin with `AGT_TRIVIA_SETUP_PASSWORD` and signs it in; `201 { username }` |
 | `POST /api/admin/login` | `{ username, password }`: signs the Admin in; `200 { username }` |
@@ -129,7 +136,7 @@ twice adds nothing. The audit log records the action, the files and the counts, 
 | `POST /api/member/categories` | `{ shortName, name, description, priority }`: creates a category; `201 { category, notices }` |
 | `PUT /api/member/categories/{id}` | The same fields and `version`: replaces the category; `200 { category, notices }` |
 | `DELETE /api/member/categories/{id}?version=` | Deletes a category without questions (`409 category_not_empty` otherwise); `204` |
-| `POST /api/member/results` | `{ categoryId, length, answers: [{ questionId, choiceIds }] }`: grades a finished quiz and saves it in the member's history (#21); `201 { result, skippedQuestionIds, notices }`. A result is `{ id, categoryId, categoryName, length, score, total, percent, finishedAt }`; `percent` is rounded, but 100 only for a perfect score and 0 only for none right |
+| `POST /api/member/results` | `{ categoryId, length, attemptToken, answers: [{ questionId, choiceIds }] }`: grades a finished quiz and saves it in the member's history (#21); `201 { result, skippedQuestionIds, notices }`, or `200` with the saved result when the attempt was already saved (#45; `attemptToken` is optional until 3.0.0, deprecated without). A result is `{ id, categoryId, categoryName, length, score, total, percent, finishedAt }`; `percent` is rounded, but 100 only for a perfect score and 0 only for none right |
 | `GET /api/member/results` | The member's own results, newest first: `{ items, nextCursor }` (API-8; `limit`, `cursor`, `categoryId`) |
 | `DELETE /api/member/results` | Clears the member's own history; `204` |
 | `GET /api/member/stats` | Per category that still exists: `[{ categoryId, categoryName, plays, bestPercent, averagePercent, lastPlayedAt }]`, the most recently played first; percentages are rounded like `percent` |
@@ -173,6 +180,7 @@ and `fields` lists field-level problems, each with a `field` (the request proper
 | `unknown_setting` | 400 | A settings update names a key that is not a dashboard setting | `{ key }` |
 | `invalid_setting` | 400 | A settings update has a value the setting does not allow | `{ key }` |
 | `file_required` | 400 | A restore upload without its `backup` file | — |
+| `attempt_invalid` | 400 | A result's `attemptToken` cannot be used: not signed by this server (`params.reason` `invalid`), older than 24 hours (`expired`), or for another category, length or set of questions than the answers (`mismatch`); nothing was saved | `{ reason }` |
 | `unauthorized` | 401 | No valid Admin session on an Admin route, or no valid member session on a member route | — |
 | `invalid_credentials` | 401 | Wrong username or password, or wrong current password | — |
 | `invalid_setup_password` | 401 | Wrong setup password | — |

@@ -21,10 +21,12 @@ type SaveState =
   | { status: 'saved'; skipped: number }
   | { status: 'error'; cause: unknown };
 
-export function SaveResult({ member, categoryId, length, answers, onSignIn }: {
+export function SaveResult({ member, categoryId, length, attemptToken, answers, onSignIn }: {
   member: MemberSession | null | undefined;
   categoryId: string;
   length: QuizLength;
+  /** The drawn quiz's signed attempt (#45): a retry after a lost answer saves nothing twice. */
+  attemptToken: string;
   answers: readonly { questionId: string; choiceIds: readonly string[] }[];
   onSignIn(): void;
 }) {
@@ -36,12 +38,12 @@ export function SaveResult({ member, categoryId, length, answers, onSignIn }: {
   const save = useCallback(async () => {
     setState({ status: 'saving' });
     try {
-      const saved = await saveResult(categoryId, length, answers);
+      const saved = await saveResult(categoryId, length, attemptToken, answers);
       setState({ status: 'saved', skipped: saved.skippedQuestionIds.length });
     } catch (cause) {
       setState({ status: 'error', cause });
     }
-  }, [categoryId, length, answers]);
+  }, [categoryId, length, attemptToken, answers]);
 
   useEffect(() => {
     if (!member || sent.current === answers || answers.length === 0) return;

@@ -5,6 +5,7 @@ import { Transform } from 'node:stream';
 import BetterSqlite3 from 'better-sqlite3';
 import { settingKeys } from './config.js';
 import { lockedSettingKeys, settingValues, type AppContext } from './context.js';
+import { ensureAttemptKey } from './attempts.js';
 import { asOperation } from './dataWrite.js';
 import { EXPECTED_TABLES, missingTables, openSqlite, runMigrations, SCHEMA_VERSION, schemaVersion, type Sqlite } from './db.js';
 import type { RestoreWarningCode } from './backupCodes.js';
@@ -480,6 +481,8 @@ export class BackupService {
         this.context.db.replace(sqlite);
         runMigrations(sqlite);
         healthCheck(sqlite);
+        // SEC-8: a restored database without the generated secrets gets them here, as at startup (#45).
+        if (ensureAttemptKey(this.context.db)) this.log.info({ source: 'backup' }, 'Generated the quiz attempt key for the restored data.');
         // Step 6.1: settings config.yaml locks, and every session, in one transaction.
         dropped = asOperation(() => this.context.db.transaction((connection) => {
           const locked = lockedSettingKeys(this.context.config);

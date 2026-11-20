@@ -8,6 +8,8 @@ import yauzl from 'yauzl';
 import yazl from 'yazl';
 import { buildApp } from '../app.js';
 import { lineDiff, markerFile, type BackupHooks } from '../backup.js';
+import { ATTEMPT_KEY_NAME } from '../attempts.js';
+import { getSecret } from '../repository/secrets.js';
 import { readSettings } from '../repository/settings.js';
 import { isSafePath, openSafeZip } from '../zip.js';
 import { adminCookie, testContext, type TestContextOptions } from './helpers.js';
@@ -201,6 +203,28 @@ describe('restores (BAK-3, BAK-4, BAK-5)', () => {
       const entry = s.context.logs.listAudit({}, null, 100).find((candidate) => candidate.action === 'restoreBackup' && candidate.outcome === 'success');
       assert.ok(entry);
       assert.doesNotMatch(JSON.stringify(entry), /Changed later|Backed up/);
+    } finally {
+      await s.close();
+    }
+  });
+
+  it('restores the quiz attempt key with the data, and creates one for a backup without it (SEC-8, #45)', async () => {
+    const s = server();
+    try {
+      const key = getSecret(s.context.db, ATTEMPT_KEY_NAME);
+      assert.ok(key);
+      const withKey = await download(s, await adminCookie(s.context));
+      s.context.db.connection.prepare('UPDATE app_secrets SET value = ? WHERE name = ?').run('replaced', ATTEMPT_KEY_NAME);
+      const restored = await upload(s, await adminCookie(s.context), 'restore', withKey);
+      assert.equal(restored.statusCode, 200, restored.body);
+      assert.equal(getSecret(s.context.db, ATTEMPT_KEY_NAME), key, 'the key is part of the backed-up data');
+
+      s.context.db.connection.prepare('DELETE FROM app_secrets').run();
+      const withoutKey = await download(s, await adminCookie(s.context));
+      const again = await upload(s, await adminCookie(s.context), 'restore', withoutKey);
+      assert.equal(again.statusCode, 200, again.body);
+      const created = getSecret(s.context.db, ATTEMPT_KEY_NAME);
+      assert.ok(created && created !== key, 'BAK-4 step 5 creates a missing key');
     } finally {
       await s.close();
     }

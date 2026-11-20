@@ -206,7 +206,7 @@ export function App() {
   } else if (isFinished(play.session)) {
     content = (
       <Results category={category} session={play.session} onReplay={() => void startQuiz(category, play.length)} onAnother={() => navigate(null)}>
-        <SaveResult member={member} categoryId={category.id} length={play.length} answers={play.session.answers} onSignIn={() => openPage('login')} />
+        <SaveResult member={member} categoryId={category.id} length={play.length} attemptToken={play.quiz.attempt.token} answers={play.session.answers} onSignIn={() => openPage('login')} />
       </Results>
     );
   } else {

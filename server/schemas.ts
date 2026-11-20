@@ -48,6 +48,7 @@ export const errorCodes = [
   'iam_unavailable',
   'maintenance',
   'iam_timeout',
+  'attempt_invalid',
 ] as const;
 
 const Params = Type.Record(Type.String(), Type.Union([Type.String(), Type.Number(), Type.Boolean()]), {
@@ -115,6 +116,11 @@ export const PublicQuiz = object({
   category: PublicCategory,
   length: QuizLength,
   questions: Type.Array(PublicQuestion, { description: 'A random selection of approved questions, as many as `length` asks for or all there are.' }),
+  attempt: object({
+    id: Type.String({ format: 'uuid' }),
+    token: Type.String({ description: 'Signed by the server; a member sends it back as `attemptToken` with their result.' }),
+    expiresAt: Type.String({ format: 'date-time', description: 'After this the result can no longer be saved.' }),
+  }, 'The signed attempt of this draw (#45). Nothing is stored when a quiz is drawn.'),
 });
 
 // --- Setup and the Admin session (AUTH-3..AUTH-6) --------------------------
@@ -498,6 +504,10 @@ export const QuizResult = object({
 export const ResultCreateBody = object({
   categoryId: Type.String({ maxLength: 64 }),
   length: QuizLength,
+  attemptToken: Type.Optional(Type.String({
+    maxLength: 1024,
+    description: "The `attempt.token` of the quiz that was played (#45): the answers must then be exactly its questions, in the order drawn, and the attempt is saved once (sending it again returns `200` with the saved result). A result without it is deprecated and will be refused from 3.0.0.",
+  })),
   answers: Type.Array(object({
     questionId: Type.String({ maxLength: 64 }),
     choiceIds: Type.Array(Type.String({ maxLength: 64 }), { maxItems: 4, description: 'The chosen answers; empty counts as wrong.' }),

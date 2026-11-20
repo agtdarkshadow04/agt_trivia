@@ -105,10 +105,11 @@ export const deleteCategory = (id: string, version: number) => (
 // --- Member score history (#21) ----------------------------------------------------
 
 /** Sends a finished quiz's answers; the server grades them and keeps the result. */
-export const saveResult = (categoryId: string, length: QuizLength, answers: readonly { questionId: string; choiceIds: readonly string[] }[]) => (
+/** Saves a finished quiz with its signed attempt (#45); sending the same attempt again returns the saved result. */
+export const saveResult = (categoryId: string, length: QuizLength, attemptToken: string, answers: readonly { questionId: string; choiceIds: readonly string[] }[]) => (
   apiRequest<{ result: QuizResultRecord; skippedQuestionIds: string[]; notices: FieldError[] }>('/api/member/results', {
     method: 'POST',
-    body: { categoryId, length, answers },
+    body: { categoryId, length, attemptToken, answers },
   })
 );
 

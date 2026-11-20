@@ -23,7 +23,11 @@ export async function withDataWrite<T>(lock: Pick<OperationLock, 'enterWrite'>, 
   }
 }
 
-/** The writes of a backup or restore itself, which already holds the operation lock (BAK-4 step 6.1). */
+/**
+ * The writes of a backup or restore itself, which already holds the operation
+ * lock (BAK-4 step 6.1), and of startup before the server listens (the
+ * generated secrets, SEC-8).
+ */
 export function asOperation<T>(work: () => T): T {
   return writing.run(true, work);
 }

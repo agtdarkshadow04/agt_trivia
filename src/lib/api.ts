@@ -71,10 +71,22 @@ export interface PublicQuestion {
 }
 
 /** `GET /api/categories/{id}/quiz?length=` (#15). */
+/**
+ * A drawn quiz's signed attempt (#45): a member's result sends `token` back,
+ * so the server saves only answers to exactly the questions drawn, once.
+ */
+export interface QuizAttempt {
+  id: string;
+  token: string;
+  /** After this the result can no longer be saved. */
+  expiresAt: string;
+}
+
 export interface PublicQuiz {
   category: PublicCategory;
   length: QuizLength;
   questions: PublicQuestion[];
+  attempt: QuizAttempt;
 }
 
 /** `GET /api/settings/public` (CFG-10): what the player UI needs, nothing sensitive. */

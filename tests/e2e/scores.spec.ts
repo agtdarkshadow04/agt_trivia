@@ -109,10 +109,12 @@ test('a failed save offers a retry, and anonymous players are invited to sign in
 
   await signIn(page, 'e2e.other');
   let failed = false;
-  // The server cannot fail on demand; this simulates one failed save.
+  // The server cannot fail on demand; this simulates one failed save whose answer was lost after the server had
+  // saved it (#45): the retry sends the same signed attempt, so the history still holds the quiz once.
   await page.route('**/api/member/results', async (route) => {
     if (failed || route.request().method() !== 'POST') return route.continue();
     failed = true;
+    expect((await route.fetch()).status()).toBe(201);
     return route.fulfill({ status: 500, contentType: 'application/json', body: JSON.stringify({ error: 'internal', message: 'Boom.' }) });
   });
   await playBiology(page, 2);
