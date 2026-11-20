@@ -400,8 +400,10 @@ open a dialog for the name, short name (1 to 16 letters, digits and hyphens), de
 lower comes first, then by name). Names and short names are unique, ignoring case.
 
 The short name is part of every link to the category (`/?category=<short name>`): changing it breaks the old links,
-and the edit dialog says so. A category can be deleted only once it has no questions of any status: move them to
-another category (edit each question) or delete them first. Players see a new category as soon as it exists, but can
+and the edit dialog says so. A category can be deleted only once it has no questions of any status. **Move
+questions** on a category's card (and on the message a refused delete shows) moves all of them at once, whatever
+their status, to the category you choose; members' saved scores keep the old category. If a moved question has the
+same text as one already in the target, the page says how many, so you can check them under **My questions**. Players see a new category as soon as it exists, but can
 choose it only once it has approved questions.
 
 ## Members and roles

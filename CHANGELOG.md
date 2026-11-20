@@ -16,6 +16,8 @@ All notable changes to AGT Galactic Trivia are documented in this file. The form
 - **Report a problem** with a question: signed-in members report a question while they play it or from the answer
   review, with a reason and optional details. Moderators see the open reports under **Reported questions** on the
   Review queue page, counted in the header, and mark them resolved or dismiss them (#46).
+- **Move questions** on the Categories page: Moderators move every question of a category, whatever its status, to
+  another category in one step, from the category's card or from a refused delete, and can then delete it (#47).
 
 ### Changed
 

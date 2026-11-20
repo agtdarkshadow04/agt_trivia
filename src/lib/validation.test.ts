@@ -4,7 +4,7 @@ import { isUuidV4, roleAtLeast } from './api.js';
 import {
   adminUsernameError, categoryErrors, displayNameError, memberUsernameError, normalizeMemberUsername, confirmationError, errorsOf, newPasswordError, normalizeCategory, normalizeQuestion,
   questionErrors, questionNotices, quizLengthsError, requiredError, type CategoryInput, type QuestionInput,
-  normalizeReport, reportInputErrors, resolutionNoteError,
+  normalizeReport, reportInputErrors, resolutionNoteError, moveTargetError,
 } from './validation.js';
 
 describe('shared validators', () => {
@@ -168,5 +168,15 @@ describe('question reports (#46)', () => {
     assert.equal(resolutionNoteError(''), null);
     assert.equal(resolutionNoteError('y'.repeat(501))?.code, 'too_long');
     assert.deepEqual(normalizeReport({ reason: 'typo', note: '  spaced  ' }), { reason: 'typo', note: 'spaced' });
+  });
+});
+
+describe('moving a category\'s questions (#47)', () => {
+  it('needs another category than the one the questions leave, ignoring case', () => {
+    const source = '11111111-1111-4111-8111-111111111111';
+    assert.equal(moveTargetError(source, '')?.code, 'required');
+    assert.equal(moveTargetError(source, '  ')?.code, 'required');
+    assert.equal(moveTargetError(source, source.toUpperCase())?.code, 'not_allowed');
+    assert.equal(moveTargetError(source, '22222222-2222-4222-8222-222222222222'), null);
   });
 });

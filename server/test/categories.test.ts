@@ -5,7 +5,8 @@ import type { ManagedCategory } from '../../src/lib/api.js';
 import { buildApp } from '../app.js';
 import { withDataWrite } from '../dataWrite.js';
 import { getCategory, insertCategory } from '../repository/categories.js';
-import { insertQuestion } from '../repository/questions.js';
+import { getQuestion, insertQuestion } from '../repository/questions.js';
+import { insertResult } from '../repository/results.js';
 import { createMember, memberCookie, sampleQuestion, testContext } from './helpers.js';
 
 /** Category management (#20): Moderators only, validation, optimistic concurrency, the refused delete, the audit log. */
@@ -148,5 +149,89 @@ describe('category management', () => {
     ]);
     assert.deepEqual(entries[1].details, { shortName: 'audited', changed: ['description'] });
     assert.doesNotMatch(JSON.stringify(entries), /Secret/);
+  });
+
+  describe('moving every question of a category (#47)', () => {
+    const question = (categoryId: string, prompt: string, status: 'draft' | 'pending' | 'approved' | 'rejected' = 'approved') => (
+      withDataWrite(context.operations, () => insertQuestion(context.db, sampleQuestion(categoryId, prompt, { status })))
+    );
+    const move = (key: keyof typeof cookies, id: string, payload: object) => as(key, 'POST', `/api/member/categories/${id}/move-questions`, payload);
+    const codes = (response: { json(): { fields: { field: string; code: string }[] } }) => response.json().fields.map((field) => [field.field, field.code]);
+
+    it('moves questions of every status, with new versions, so the source can be deleted', async () => {
+      const source = await seed('old-moons', 'Old moons');
+      const target = await seed('moons', 'Moons');
+      const moved = await Promise.all([
+        question(source.id, 'Which moon is largest?'),
+        question(source.id, 'Draft moon?', 'draft'),
+        question(source.id, 'Pending moon?', 'pending'),
+        question(source.id, 'Rejected moon?', 'rejected'),
+      ]);
+      await question(target.id, 'which moon is LARGEST?');
+      // A member's saved result keeps its category.
+      const member = (await as('player', 'GET', '/api/member/session')).json() as { id: string };
+      await withDataWrite(context.operations, () => insertResult(context.db, {
+        memberId: member.id, categoryId: source.id, categoryName: source.name, length: 'all', answers: [{ questionId: moved[0].id, correct: true }],
+      }));
+
+      const response = await move('moderator', source.id, { targetCategoryId: target.id.toUpperCase(), version: source.version });
+      assert.equal(response.statusCode, 200, response.body);
+      const result = response.json();
+      assert.equal(result.moved, 4);
+      assert.deepEqual(result.source.questionCounts, { draft: 0, pending: 0, approved: 0, rejected: 0 });
+      assert.deepEqual(result.target.questionCounts, { draft: 1, pending: 1, approved: 2, rejected: 1 });
+      assert.equal(result.source.version, source.version, 'the category itself did not change');
+      // The duplicate prompt is a notice, not an error (API-2).
+      assert.deepEqual(result.notices.map((notice: { field: string; code: string; params: unknown }) => [notice.field, notice.code, notice.params]), [['targetCategoryId', 'duplicate', { count: 1 }]]);
+      const moderator = (await as('moderator', 'GET', '/api/member/session')).json() as { id: string };
+      for (const before of moved) {
+        const after = getQuestion(context.db, before.id)!;
+        assert.equal(after.categoryId, target.id);
+        assert.equal(after.status, before.status);
+        assert.equal(after.version, before.version + 1);
+        assert.equal(after.modifiedBy, moderator.id);
+      }
+      const results = (await as('player', 'GET', `/api/member/results?categoryId=${source.id}`)).json().items as { categoryId: string }[];
+      assert.equal(results.length, 1, 'the result still belongs to the old category');
+      // The public quiz of the target now has both approved questions.
+      assert.equal((await app.inject(`/api/categories/${target.id}/quiz?length=all`)).json().questions.length, 2);
+      assert.equal((await as('moderator', 'DELETE', `/api/member/categories/${source.id}?version=${source.version}`)).statusCode, 204);
+    });
+
+    it('checks the target and the version, and moving an empty category moves nothing', async () => {
+      const source = await seed('move-src', 'Move source');
+      const target = await seed('move-dst', 'Move target');
+      await question(source.id, 'Stays put?');
+      assert.deepEqual(codes(await move('moderator', source.id, { targetCategoryId: '', version: source.version })), [['targetCategoryId', 'required']]);
+      assert.deepEqual(codes(await move('moderator', source.id, { targetCategoryId: source.id, version: source.version })), [['targetCategoryId', 'not_allowed']]);
+      for (const unknown of ['nope', '00000000-0000-4000-8000-000000000000']) {
+        assert.deepEqual(codes(await move('moderator', source.id, { targetCategoryId: unknown, version: source.version })), [['targetCategoryId', 'not_allowed']], unknown);
+      }
+      assert.equal((await move('moderator', source.id, { targetCategoryId: target.id, version: source.version + 1 })).statusCode, 409);
+      assert.equal((await move('moderator', '00000000-0000-4000-8000-000000000000', { targetCategoryId: target.id, version: 1 })).statusCode, 404);
+      assert.equal((await move('moderator', source.id, { targetCategoryId: target.id })).statusCode, 400, 'version is required');
+      assert.equal(getCategory(context.db, source.id)!.version, source.version);
+      const empty = await seed('move-empty', 'Move empty');
+      const none = await move('moderator', empty.id, { targetCategoryId: target.id, version: empty.version });
+      assert.equal(none.statusCode, 200);
+      assert.equal(none.json().moved, 0);
+      assert.deepEqual(none.json().notices, []);
+    });
+
+    it('is for Moderators only, with the CSRF header, and is audited with the counts', async () => {
+      const source = await seed('audit-src', 'Audit source');
+      const target = await seed('audit-dst', 'Audit target');
+      await question(source.id, 'Audited move?');
+      for (const key of ['player', 'editor'] as const) {
+        assert.equal((await move(key, source.id, { targetCategoryId: target.id, version: source.version })).statusCode, 403, key);
+      }
+      const noCsrf = await app.inject({
+        method: 'POST', url: `/api/member/categories/${source.id}/move-questions`, headers: { cookie: cookies.moderator }, payload: { targetCategoryId: target.id, version: source.version },
+      });
+      assert.equal(noCsrf.json().error, 'csrf');
+      assert.equal((await move('moderator', source.id, { targetCategoryId: target.id, version: source.version })).statusCode, 200);
+      const entry = context.logs.listAudit({}, null, 200).find((candidate) => candidate.action === 'moveCategoryQuestions' && candidate.targetId === source.id && candidate.outcome === 'success')!;
+      assert.deepEqual(entry.details, { shortName: 'audit-src', to: target.id, toShortName: 'audit-dst', moved: 1 });
+    });
   });
 });

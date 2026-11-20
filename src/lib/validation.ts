@@ -286,3 +286,12 @@ export function reportInputErrors(input: ReportInput): FieldError[] {
 export function resolutionNoteError(note: string): FieldError | null {
   return optionalTextError('resolutionNote', note, reportLimits.resolutionNote.max, 'The note');
 }
+
+// --- Moving a category's questions (#47) ---------------------------------------------
+
+/** The category to move every question of `sourceId` to: chosen, and not the same one. */
+export function moveTargetError(sourceId: string, targetId: string): FieldError | null {
+  if (!targetId.trim()) return fieldError('targetCategoryId', 'required', 'Choose the category to move the questions to.');
+  if (targetId.trim().toLowerCase() === sourceId.toLowerCase()) return fieldError('targetCategoryId', 'not_allowed', 'Choose another category than this one.');
+  return null;
+}

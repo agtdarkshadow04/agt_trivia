@@ -109,6 +109,65 @@ test('a Moderator creates and edits a category, cannot delete one with questions
   expect(await watched.violations()).toEqual([]);
 });
 
+test('a Moderator moves every question of a category to another one, from the card or the refused delete (#47)', async ({ page }) => {
+  const watched = await watchPage(page);
+  await signIn(page, 'e2e.curator');
+  await page.goto('/?page=categories');
+  // A category to move Space's questions to; they move back at the end, so the seeded quiz stays as it was.
+  await page.getByRole('button', { name: 'New category' }).click();
+  const create = page.getByRole('dialog', { name: 'New category' });
+  await create.getByLabel('Short name').fill('nebulae');
+  await create.getByLabel('Name', { exact: true }).fill('Nebulae');
+  await create.getByLabel('Description').fill('Clouds of dust and gas.');
+  await create.getByRole('button', { name: 'Save category' }).click();
+  await expect(page.getByRole('status').filter({ hasText: 'Category created.' })).toBeVisible();
+  // An empty category has nothing to move.
+  await expect(card(page, 'Nebulae').getByRole('button', { name: 'Move questions' })).toHaveCount(0);
+
+  // The refused delete offers the move.
+  await card(page, 'Space').getByRole('button', { name: 'Delete' }).click();
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Delete category' }).click();
+  await expect(page.getByRole('alert')).toHaveText('This category still has 12 questions. Move them to another category or delete them first.');
+  const offer = page.locator('.action-error').getByRole('button', { name: 'Move questions' });
+  await expectDialogBehaviour(page, offer, 'Move the questions of Space');
+  await offer.click();
+  const dialog = page.getByRole('dialog', { name: 'Move the questions of Space' });
+  await expect(dialog).toContainText('12 in all');
+  await expect(dialog.getByLabel('Move to').getByRole('option', { name: 'Space' })).toHaveCount(0);
+  await expectAccessible(page, 'move dialog');
+  // FE-6: a target is required before anything is sent.
+  await dialog.getByRole('button', { name: 'Move questions' }).click();
+  await expect(dialog.getByLabel('Move to')).toHaveAttribute('aria-invalid', 'true');
+  await dialog.getByLabel('Move to').selectOption({ label: 'Nebulae' });
+  await dialog.getByRole('button', { name: 'Move questions' }).click();
+  await expect(dialog).toBeHidden();
+  await expect(page.getByRole('status').filter({ hasText: '12 questions moved to Nebulae.' })).toBeVisible();
+  await expect(card(page, 'Space').getByRole('definition').first()).toHaveText('0');
+  await expect(card(page, 'Nebulae').getByRole('definition').first()).toHaveText('12');
+  await expect(card(page, 'Space').getByRole('button', { name: 'Move questions' })).toHaveCount(0);
+
+  // Players find them under the new category.
+  const player = await page.context().browser()!.newPage();
+  await player.goto('/?category=nebulae');
+  await expect(player.getByText('Questions available: 12')).toBeVisible();
+  await player.close();
+
+  // Back again from the card, then the emptied category goes.
+  await card(page, 'Nebulae').getByRole('button', { name: 'Move questions' }).click();
+  const back = page.getByRole('dialog', { name: 'Move the questions of Nebulae' });
+  await back.getByLabel('Move to').selectOption({ label: 'Space' });
+  await back.getByRole('button', { name: 'Move questions' }).click();
+  await expect(page.getByRole('status').filter({ hasText: '12 questions moved to Space.' })).toBeVisible();
+  await expect(card(page, 'Space').getByRole('definition').first()).toHaveText('12');
+  await card(page, 'Nebulae').getByRole('button', { name: 'Delete' }).click();
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Delete category' }).click();
+  await expect(page.getByRole('status').filter({ hasText: 'Category deleted.' })).toBeVisible();
+  await expect(card(page, 'Nebulae')).toHaveCount(0);
+
+  expect(watched.consoleErrors.filter((message) => !/status of 409/.test(message))).toEqual([]);
+  expect(await watched.violations()).toEqual([]);
+});
+
 test('only Moderators have the Categories page', async ({ page }) => {
   await signIn(page, 'e2e.writer');
   await expect(page.getByRole('link', { name: 'Categories' })).toHaveCount(0);
@@ -128,6 +187,10 @@ test('the Categories page fits every width, and 300 px at 2× text (UI-12, A11Y-
       await expectNoHorizontalScroll(page, `categories at ${width}px, ${scale}×`);
       await card(page, 'Space').getByRole('button', { name: 'Edit' }).click();
       await expectNoHorizontalScroll(page, `category dialog at ${width}px, ${scale}×`);
+      await page.keyboard.press('Escape');
+      await card(page, 'Space').getByRole('button', { name: 'Move questions' }).click();
+      await expect(page.getByRole('dialog', { name: 'Move the questions of Space' })).toBeVisible();
+      await expectNoHorizontalScroll(page, `move dialog at ${width}px, ${scale}×`);
     }
   }
 });
