@@ -34,7 +34,7 @@ async function signIn(page: Page, username: string) {
 /** Plays the 3 Biology questions, answering `right` of them right (the multi-answer one first among them). */
 async function playBiology(page: Page, right: number) {
   await page.goto('/?category=bio');
-  await page.getByRole('button', { name: /Short quiz/ }).click();
+  await page.getByRole('button', { name: /Full quiz/ }).click();
   let answeredRight = 0;
   for (let number = 1; number <= 3; number += 1) {
     await expect(page.getByText(`Question ${number} of 3`)).toBeVisible();
@@ -78,7 +78,7 @@ test('a member\'s finished quiz is saved to their history, shown in My scores an
   // Newest first, graded by the server, the time in the reader's time zone (I18N-5).
   await expect(entries.nth(0)).toContainText('1 of 3 correct · 33%');
   await expect(entries.nth(1)).toContainText('3 of 3 correct · 100%');
-  await expect(entries.nth(0)).toContainText('Short quiz');
+  await expect(entries.nth(0)).toContainText('Full quiz');
   await expect(entries.nth(0).locator('time')).toContainText('GMT+5:30');
   await page.getByLabel('Category').selectOption({ label: 'Biology' });
   await expect(entries).toHaveCount(2);

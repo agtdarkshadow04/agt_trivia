@@ -1,5 +1,6 @@
 import { type FormEvent, useEffect, useId, useRef } from 'react';
 import type { PublicCategory, QuizLength } from '../lib/api';
+import { availableLengths } from '../lib/quiz';
 import { choiceState, currentQuestion, isMultiAnswer, quizResult, type ChoiceState, type QuizSession } from '../lib/quizSession';
 import { formatTranslation } from '../translations';
 import { useI18n } from './I18n';
@@ -17,7 +18,7 @@ export function BackToCategories({ onBack, children }: { onBack(): void; childre
   );
 }
 
-/** Short, long or full (#16): the lengths come from `quiz.shortLength` and `quiz.longLength`. */
+/** Short, long or full (#16): the lengths come from `quiz.shortLength` and `quiz.longLength`; only those that differ are offered (#43). */
 export function LengthChoice({ category, shortLength, longLength, onChoose }: {
   category: PublicCategory;
   shortLength: number;
@@ -26,11 +27,13 @@ export function LengthChoice({ category, shortLength, longLength, onChoose }: {
 }) {
   const { t, number } = useI18n();
   const heading = useViewHeading(`length:${category.id}`);
-  const choices: { length: QuizLength; name: string; meta: string; text: string }[] = [
-    { length: 'short', name: t.quiz.short, meta: formatTranslation(t.quiz.upTo, { count: number(Math.min(shortLength, category.questionCount)) }), text: t.quiz.shortText },
-    { length: 'long', name: t.quiz.long, meta: formatTranslation(t.quiz.upTo, { count: number(Math.min(longLength, category.questionCount)) }), text: t.quiz.longText },
-    { length: 'all', name: t.quiz.full, meta: formatTranslation(t.quiz.allOf, { count: number(category.questionCount) }), text: t.quiz.fullText },
-  ];
+  const all: Record<QuizLength, { name: string; meta: string; text: string }> = {
+    short: { name: t.quiz.short, meta: formatTranslation(t.quiz.upTo, { count: number(shortLength) }), text: t.quiz.shortText },
+    long: { name: t.quiz.long, meta: formatTranslation(t.quiz.upTo, { count: number(longLength) }), text: t.quiz.longText },
+    all: { name: t.quiz.full, meta: formatTranslation(t.quiz.allOf, { count: number(category.questionCount) }), text: t.quiz.fullText },
+  };
+  // #43: only the lengths that differ; a short quiz of a 6-question category would be the full one.
+  const choices = availableLengths(category.questionCount, shortLength, longLength).map((length) => ({ length, ...all[length] }));
   return (
     <section className="player-section" aria-labelledby="length-heading">
       <div className="section-heading">

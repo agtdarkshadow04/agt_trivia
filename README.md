@@ -309,7 +309,8 @@ Visitors play at `/`:
 1. **Choose a category.** Categories are listed by priority, then by name, with their short name, number of
    questions and description. A category without approved questions is shown but cannot be chosen.
 2. **Choose a length**: a short quiz (`quiz.shortLength` questions), a long one (`quiz.longLength`) or the full
-   quiz (all of them). Fewer when the category has fewer. Questions are drawn at random each time.
+   quiz (all of them). Only the lengths that differ are offered: a category with no more questions than a short
+   quiz offers only the full quiz. Questions, and the order of their answers, are drawn at random each time.
 3. **Answer.** A single-answer question has radio buttons ("Select one answer"); a multi-answer one has checkboxes
    ("Select every correct answer") and counts only when exactly the correct answers are chosen. **Lock answer**
    shows whether it was right, the correct answers, and who submitted the question; then **Next question**.

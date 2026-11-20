@@ -4,7 +4,13 @@ All notable changes to AGT Galactic Trivia are documented in this file. The form
 [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/), and the project uses
 [Semantic Versioning](https://semver.org/) as the AGT Web Application Specification requires (§21).
 
-## [2.0.1] - Unreleased
+## [2.1.0] - Unreleased
+
+### Changed
+
+- A category offers only the quiz lengths that differ: with no more questions than a short quiz it offers only the
+  full quiz, and with no more than a long quiz, the short and the full ones, instead of the same quiz up to three
+  times (#43).
 
 ### Fixed
 
