@@ -112,10 +112,17 @@ it with the TEST-8 smoke tests the README's Installation steps describe.
 
 ## Conventions and gotchas
 
-- **Versioning (§21):** `1.0.0` (tag) is the static Amplify app. The rebuild is `2.0.0`: every rebuild PR keeps
-  `package.json` at `2.0.0` and adds its entries under `## [2.0.0] - Unreleased` in `CHANGELOG.md` (VER-8, VER-9). Set
-  versions with `npm version X.Y.Z --no-git-tag-version`. Docs-only, test-only, CI and `AGENTS.md` changes need no
-  bump (VER-6). New tags use the `v` prefix (`v2.0.0`, VER-11); create tags and GitHub Releases only when the
+- **Versioning (§21):** `1.0.0` (tag) is the static Amplify app; `v2.0.0` is the first release of the rebuild. Each
+  PR sets `package.json` relative to the last released tag, at the level its changes need: major for a break (VER-3),
+  minor for a new feature, setting, field or additive migration (VER-4), patch for a fix (VER-5). If `main` already
+  carries an unreleased version at that level or higher, the PR keeps it (VER-8). The PR adds its entries under that
+  version's `## [X.Y.Z] - Unreleased` heading in `CHANGELOG.md` (VER-9), and its description states the level and the
+  rule. Set versions with `npm version X.Y.Z --no-git-tag-version`. Docs-only, test-only, CI and `AGENTS.md` changes
+  need no bump (VER-6). Removing or renaming an API field or route, a `config.yaml` key or an environment variable, or
+  making a request field required, is a major change after at least one minor release that lists it under
+  **Deprecated** (VER-10). Saving a result without `attemptToken` is deprecated since 2.1.0 (#45) and becomes
+  required in 3.0.0. The release PR only dates the CHANGELOG heading and records the acceptance tests (TEST-6 to
+  TEST-9, VER-12). New tags use the `v` prefix (`v2.1.0`, VER-11); create tags and GitHub Releases only when the
   maintainer asks (VER-12).
 - **Spec work:** cite rule IDs in commits and PRs (WF-2). When a PR makes a deviation below go away, narrow or delete
   its row in the same PR; when it adds one, add a row. One concern per PR (WF-3); each sub-issue of #6 is one or more
