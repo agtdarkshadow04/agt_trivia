@@ -1,4 +1,4 @@
-import type { MemberQuestion, MemberQuestionStatus, MemberSession, PublicCategory, PublicQuiz, PublicSettings, QuestionBody, QuestionCounts, QuestionPage, QuizLength } from './api.js';
+import type { CategoryBody, ManagedCategory, MemberQuestion, MemberQuestionStatus, MemberSession, PublicCategory, PublicQuiz, PublicSettings, QuestionBody, QuestionCounts, QuestionPage, QuizLength } from './api.js';
 import type { FieldError } from './errors.js';
 import { ApiError, apiRequest } from './client.js';
 
@@ -84,4 +84,20 @@ export const changeQuestionStatus = (id: string, version: number, verb: 'submit'
 
 export const rejectQuestion = (id: string, version: number, reviewNote: string) => (
   apiRequest<MemberQuestion>(`/api/member/questions/${encodeURIComponent(id)}/reject`, { method: 'POST', body: { version, reviewNote } })
+);
+
+// --- Category management (#20) -----------------------------------------------------
+
+export const listManagedCategories = () => apiRequest<ManagedCategory[]>('/api/member/categories');
+
+export const createCategory = (body: CategoryBody) => (
+  apiRequest<{ category: ManagedCategory; notices: FieldError[] }>('/api/member/categories', { method: 'POST', body })
+);
+
+export const replaceCategory = (id: string, version: number, body: CategoryBody) => (
+  apiRequest<{ category: ManagedCategory; notices: FieldError[] }>(`/api/member/categories/${encodeURIComponent(id)}`, { method: 'PUT', body: { ...body, version } })
+);
+
+export const deleteCategory = (id: string, version: number) => (
+  apiRequest<void>(`/api/member/categories/${encodeURIComponent(id)}?version=${version}`, { method: 'DELETE' })
 );

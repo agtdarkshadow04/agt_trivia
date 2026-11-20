@@ -74,6 +74,9 @@ All notable changes to AGT Galactic Trivia are documented in this file. The form
   reject them with a note in the **Review queue** (`/?page=review`, with a count in the header), and can change,
   unpublish and delete any question. A changed rejected question is a draft again; approved questions are locked for
   Editors. Two people changing the same question never overwrite each other: the second one is asked to reload (#19).
+- **Category management**: Moderators create, edit and delete categories on the **Categories** page
+  (`/?page=categories`), which lists them in display order with their questions counted by status. Changing a short
+  name warns that old links break; a category with questions cannot be deleted until they are moved or deleted (#20).
 
 ### Changed
 

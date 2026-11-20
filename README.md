@@ -324,6 +324,19 @@ are approved.
 If two people change the same question at once, the second change is refused with a message to reload, and
 nothing is overwritten. Players and visitors never see drafts, submitted or rejected questions, or review notes.
 
+### Categories
+
+Moderators manage the categories on the **Categories** page (the folder button in the header,
+`/?page=categories`). It lists them in the order players see them, each with its short name, priority, description
+and how many of its questions are approved, waiting for review, drafts or rejected. **New category** and **Edit**
+open a dialog for the name, short name (1 to 16 letters, digits and hyphens), description and priority (0 to 100;
+lower comes first, then by name). Names and short names are unique, ignoring case.
+
+The short name is part of every link to the category (`/?category=<short name>`): changing it breaks the old links,
+and the edit dialog says so. A category can be deleted only once it has no questions of any status: move them to
+another category (edit each question) or delete them first. Players see a new category as soon as it exists, but can
+choose it only once it has approved questions.
+
 ## Members and roles
 
 Besides the single **Admin**, who runs the installation, there are **members**: people with an account on the game.
@@ -334,7 +347,7 @@ Anonymous visitors can still play without an account.
 | --- | --- |
 | **Player** | Play and keep a score history (#21) |
 | **Editor** | What a Player can, plus write questions and submit them, and edit or delete their own until they are approved |
-| **Moderator** | What an Editor can, plus review (approve, reject, edit, unpublish, delete) any question, their own included, and manage the categories (#20) |
+| **Moderator** | What an Editor can, plus review (approve, reject, edit, unpublish, delete) any question, their own included, and manage the categories |
 
 There is no self-registration: the Admin creates member accounts in the **Members** tab, with a username (3 to 64
 lowercase letters, digits, dots, underscores or hyphens), a display name, a role and a first password. Members
