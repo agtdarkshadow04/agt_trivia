@@ -402,6 +402,9 @@ or **reject** it with a required note for its author. Moderators may approve the
 edit, **unpublish** (back to a draft, out of the quiz) and delete any question; Editors delete their own until they
 are approved.
 
+Both pages can **search the question text** (ignoring case) and **filter by category**; My questions also filters
+by status. **Load more** keeps the filters, and **Clear filters** starts again from every question.
+
 If two people change the same question at once, the second change is refused with a message to reload, and
 nothing is overwritten. Players and visitors never see drafts, submitted or rejected questions, or review notes.
 

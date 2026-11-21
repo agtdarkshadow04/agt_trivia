@@ -44,6 +44,9 @@ export const memberIamSignIn = (travellerName: string, password: string) => (
 export interface QuestionQuery {
   status?: MemberQuestionStatus;
   mine?: boolean;
+  /** Part of the question text (#73). */
+  q?: string;
+  categoryId?: string;
   cursor?: string | null;
   limit?: number;
 }
@@ -57,6 +60,8 @@ export function listQuestions(query: QuestionQuery = {}) {
   const params = new URLSearchParams();
   if (query.status) params.set('status', query.status);
   if (query.mine) params.set('mine', 'true');
+  if (query.q) params.set('q', query.q);
+  if (query.categoryId) params.set('categoryId', query.categoryId);
   if (query.cursor) params.set('cursor', query.cursor);
   if (query.limit) params.set('limit', String(query.limit));
   const search = params.toString();

@@ -353,12 +353,20 @@ export function QuestionWorkshop({ mode, member, categories, onChanged }: {
   /** After every change, so the header's review count can follow. */
   onChanged(): void;
 }) {
-  const { t, error } = useI18n();
+  const { t, error, number } = useI18n();
   const moderator = roleAtLeast(member.role, 'Moderator');
   const heading = useViewHeading(`workshop:${mode}`);
   const [list, setList] = useState<ListState>({ status: 'loading' });
   const [statusFilter, setStatusFilter] = useState<MemberQuestionStatus | ''>('');
   const [everyone, setEveryone] = useState(false);
+  // #73: the text search, applied a moment after typing stops or on Enter, and the category.
+  const [searchInput, setSearchInput] = useState('');
+  const [search, setSearch] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('');
+  useEffect(() => {
+    const timer = window.setTimeout(() => setSearch(searchInput.trim()), 400);
+    return () => window.clearTimeout(timer);
+  }, [searchInput]);
   const [editing, setEditing] = useState<MemberQuestion | 'new' | null>(null);
   const [rejecting, setRejecting] = useState<MemberQuestion | null>(null);
   const [deleting, setDeleting] = useState<MemberQuestion | null>(null);
@@ -367,7 +375,17 @@ export function QuestionWorkshop({ mode, member, categories, onChanged }: {
   const [notices, setNotices] = useState<string[]>([]);
   const [actionError, setActionError] = useState('');
 
-  const query = mode === 'review' ? { status: 'pending' as const } : { status: statusFilter || undefined, mine: !(moderator && everyone) };
+  const filters = { q: search || undefined, categoryId: categoryFilter || undefined };
+  const query = mode === 'review'
+    ? { status: 'pending' as const, ...filters }
+    : { status: statusFilter || undefined, mine: !(moderator && everyone), ...filters };
+  const searching = Boolean(search || categoryFilter);
+  function clearFilters() {
+    setSearchInput('');
+    setSearch('');
+    setCategoryFilter('');
+    if (mode !== 'review') setStatusFilter('');
+  }
   const queryKey = JSON.stringify(query);
 
   const load = useCallback(async () => {
@@ -381,7 +399,10 @@ export function QuestionWorkshop({ mode, member, categories, onChanged }: {
   }, [queryKey]);
 
   useEffect(() => { void load(); }, [load]);
-  useEffect(() => { setEditing(null); setMessage(''); setNotices([]); setActionError(''); }, [mode]);
+  useEffect(() => {
+    setEditing(null); setMessage(''); setNotices([]); setActionError('');
+    setSearchInput(''); setSearch(''); setCategoryFilter('');
+  }, [mode]);
 
   async function loadMore() {
     if (list.status !== 'ready' || !list.nextCursor) return;
@@ -485,19 +506,34 @@ export function QuestionWorkshop({ mode, member, categories, onChanged }: {
       <p className="workshop-intro">{review ? t.authoring.reviewText : t.authoring.questionsText}</p>
       {statusLine}
       {actionError && <p className="error-note" role="alert">{actionError}</p>}
-      {!review && (
-        <div className="workshop-filters">
+      <form className="workshop-filters" role="search" onSubmit={(event) => { event.preventDefault(); setSearch(searchInput.trim()); }}>
+        <TextField
+          type="search"
+          label={t.authoring.searchLabel}
+          value={searchInput}
+          maxLength={300}
+          autoComplete="off"
+          onChange={(event) => setSearchInput(event.target.value)}
+        />
+        <SelectField label={t.fields.categoryId} value={categoryFilter} onChange={(event) => setCategoryFilter(event.target.value)}>
+          <option value="">{t.authoring.allCategories}</option>
+          {[...categories].sort((a, b) => a.name.localeCompare(b.name, 'en')).map((category) => <option key={category.id} value={category.id} lang="en">{category.name}</option>)}
+        </SelectField>
+        {!review && (
           <SelectField label={t.authoring.status} value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as MemberQuestionStatus | '')}>
             {statusFilters.map((value) => <option key={value} value={value}>{value ? t.authoring.statuses[value] : t.authoring.allStatuses}</option>)}
           </SelectField>
-          {moderator && (
-            <SelectField label={t.authoring.show} value={everyone ? 'all' : 'mine'} onChange={(event) => setEveryone(event.target.value === 'all')}>
-              <option value="mine">{t.authoring.showMine}</option>
-              <option value="all">{t.authoring.showAll}</option>
-            </SelectField>
-          )}
-        </div>
-      )}
+        )}
+        {!review && moderator && (
+          <SelectField label={t.authoring.show} value={everyone ? 'all' : 'mine'} onChange={(event) => setEveryone(event.target.value === 'all')}>
+            <option value="mine">{t.authoring.showMine}</option>
+            <option value="all">{t.authoring.showAll}</option>
+          </SelectField>
+        )}
+      </form>
+      <p className="sr-only" role="status">
+        {searching && list.status === 'ready' ? formatTranslation(t.authoring.shownCount, { count: number(list.items.length) }) : ''}
+      </p>
       {list.status === 'loading' && <p className="loading-note" role="status">{t.authoring.loading}</p>}
       {list.status === 'error' && (
         <div role="alert">
@@ -506,7 +542,12 @@ export function QuestionWorkshop({ mode, member, categories, onChanged }: {
         </div>
       )}
       {list.status === 'ready' && (list.items.length === 0 ? (
-        <p className="empty-note">{review ? t.authoring.reviewEmpty : statusFilter ? t.authoring.emptyFiltered : t.authoring.empty}</p>
+        searching ? (
+          <div className="workshop-empty">
+            <p className="empty-note">{t.authoring.noMatches}</p>
+            <button className="button button-secondary" type="button" onClick={clearFilters}>{t.authoring.clearFilters}</button>
+          </div>
+        ) : <p className="empty-note">{review ? t.authoring.reviewEmpty : statusFilter ? t.authoring.emptyFiltered : t.authoring.empty}</p>
       ) : (
         <ul className="question-list" aria-busy={busy}>
           {list.items.map((question) => (

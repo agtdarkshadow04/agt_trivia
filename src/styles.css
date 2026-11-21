@@ -300,3 +300,6 @@ img { max-width: 100%; }
 .score-trend-path { fill: none; stroke: var(--agt-red-orange); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .score-trend-end { fill: var(--agt-orange); }
 .score-trend-latest { color: var(--muted); font-size: 0.8rem; }
+
+/* #73: an empty filtered question list with its Clear filters button. */
+.workshop-empty { display: grid; gap: 0.75rem; justify-items: start; }
