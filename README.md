@@ -589,7 +589,7 @@ The browser tests need Chromium: run `npx playwright install --with-deps chromiu
 | `public/` | The AGT logo, fonts and font licences |
 | `tests/e2e/` | Browser tests |
 | `docs/API.md` | API guide; the full description is `GET /api/openapi.json` |
-| `docs/agt-webapp-spec.md` | The AGT Web Application Specification v6.0.1 the app follows |
+| `docs/agt-webapp-spec.md` | The AGT Web Application Specification v6.0.3 the app follows |
 
 Contributor and AI-agent guidance is in [`AGENTS.md`](AGENTS.md); the rules the app follows are in the
 [AGT Web Application Specification](docs/agt-webapp-spec.md).
@@ -638,8 +638,8 @@ Contributor and AI-agent guidance is in [`AGENTS.md`](AGENTS.md); the rules the 
 ## Credits
 
 The AGT logo and the fonts come unmodified from the
-[AGT Web Application Specification](https://github.com/agtdarkshadow04/agt_webapp_specification/blob/v6.0.1/assets/README.md)
-(v6.0.1). The logo is © Alliance of Galactic Travellers, all rights reserved, and is used only in AGT apps.
+[AGT Web Application Specification](https://github.com/agtdarkshadow04/agt_webapp_specification/blob/v6.0.3/assets/README.md)
+(v6.0.3). The logo is © Alliance of Galactic Travellers, all rights reserved, and is used only in AGT apps.
 
 - **NMS Futura** (`public/NMSFuturaProBook_Kerned.ttf`), the interface font: by No Man's Sky Community Developers &
   Designers (NMSCD), designer Blend3rman (licence notice © 2020 Hector Javier Gonzalez Rivera), based on the typeface
