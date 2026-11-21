@@ -12,7 +12,7 @@ services:
     # server.trustProxy. Publish on another interface only if that proxy runs on another machine.
     ports:
       - "127.0.0.1:8082:8082"
-    # Secrets only (AGT_TRIVIA_SETUP_PASSWORD). See .env.example.
+    # Secrets only (AGT_TRIVIA_SETUP_PASSWORD, AGT_TRIVIA_IAM_API_KEY). See .env.example.
     env_file:
       - path: .env
         required: false

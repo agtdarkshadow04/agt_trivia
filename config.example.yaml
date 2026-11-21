@@ -49,7 +49,7 @@
 #   login: { max: 10, windowMinutes: 15 }
 #   # First-run setup.
 #   setup: { max: 10, windowMinutes: 15 }
-#   # Backup restore uploads (preview and restore).
+#   # Admin uploads: backup restore (preview and restore) and the sheet import.
 #   adminUploads: { max: 120, windowMinutes: 15 }
 
 # --- Keys that can also be set in the dashboard ----------------------------
@@ -72,6 +72,23 @@
 #   # How many members a leaderboard shows (3-50).
 #   size: 10
 
+# iam:
+#   # AGT sign-in: members sign in with their AGT account through AGT IAM
+#   # (README, AGT sign-in). Off by default; also editable in the dashboard.
+#   # Needs baseUrl, appId and AGT_TRIVIA_IAM_API_KEY in .env.
+#   enabled: false
+#   # The AGT IAM address: https://, or http:// only to localhost.
+#   baseUrl: https://iam.example.org
+#   # The App ID AGT IAM registered for this installation.
+#   appId: agt-trivia
+#   # How long a sign-in waits for AGT IAM, in seconds (1-30).
+#   timeoutSeconds: 10
+#   # The role of an authorized traveller whose AGT tier roleMap does not name.
+#   defaultRole: Player
+#   # AGT IAM tier -> role (Player, Editor or Moderator). The tiers NOACCESS and
+#   # NONE never sign in.
+#   roleMap: { Editor: Editor, Moderator: Moderator }
+
 # backup:
 #   # Largest backup upload in bytes (1024-2147483648).
 #   maxZipBytes: 209715200
@@ -89,20 +106,3 @@
 #   auditRetentionDays: 365
 #   # Most entries the audit log keeps (10000-10000000); failures go first.
 #   auditMaxEntries: 1000000
-
-# iam:
-#   # AGT sign-in: members sign in with their AGT account through AGT IAM
-#   # (README, AGT sign-in). Off by default; also editable in the dashboard.
-#   # Needs baseUrl, appId and AGT_TRIVIA_IAM_API_KEY in .env.
-#   enabled: false
-#   # The AGT IAM address: https://, or http:// only to localhost.
-#   baseUrl: https://iam.example.org
-#   # The App ID AGT IAM registered for this installation.
-#   appId: agt-trivia
-#   # How long a sign-in waits for AGT IAM, in seconds (1-30).
-#   timeoutSeconds: 10
-#   # The role of an authorized traveller whose AGT tier roleMap does not name.
-#   defaultRole: Player
-#   # AGT IAM tier -> role (Player, Editor or Moderator). The tiers NOACCESS and
-#   # NONE never sign in.
-#   roleMap: { Editor: Editor, Moderator: Moderator }
