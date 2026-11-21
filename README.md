@@ -212,7 +212,7 @@ Settings come from three places:
 | `session.secureCookie` | `auto` | Whether the session cookie is `Secure`: `auto` (when the request came over HTTPS; behind a proxy that needs `server.trustProxy`), `true` or `false` |
 | `rateLimits.login` | 10 per 15 minutes | Admin and member sign-in and both password changes, each counted separately, per client address |
 | `rateLimits.setup` | 10 per 15 minutes | First-run setup, per client address |
-| `rateLimits.adminUploads` | 120 per 15 minutes | Backup previews and restores, per client address |
+| `rateLimits.adminUploads` | 120 per 15 minutes | Backup previews and restores, and the sheet import, per client address |
 | `iam.baseUrl` | — | The AGT IAM address for [AGT sign-in](#agt-sign-in): `https://`, or `http://` only to localhost |
 | `iam.appId` | — | The App ID AGT IAM registered for this installation |
 | `iam.timeoutSeconds` | `10` | How long an AGT sign-in waits for AGT IAM (1–30) |
@@ -229,10 +229,10 @@ Settings come from three places:
 | `quiz.longLength` | `30` | Questions in a long quiz (2–500, more than `quiz.shortLength`) |
 | `leaderboards.enabled` | `false` | Whether each category has a public [leaderboard](#leaderboards) of the members who chose to appear on it |
 | `leaderboards.size` | `10` | How many members a leaderboard shows (3–50) |
+| `iam.enabled` | `false` | Whether members can sign in with their AGT account ([AGT sign-in](#agt-sign-in)); needs `iam.baseUrl`, `iam.appId` and `AGT_TRIVIA_IAM_API_KEY`. Turning it off signs every AGT member out |
 | `backup.maxZipBytes` | `209715200` (200 MiB) | Largest backup upload, in bytes (1024 to 2 GiB) |
 | `backup.maxUncompressedBytes` | `1073741824` (1 GiB) | Largest total size of a backup's files once unpacked, in bytes (1024 to 8 GiB) |
 | `backup.maxEntries` | `10000` | Most files in a backup archive (1–100000) |
-| `iam.enabled` | `false` | Whether members can sign in with their AGT account ([AGT sign-in](#agt-sign-in)); needs `iam.baseUrl`, `iam.appId` and `AGT_TRIVIA_IAM_API_KEY`. Turning it off signs every AGT member out |
 | `logs.serverRetentionDays` | `30` | Days the server log keeps an entry (1–3650) |
 | `logs.serverMaxEntries` | `100000` | Most server log entries (1000–10000000); the oldest go first |
 | `logs.auditRetentionDays` | `365` | Days the audit log keeps an entry (30–3650) |
@@ -535,13 +535,25 @@ The server keeps two logs in their own SQLite file, `storage.logDatabaseFile` (`
   configuration file), configuration warnings such as the setup-password reminder, every migration applied,
   retention runs, unexpected errors with their stack, and shutdown. Entries at `info` level and above are stored,
   whatever `server.logLevel` says; that key only controls what is also printed to stdout.
-- The **audit log** holds what people did: every request that changes something (setup, sign-in and sign-out,
-  password changes, settings changes, clearing the server log), downloads of log exports, denied attempts on the
-  Admin pages and every rate-limited request, each with its outcome. Settings changes record the old and new values;
-  nothing else records submitted values, and passwords, tokens and cookies are never logged. Repeated failures from
-  one address within a minute are counted in one entry.
+- The **audit log** holds what people did, each with its outcome: every request that changes something, downloads of
+  log exports, denied attempts on the Admin's and the members' pages (401 and 403), and every rate-limited request.
+  Repeated failures from one address within a minute are counted in one entry. Changes include:
+  - the Admin's setup, sign-in, sign-out and password change, settings changes and clearing the server log;
+  - member sign-in and sign-out, with a local account or [AGT sign-in](#agt-sign-in), and members' password changes;
+  - the Members tab: creating, changing, deactivating, deleting members and setting their passwords;
+  - writing, submitting, approving, rejecting, unpublishing and deleting questions;
+  - creating, changing and deleting categories, and moving their questions;
+  - reporting a question, and resolving or dismissing a report;
+  - saving and clearing score results, and turning **Show me on leaderboards** on or off;
+  - the sheet import, backups downloaded and restores.
 
-**Privacy:** the audit log stores the Admin's username and, for every entry, a pseudonymous network identifier: the
+  Entries name what changed by its ID, its status and the names of the changed fields. Settings changes record the
+  old and new values; nothing else records submitted values. Question and choice text, review notes, report notes
+  and quiz answers are never copied into the log, and passwords, tokens and cookies are never logged.
+
+**Privacy:** the audit log stores who acted: the Admin's username, or a member's username (for an AGT member, their
+traveller name), with the kind of actor (`admin`, `member` or `anonymous`). For every entry it also stores a
+pseudonymous network identifier: the
 first 16 hex characters of an HMAC of the client address (the /64 prefix for IPv6), with a random key kept in the log
 store. Raw IP addresses are never stored, in either log. Entries are kept for `logs.auditRetentionDays` (365 days by
 default, at least 30) and the server log's for `logs.serverRetentionDays` (30 days); each log also has a maximum
@@ -549,7 +561,8 @@ number of entries. A retention job removes older entries at startup and every ho
 something in the server log.
 
 Both tabs export the entries matching the current filters as JSON Lines or CSV. CSV cells that start like a
-spreadsheet formula (`=`, `+`, `-`, `@`) get a leading `'`, so opening an export never runs one.
+spreadsheet formula (`=`, `+`, `-`, `@`, a tab or a carriage return) get a leading `'`, so opening an export never runs
+one.
 
 ## Content safety
 
@@ -557,10 +570,19 @@ spreadsheet formula (`=`, `+`, `-`, `@`) get a leading `'`, so opening an export
   `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy` and `Cross-Origin-Opener-Policy`, and
   API and HTML responses are never cached. The API sends no CORS headers.
 - The fonts and the logo are bundled and served by the app; nothing is loaded from another site.
-- The Admin password is hashed with scrypt (`N = 2^15, r = 8, p = 1`); a stored hash in any other format can never
-  verify. Sessions use random tokens stored only as SHA-256 hashes, in an `HttpOnly`, `SameSite=Strict` cookie, and
-  every request that changes something needs the `x-agt-request: 1` header. Setup, sign-in and the password change
-  are rate limited.
+- The Admin's and members' passwords are hashed with scrypt (`N = 2^15, r = 8, p = 1`); a stored hash in any other
+  format can never verify. Sessions use random tokens stored only as SHA-256 hashes, in an `HttpOnly`,
+  `SameSite=Strict` cookie, and every request that changes something needs the `x-agt-request: 1` header.
+- The Admin and members have separate cookies (`agt_trivia_session` and `agt_trivia_member_session`). Each is accepted
+  only on its own routes, so a member session never opens the Admin dashboard, and the reverse.
+- With [AGT sign-in](#agt-sign-in), a traveller's AGT password is sent only to AGT IAM, and neither it nor AGT IAM's
+  answer token is stored or logged. `AGT_TRIVIA_IAM_API_KEY` stays in `.env`.
+- Setup, Admin and member sign-in (local and AGT) and both password changes are rate limited (`rateLimits.login`,
+  `rateLimits.setup`).
+- Everything members write is plain text: questions, choices, categories, review notes, report notes and display
+  names. It is shown through React's escaping, never as HTML: no Markdown, no links and no images.
+- The [sheet import](#importing-the-google-sheet) accepts only from the Admin two CSV files of at most 1 MiB each,
+  checked as UTF-8 text. They are parsed in memory and never written to disk, stored or served.
 
 ## Development
 

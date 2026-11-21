@@ -14,7 +14,7 @@ Group=agt-trivia
 WorkingDirectory=/opt/agt-trivia
 Environment=NODE_ENV=production
 Environment=AGT_TRIVIA_CONFIG_FILE=/etc/agt-trivia/config.yaml
-# Secrets only (AGT_TRIVIA_SETUP_PASSWORD). Optional: the leading "-".
+# Secrets only (AGT_TRIVIA_SETUP_PASSWORD, AGT_TRIVIA_IAM_API_KEY). Optional: the leading "-".
 EnvironmentFile=-/etc/agt-trivia/.env
 ExecStart=/usr/bin/node dist-server/index.mjs
 Restart=on-failure
