@@ -326,6 +326,10 @@ A link to a category opens it directly: `/?category=<short name>`, ignoring case
 An unknown or empty category falls back to the list with a notice. Back and Forward move between the list and the
 categories.
 
+Once an answer is locked in, leaving the quiz before its results (the Categories button, the logo, a header link or
+the browser's Back) first asks **Leave this quiz?**: **Keep playing** returns to the question, **Leave quiz** goes
+on and the answers are lost. Reloading or closing the tab gets the browser's own prompt.
+
 Anonymous play happens entirely in the browser and saves nothing. The **Settings** button in the header sets the
 language, the time zone (for the dates in [score history](#score-history)) and the text size (1× to 2×); they are stored in this browser and shared with the admin dashboard. The
 questions and categories themselves stay in English, in every language.

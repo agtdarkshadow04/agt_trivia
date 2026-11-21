@@ -6,6 +6,12 @@ All notable changes to AGT Galactic Trivia are documented in this file. The form
 
 ## [2.2.0] - Unreleased
 
+### Added
+
+- **Leave this quiz?** Once an answer is locked in, leaving a quiz before its results, through the Categories
+  button, the logo, a header link or the browser's Back, asks first: **Keep playing** or **Leave quiz**. Reloading
+  or closing the tab gets the browser's own prompt (#67).
+
 ### Deprecated
 
 - `POST /api/member/questions/{id}/reports` answers `201` with the bare report, and `PUT /api/member/preferences`

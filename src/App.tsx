@@ -1,11 +1,12 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { MemberSession, PublicCategory, PublicQuiz, PublicSettings, QuizLength } from './lib/api';
 import { getMemberSession, getPublicSettings, getQuestionCounts, getQuiz, listCategories } from './lib/playerApi';
 import { canAuthor } from './lib/questionRules';
-import { choose, isFinished, lockAnswer, nextQuestion, startSession, type QuizSession } from './lib/quizSession';
+import { choose, isFinished, isInProgress, lockAnswer, nextQuestion, startSession, type QuizSession } from './lib/quizSession';
 import { categoryParam, findCategory, pageParam, searchForLeaderboard, searchForPage, searchWithCategory, viewParam, type Page } from './lib/routes';
 import { COMMON_TRANSLATIONS, formatTranslation } from './translations';
 import { CategoryList } from './components/CategoryList';
+import { ConfirmDialog } from './components/Dialog';
 import { useI18n } from './components/I18n';
 import { RefreshIcon, TrophyIcon } from './components/Icons';
 import { Leaderboard } from './components/Leaderboard';
@@ -58,6 +59,27 @@ export function App() {
   const [status, setStatus] = useState('');
   // #19: the questions waiting for review, for a Moderator's header.
   const [reviewCount, setReviewCount] = useState<number | null>(null);
+  // #67: where the player wanted to go while a quiz was in progress, until they confirm or keep playing.
+  const [leaving, setLeaving] = useState<(() => void) | null>(null);
+
+  // #67: a quiz with at least one locked answer and no results yet is lost by leaving it.
+  const inProgress = play?.status === 'playing' && isInProgress(play.session);
+  const inProgressRef = useRef(inProgress);
+  const searchRef = useRef(search);
+  const leavingByBack = useRef(false);
+  useEffect(() => { inProgressRef.current = inProgress; searchRef.current = search; });
+  /** Runs `action` at once, or after the player confirms leaving the quiz in progress. */
+  const guard = useCallback((action: () => void) => {
+    if (inProgressRef.current) setLeaving(() => action);
+    else action();
+  }, []);
+  // Reloading or closing the tab gets the browser's own prompt.
+  useEffect(() => {
+    if (!inProgress) return undefined;
+    const warn = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = ''; };
+    window.addEventListener('beforeunload', warn);
+    return () => window.removeEventListener('beforeunload', warn);
+  }, [inProgress]);
 
   useEffect(() => {
     getMemberSession().then(setMember, () => setMember(null));
@@ -94,9 +116,18 @@ export function App() {
   }, [memberRole]);
   useEffect(() => { refreshCounts(); }, [refreshCounts, memberId]);
 
-  // Back and Forward move between the list and the categories (FE-4).
+  // Back and Forward move between the list and the categories (FE-4). During a quiz in progress the quiz's entry is
+  // put back and the player asked first; leaving goes back for real (#67).
   useEffect(() => {
-    const follow = () => { setSearch(window.location.search); setPlay(null); setNotice(null); setStatus(''); };
+    const follow = () => {
+      if (inProgressRef.current && !leavingByBack.current) {
+        window.history.pushState(null, '', `${window.location.pathname}${searchRef.current}`);
+        setLeaving(() => () => { leavingByBack.current = true; window.history.back(); });
+        return;
+      }
+      leavingByBack.current = false;
+      setSearch(window.location.search); setPlay(null); setNotice(null); setStatus('');
+    };
     window.addEventListener('popstate', follow);
     return () => window.removeEventListener('popstate', follow);
   }, []);
@@ -128,9 +159,9 @@ export function App() {
     setPlay(null);
     setNotice(null);
   }, []);
-  /** A category, or the list for null; a page such as the sign-in is left behind. */
-  const navigate = useCallback((shortName: string | null) => { setStatus(''); go(searchWithCategory('', shortName)); }, [go]);
-  const openPage = useCallback((target: Page) => { setStatus(''); go(searchForPage(target)); }, [go]);
+  /** A category, or the list for null; a page such as the sign-in is left behind. Asks first during a quiz (#67). */
+  const navigate = useCallback((shortName: string | null) => guard(() => { setStatus(''); go(searchWithCategory('', shortName)); }), [go, guard]);
+  const openPage = useCallback((target: Page) => guard(() => { setStatus(''); go(searchForPage(target)); }), [go, guard]);
 
   // A signed-in member has nothing to do on the sign-in page, and only Editors and Moderators have question
   // pages (Moderators the review queue); anyone else goes back to the game (FE-4).
@@ -258,6 +289,17 @@ export function App() {
       onSignedOut={() => { setMember(null); setStatus(t.login.signedOut); }}
     >
       <div className="player">{content}</div>
+      {leaving && (
+        <ConfirmDialog
+          title={t.quiz.leaveTitle}
+          description={t.quiz.leaveText}
+          confirmLabel={t.quiz.leaveQuiz}
+          cancelLabel={t.quiz.keepPlaying}
+          danger
+          onConfirm={() => { setLeaving(null); leaving(); }}
+          onCancel={() => setLeaving(null)}
+        />
+      )}
     </Layout>
   );
 }

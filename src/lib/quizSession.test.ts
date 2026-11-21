@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import type { PublicQuestion } from './api.js';
-import { choiceState, choose, currentQuestion, isFinished, isMultiAnswer, lockAnswer, nextQuestion, quizResult, reviewAnswers, startSession } from './quizSession.js';
+import { choiceState, choose, currentQuestion, isFinished, isInProgress, isMultiAnswer, lockAnswer, nextQuestion, quizResult, reviewAnswers, startSession } from './quizSession.js';
 
 const single: PublicQuestion = {
   id: 'q1', prompt: 'Largest planet?', authorCredit: null,
@@ -13,6 +13,20 @@ const multi: PublicQuestion = {
 };
 
 describe('a quiz session (#16)', () => {
+  it('is in progress from the first locked answer until the results (#67)', () => {
+    let session = startSession([single, multi]);
+    assert.equal(isInProgress(session), false);
+    session = choose(session, 'a');
+    assert.equal(isInProgress(session), false, 'a choice alone is not an answer yet');
+    session = lockAnswer(session);
+    assert.equal(isInProgress(session), true);
+    session = nextQuestion(session);
+    assert.equal(isInProgress(session), true);
+    session = nextQuestion(lockAnswer(choose(session, 'c')));
+    assert.equal(isFinished(session), true);
+    assert.equal(isInProgress(session), false, 'nothing is lost on the results screen');
+  });
+
   it('tells single- from multi-answer questions', () => {
     assert.equal(isMultiAnswer(single), false);
     assert.equal(isMultiAnswer(multi), true);

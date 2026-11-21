@@ -39,6 +39,11 @@ export function isFinished(session: QuizSession) {
   return session.index >= session.questions.length;
 }
 
+/** At least one answer is locked and the results are not shown yet: leaving now loses the quiz (#67). */
+export function isInProgress(session: QuizSession) {
+  return session.answers.length > 0 && !isFinished(session);
+}
+
 /**
  * Chooses or, for a multi-answer question, toggles a choice. Nothing changes
  * once the answer is locked, or for a choice the question does not have.

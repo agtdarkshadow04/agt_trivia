@@ -131,6 +131,89 @@ test('plays with the keyboard alone (A11Y-5)', async ({ page }) => {
   await expect(page.getByRole('img', { name: /of 3 correct/ })).toBeVisible();
 });
 
+test('asks before leaving a quiz in progress, and only then (#67)', async ({ page }) => {
+  const watched = await watchPage(page);
+  const leave = page.getByRole('alertdialog', { name: 'Leave this quiz?' });
+  const startBiology = async () => {
+    await page.getByRole('button', { name: /Full quiz/ }).click();
+    await expect(page.getByText('Question 1 of 3')).toBeVisible();
+  };
+  await page.goto('/');
+  await page.getByRole('button', { name: /Biology/ }).click();
+  await startBiology();
+
+  // No prompt before the first answer is locked in.
+  await page.getByRole('button', { name: 'Categories' }).click();
+  await expect(page.getByRole('heading', { name: 'Choose a category' })).toBeVisible();
+  await expect(leave).toHaveCount(0);
+
+  await page.getByRole('button', { name: /Biology/ }).click();
+  await startBiology();
+  await answer(page, true);
+  await page.getByRole('button', { name: 'Next question' }).click();
+  await expect(page.getByText('Question 2 of 3')).toBeVisible();
+
+  // Back to categories: Keep playing has the focus, keeps the question and score, and focus returns to the opener.
+  const back = page.getByRole('button', { name: 'Categories' });
+  await back.click();
+  await expect(leave).toBeVisible();
+  await expect(leave).toContainText('Your answers so far will be lost.');
+  await expect(leave.getByRole('button', { name: 'Keep playing' })).toBeFocused();
+  await expectAccessible(page, 'leave quiz dialog');
+  await leave.getByRole('button', { name: 'Keep playing' }).click();
+  await expect(leave).toBeHidden();
+  await expect(back).toBeFocused();
+  await expect(page.getByText('Question 2 of 3')).toBeVisible();
+  await expect(page.getByText('Score: 1')).toBeVisible();
+
+  // The brand link: Escape keeps playing.
+  await page.locator('a.brand').click();
+  await expect(leave).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(leave).toBeHidden();
+  await expect(page).toHaveURL(/\?category=bio$/);
+
+  // A header link.
+  await page.getByRole('link', { name: 'Sign in' }).click();
+  await expect(leave).toBeVisible();
+  await leave.getByRole('button', { name: 'Keep playing' }).click();
+  await expect(page.getByText('Question 2 of 3')).toBeVisible();
+
+  // The browser's Back: the quiz stays until the player leaves, and leaving goes back for real.
+  await page.goBack();
+  await expect(leave).toBeVisible();
+  await expect(page).toHaveURL(/\?category=bio$/);
+  await leave.getByRole('button', { name: 'Keep playing' }).click();
+  await expect(page.getByText('Question 2 of 3')).toBeVisible();
+  await expect(page.getByText('Score: 1')).toBeVisible();
+  await page.goBack();
+  await leave.getByRole('button', { name: 'Leave quiz' }).click();
+  await expect(page).toHaveURL(/\/$/);
+  await expect(page.getByRole('heading', { name: 'Choose a category' })).toBeVisible();
+
+  // Leaving through a header link goes where asked.
+  await page.getByRole('button', { name: /Biology/ }).click();
+  await startBiology();
+  await answer(page, false);
+  await page.getByRole('link', { name: 'Sign in' }).click();
+  await leave.getByRole('button', { name: 'Leave quiz' }).click();
+  await expect(page).toHaveURL(/\?page=login$/);
+
+  // No prompt on the results screen.
+  await page.goto('/?category=bio');
+  await startBiology();
+  for (let number = 1; number <= 3; number += 1) {
+    await answer(page, true);
+    await page.getByRole('button', { name: number === 3 ? 'View results' : 'Next question' }).click();
+  }
+  await expect(page.getByRole('img', { name: /of 3 correct/ })).toBeVisible();
+  await page.getByRole('button', { name: 'Choose another' }).click();
+  await expect(leave).toHaveCount(0);
+  await expect(page.getByRole('heading', { name: 'Choose a category' })).toBeVisible();
+  expect(watched.consoleErrors).toEqual([]);
+  expect(await watched.violations()).toEqual([]);
+});
+
 test('follows deep links, ignoring case, and falls back to the list (FE-4)', async ({ page }) => {
   await page.goto('/?category=BIO');
   await expect(page.getByRole('heading', { name: 'Choose quiz length' })).toBeVisible();
