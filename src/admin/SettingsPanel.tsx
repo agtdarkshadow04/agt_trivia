@@ -3,11 +3,12 @@ import { fieldError } from '../lib/errors';
 import { errorsOf, quizLengthsError } from '../lib/validation';
 import { formatTranslation } from '../translations';
 import { formErrors, noFormErrors, TextField } from '../components/Field';
-import { listSettings, updateSettings, type IamStatus, type SettingState, type SettingValue } from './api';
+import { listRankedCategories, listSettings, saveRankedCategories, updateSettings, type IamStatus, type RankedCategory, type SettingState, type SettingValue } from './api';
 import { useAdminI18n } from './context';
 import type { AdminTranslations } from './i18n';
 
 type Key = 'site.title' | 'site.supportUrl' | 'quiz.shortLength' | 'quiz.longLength' | 'leaderboards.enabled' | 'leaderboards.size'
+  | 'ranked.enabled' | 'ranked.questionsPerRun' | 'ranked.secondsPerQuestion' | 'ranked.ratingRuns' | 'ranked.cooldownDays' | 'ranked.boardSize'
   | 'backup.maxZipBytes' | 'backup.maxUncompressedBytes' | 'backup.maxEntries' | 'iam.enabled'
   | 'logs.serverRetentionDays' | 'logs.serverMaxEntries' | 'logs.auditRetentionDays' | 'logs.auditMaxEntries';
 
@@ -19,6 +20,14 @@ const groups: { title: (a: AdminTranslations) => string; help?: (a: AdminTransla
     title: (a) => a.settings.leaderboards,
     help: (a) => a.settings.leaderboardsHelp,
     keys: [{ key: 'leaderboards.enabled', type: 'checkbox' }, { key: 'leaderboards.size', type: 'number' }],
+  },
+  {
+    title: (a) => a.settings.ranked,
+    help: (a) => a.settings.rankedHelp,
+    keys: [
+      { key: 'ranked.enabled', type: 'checkbox' }, { key: 'ranked.questionsPerRun', type: 'number' }, { key: 'ranked.secondsPerQuestion', type: 'number' },
+      { key: 'ranked.ratingRuns', type: 'number' }, { key: 'ranked.cooldownDays', type: 'number' }, { key: 'ranked.boardSize', type: 'number' },
+    ],
   },
   {
     title: (a) => a.settings.backupLimits,
@@ -42,6 +51,12 @@ const labels = (a: AdminTranslations): Record<Key, string> => ({
   'quiz.longLength': a.settings.quizLongLength,
   'leaderboards.enabled': a.settings.leaderboardsEnabled,
   'leaderboards.size': a.settings.leaderboardsSize,
+  'ranked.enabled': a.settings.rankedEnabled,
+  'ranked.questionsPerRun': a.settings.rankedQuestionsPerRun,
+  'ranked.secondsPerQuestion': a.settings.rankedSecondsPerQuestion,
+  'ranked.ratingRuns': a.settings.rankedRatingRuns,
+  'ranked.cooldownDays': a.settings.rankedCooldownDays,
+  'ranked.boardSize': a.settings.rankedBoardSize,
   'backup.maxZipBytes': a.settings.maxZipBytes,
   'backup.maxUncompressedBytes': a.settings.maxUncompressedBytes,
   'backup.maxEntries': a.settings.maxEntries,
@@ -59,6 +74,76 @@ const iamMissingName = (missing: IamStatus['missing'][number]) => (missing === '
 function sourceText(state: SettingState, a: AdminTranslations) {
   const template = state.locked ? a.settings.fromConfig : state.source === 'dashboard' ? a.settings.fromDashboard : a.settings.fromDefault;
   return formatTranslation(template, { key: state.key });
+}
+
+/**
+ * Which categories ranked runs draw from (#66): every category, ticked unless
+ * the Admin left it out. Saving sends only the categories that changed.
+ */
+function RankedCategories() {
+  const { t, a } = useAdminI18n();
+  const id = useId();
+  const [categories, setCategories] = useState<RankedCategory[] | null>(null);
+  const [draft, setDraft] = useState<Record<string, boolean>>({});
+  const [error, setError] = useState('');
+  const [saved, setSaved] = useState(false);
+  const [busy, setBusy] = useState(false);
+
+  const show = useCallback((next: RankedCategory[]) => {
+    setCategories(next);
+    setDraft(Object.fromEntries(next.map((category) => [category.id, category.ranked])));
+  }, []);
+  useEffect(() => {
+    listRankedCategories().then(show, (cause: unknown) => setError(formErrors(cause, t).form ?? ''));
+  }, [show, t]);
+
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!categories) return;
+    setSaved(false);
+    setError('');
+    const changed = categories.filter((category) => draft[category.id] !== category.ranked).map((category) => ({ id: category.id, ranked: draft[category.id] }));
+    if (!changed.length) return;
+    setBusy(true);
+    try {
+      show((await saveRankedCategories(changed)).categories);
+      setSaved(true);
+    } catch (cause) {
+      setError(formErrors(cause, t).form ?? '');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <form className="stack-form ranked-categories" noValidate aria-labelledby={`${id}-title`} onSubmit={(event) => void submit(event)}>
+      <fieldset className="settings-group">
+        <legend id={`${id}-title`}>{a.settings.rankedCategories}</legend>
+        <p className="field-help">{a.settings.rankedCategoriesHelp}</p>
+        {error && <p className="error-note" role="alert">{error}</p>}
+        <div role="status" aria-live="polite">
+          {!categories && !error && <p>{a.settings.rankedCategoriesLoading}</p>}
+          {saved && <p className="success-note">{a.settings.rankedCategoriesSaved}</p>}
+        </div>
+        {categories?.length === 0 && <p className="field-help">{a.settings.rankedCategoriesNone}</p>}
+        {categories?.map((category) => (
+          <label key={category.id} className="check-field">
+            <input
+              type="checkbox"
+              checked={draft[category.id] ?? category.ranked}
+              onChange={(event) => setDraft((current) => ({ ...current, [category.id]: event.target.checked }))}
+            />
+            {formatTranslation(a.settings.rankedCategoryCount, { name: category.name, count: category.questionCount })}
+          </label>
+        ))}
+      </fieldset>
+      {categories && categories.length > 0 && (
+        <div className="form-actions">
+          <button className="button button-primary" type="submit" disabled={busy}>{a.settings.rankedCategoriesSave}</button>
+        </div>
+      )}
+    </form>
+  );
 }
 
 /** UI-8 Settings (CFG-6, CFG-9): the dashboard-editable settings; config.yaml always wins. */
@@ -198,6 +283,7 @@ export function SettingsPanel() {
           </div>
         </form>
       )}
+      <RankedCategories />
     </section>
   );
 }

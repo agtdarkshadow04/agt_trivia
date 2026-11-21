@@ -393,6 +393,11 @@ ranked run** brings the questions one by one, each with a countdown; **Submit an
 Enter) sends it, and the next question follows at once. A member who leaves a run partway is asked first, and can
 **Continue your run** later while its time keeps running; **Start a new run** forfeits it.
 
+The **Ranked board** (`/?page=board`, linked from the category list, Ranked and its totals) is public while Ranked
+mode is on. **My scores** shows a member's rating, rank, number of runs, accuracy and their latest runs (totals only).
+The Admin sets Ranked mode in the dashboard's **Settings** tab, which also lists every category under **Ranked
+categories**: untick one to leave it out of ranked runs. New categories are included.
+
 The server runs every ranked run:
 
 - A run is `ranked.questionsPerRun` questions (10 by default), drawn from every category the Admin includes (all of

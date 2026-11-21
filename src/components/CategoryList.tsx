@@ -4,7 +4,7 @@ import { filterCategories } from '../lib/categoryFilter';
 import { formatTranslation } from '../translations';
 import { TextField } from './Field';
 import { useI18n } from './I18n';
-import { ArrowRightIcon } from './Icons';
+import { ArrowRightIcon, TrophyIcon } from './Icons';
 import { useViewHeading } from './useViewHeading';
 
 /** A member's best result and number of plays in a category (#69). */
@@ -20,13 +20,15 @@ export function PersonalBest({ stats }: { stats: CategoryStats }) {
  * address (FE-4), and starts empty whenever the list is shown again. Each card
  * keeps its number in the full list.
  */
-export function CategoryList({ categories, stats = null, notice, onChoose }: {
+export function CategoryList({ categories, stats = null, notice, onChoose, onRankedBoard }: {
   categories: readonly PublicCategory[];
   /** A signed-in member's stats by category ID (#69); null for visitors, the Admin, or while unknown. */
   stats?: ReadonlyMap<string, CategoryStats> | null;
   /** Why the list is shown instead of a deep-linked category (FE-4). */
   notice: string | null;
   onChoose(category: PublicCategory): void;
+  /** While Ranked mode is on (#66): opens the ranked board. */
+  onRankedBoard?(): void;
 }) {
   const { t, number } = useI18n();
   const heading = useViewHeading('categories');
@@ -47,6 +49,9 @@ export function CategoryList({ categories, stats = null, notice, onChoose }: {
           <h1 id="category-heading" ref={heading} tabIndex={-1}>{t.quiz.chooseCategory}</h1>
         </div>
         <p className="section-heading-meta">{formatTranslation(t.quiz.totalQuestions, { count: number(total) })}</p>
+        {onRankedBoard && (
+          <button className="button button-secondary button-with-icon" type="button" onClick={onRankedBoard}><TrophyIcon />{t.ranked.boardLink}</button>
+        )}
       </div>
       <div role="status">{notice && <p className="admin-notice">{notice}</p>}</div>
       {categories.length > 0 && (

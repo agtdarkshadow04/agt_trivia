@@ -126,6 +126,77 @@ test('a question the member does not answer in time scores nothing, and the run 
   }
 });
 
+test('the ranked board lists the members who chose to appear, for visitors too, and My scores shows the member\'s standing', async ({ page, browser }) => {
+  const watched = await watchPage(page);
+  await signIn(page);
+  expect((await page.request.put('/api/member/preferences', { headers: { 'x-agt-request': '1' }, data: { leaderboardOptIn: true } })).status()).toBe(200);
+  // A finished run of this test's own, so the member is on the board.
+  await page.goto('/?page=ranked');
+  await page.getByRole('button', { name: /Start ranked run|Start a new run/ }).click();
+  for (let number = 1; number <= 3; number += 1) {
+    await expect(page.getByText(`Question ${number} of 3`)).toBeVisible();
+    await answerFirst(page);
+  }
+  await expect(page.getByRole('heading', { name: 'Your totals' })).toBeVisible();
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Ranked board' }).click();
+  await expect(page).toHaveURL(/\?page=board$/);
+  await expect(page.getByRole('heading', { level: 1, name: 'Ranked board' })).toBeFocused();
+  await expect(page.getByText(/A rating is the average score of a member's latest 10 ranked runs/)).toBeVisible();
+  await expect(page.getByRole('rowheader', { name: 'Traveller Ranked' })).toBeVisible();
+  await expectAccessible(page, 'ranked board');
+  for (const width of [300, 520, 760, 1180]) {
+    await page.setViewportSize({ width, height: 800 });
+    await expectNoHorizontalScroll(page, `ranked board at ${width}px`);
+  }
+  await page.getByRole('button', { name: 'Play ranked' }).click();
+  await expect(page.getByRole('heading', { level: 1, name: 'Ranked run' })).toBeVisible();
+
+  await page.goto('/?page=scores');
+  const summary = page.locator('.ranked-summary');
+  await expect(summary.getByRole('heading', { name: 'Ranked', exact: true })).toBeVisible();
+  await expect(summary).toContainText('Runs');
+  await expect(summary.locator('.ranked-history li').first()).toContainText(/\d+ points · \d of 3 correct/);
+
+  // Visitors read the board, without a Play button.
+  const visitor = await browser.newPage();
+  await visitor.goto('/?page=board');
+  await expect(visitor.getByRole('rowheader', { name: 'Traveller Ranked' })).toBeVisible();
+  await expect(visitor.getByRole('button', { name: 'Play ranked' })).toHaveCount(0);
+  await visitor.close();
+  await page.request.put('/api/member/preferences', { headers: { 'x-agt-request': '1' }, data: { leaderboardOptIn: false } });
+  expect(watched.consoleErrors).toEqual([]);
+  expect(await watched.violations()).toEqual([]);
+});
+
+test.describe('the Admin', () => {
+  test.use({ storageState: adminState });
+
+  test('sets Ranked mode and its categories in the Settings tab', async ({ page }) => {
+    await page.goto('/admin');
+    await page.getByRole('tab', { name: 'Settings' }).click();
+    const group = page.getByRole('group', { name: 'Ranked mode' });
+    await expect(group.getByLabel('Members can play ranked runs')).toBeChecked();
+    await expect(group.getByLabel('Questions per run')).toHaveValue('3');
+    const categories = page.getByRole('group', { name: 'Ranked categories' });
+    const biology = categories.getByLabel(/^Biology · Questions: \d+$/);
+    await expect(biology).toBeChecked();
+    await expectAccessible(page, 'ranked settings');
+    await biology.uncheck();
+    await page.getByRole('button', { name: 'Save ranked categories' }).click();
+    await expect(page.getByRole('status').filter({ hasText: 'The ranked categories were saved.' })).toBeVisible();
+    const listed = await (await page.request.get('/api/admin/ranked/categories')).json();
+    expect(listed.find((category: { shortName: string }) => category.shortName === 'bio').ranked).toBe(false);
+    await biology.check();
+    await page.getByRole('button', { name: 'Save ranked categories' }).click();
+    await expect(page.getByRole('status').filter({ hasText: 'The ranked categories were saved.' })).toBeVisible();
+    for (const width of [300, 760]) {
+      await page.setViewportSize({ width, height: 800 });
+      await expectNoHorizontalScroll(page, `ranked settings at ${width}px`);
+    }
+  });
+});
+
 test('Ranked mode is only for members, and only while it is on', async ({ page }) => {
   await page.goto('/?page=ranked');
   await expect(page.getByRole('heading', { name: 'Choose a category' })).toBeVisible();
