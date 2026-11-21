@@ -51,6 +51,10 @@ export const errorCodes = [
   'attempt_invalid',
   'report_exists',
   'leaderboards_closed',
+  'ranked_closed',
+  'ranked_unavailable',
+  'run_not_active',
+  'question_not_current',
 ] as const;
 
 const Params = Type.Record(Type.String(), Type.Union([Type.String(), Type.Number(), Type.Boolean()]), {
@@ -84,6 +88,7 @@ export const PublicSettings = object({
   quizLongLength: Type.Integer({ description: '`quiz.longLength`: questions in a long quiz.' }),
   agtSignIn: Type.Boolean({ description: 'Members can sign in with their AGT account: `iam.enabled` is on and AGT IAM is configured (#18).' }),
   leaderboards: Type.Boolean({ description: '`leaderboards.enabled`: categories have public leaderboards (#49).' }),
+  ranked: Type.Boolean({ description: '`ranked.enabled`: members can play ranked runs, and the ranked board is public (#66).' }),
 }, 'The settings the player UI needs (CFG-10); nothing sensitive.');
 
 // --- Categories and the public quiz (#15) -----------------------------------
@@ -653,3 +658,104 @@ export const ImportUploadDocument = {
     },
   },
 };
+
+// --- Ranked mode (#66) ------------------------------------------------------------
+
+export const RankedRunIdParams = object({ id: Type.String({ description: 'The run ID (a UUIDv4); anything else, or another member\'s run, answers 404.' }) });
+
+const RankedTotals = object({
+  score: Type.Integer({ minimum: 0 }),
+  correctCount: Type.Integer({ minimum: 0 }),
+  countedCount: Type.Integer({ minimum: 0, description: 'The questions that counted: all, less those unapproved or deleted during the run.' }),
+  averageAnswerMs: Type.Union([Type.Integer({ minimum: 0 }), Type.Null()], { description: 'The mean time of the answers given in time; null without any.' }),
+  rating: Type.Integer({ description: "The member's rating after this run: the mean score of their latest `ranked.ratingRuns` ended runs." }),
+  ratingChange: Type.Union([Type.Integer(), Type.Null()], { description: 'How the rating changed with this run; null for a first run.' }),
+}, 'Only once the run has ended. Never which answers were right.');
+
+export const RankedRun = object({
+  id: Type.String({ format: 'uuid' }),
+  status: Type.Union([Type.Literal('active'), Type.Literal('finished'), Type.Literal('forfeited')]),
+  questionCount: Type.Integer({ minimum: 1 }),
+  secondsPerQuestion: Type.Integer({ minimum: 1 }),
+  closedCount: Type.Integer({ minimum: 0, description: 'The questions answered, expired or left out so far.' }),
+  startedAt: Type.String({ format: 'date-time' }),
+  finishedAt: Type.Union([Type.String({ format: 'date-time' }), Type.Null()]),
+  totals: Type.Union([RankedTotals, Type.Null()], { description: 'Null while the run is active.' }),
+});
+
+export const RankedRunCreated = object({ run: RankedRun, notices: Type.Array(FieldErrorSchema) }, 'API-2: the new run, with no notices.');
+
+export const RankedQuestion = object({
+  position: Type.Integer({ minimum: 0 }),
+  prompt: Type.String(),
+  choices: Type.Array(object({ id: Type.String({ format: 'uuid' }), text: Type.String() }), { description: 'Shuffled each time the question is shown.' }),
+  multi: Type.Boolean({ description: 'More than one answer is correct.' }),
+  servedAt: Type.String({ format: 'date-time' }),
+  deadline: Type.String({ format: 'date-time', description: 'The time limit, from the server\'s clock; answers up to 2 seconds later still count.' }),
+  remainingMs: Type.Integer({ minimum: 0, description: 'Milliseconds left until the deadline when the server answered, so a timer needs no synchronized clock.' }),
+}, 'Never the correct answers.');
+
+export const RankedStep = object({
+  run: RankedRun,
+  question: Type.Union([RankedQuestion, Type.Null()], { description: 'Null once the run has finished.' }),
+});
+
+export const RankedAnswerBody = object({
+  position: Type.Integer({ minimum: 0, maximum: 1000, description: 'The position of the question being shown.' }),
+  choiceIds: Type.Array(Type.String({ maxLength: 64 }), { maxItems: 8 }),
+});
+
+export const RankedAnswerResult = object({
+  run: RankedRun,
+  late: Type.Boolean({ description: 'The answer came after the time limit and scores nothing. Never whether it was right.' }),
+});
+
+export const MyRanked = object({
+  enabled: Type.Boolean({ description: '`ranked.enabled`.' }),
+  rating: Type.Union([Type.Integer(), Type.Null()], { description: 'Null before the first ended run.' }),
+  runs: Type.Integer({ minimum: 0, description: 'Every ended run.' }),
+  provisional: Type.Boolean({ description: 'Fewer than 3 ended runs: listed below the ranked members.' }),
+  accuracy: Type.Union([Type.Integer({ minimum: 0, maximum: 100 }), Type.Null()], { description: 'Correct answers in the rated runs, in percent.' }),
+  rank: Type.Union([Type.Integer({ minimum: 1 }), Type.Null()], { description: 'On the ranked board; null when provisional or not shown on leaderboards.' }),
+  activeRunId: Type.Union([Type.String({ format: 'uuid' }), Type.Null()]),
+  history: Type.Array(object({
+    id: Type.String({ format: 'uuid' }),
+    status: Type.Union([Type.Literal('finished'), Type.Literal('forfeited')]),
+    score: Type.Integer({ minimum: 0 }),
+    correctCount: Type.Integer({ minimum: 0 }),
+    countedCount: Type.Integer({ minimum: 0 }),
+    finishedAt: Type.String({ format: 'date-time' }),
+  }), { maxItems: 20, description: 'The latest 20 ended runs, newest first; totals only.' }),
+});
+
+const RankedBoardFields = {
+  displayName: Type.String(),
+  rating: Type.Integer({ description: 'The mean score of the latest `ranked.ratingRuns` ended runs.' }),
+  runs: Type.Integer({ minimum: 1 }),
+  accuracy: Type.Integer({ minimum: 0, maximum: 100, description: 'Correct answers in the rated runs, in percent.' }),
+};
+
+export const RankedLeaderboard = object({
+  ratingRuns: Type.Integer({ description: '`ranked.ratingRuns`.' }),
+  provisionalRuns: Type.Integer({ description: 'Members with fewer ended runs are provisional.' }),
+  entries: Type.Array(object({ rank: Type.Integer({ minimum: 1 }), ...RankedBoardFields }), { description: 'By rating, then accuracy, then who reached it first; at most `ranked.boardSize`.' }),
+  provisional: Type.Array(object(RankedBoardFields), { description: 'By runs, then rating; at most `ranked.boardSize`.' }),
+}, 'Display names only (API-3).');
+
+const RankedCategory = object({
+  id: Type.String({ format: 'uuid' }),
+  shortName: Type.String(),
+  name: Type.String(),
+  questionCount: Type.Integer({ minimum: 0, description: 'Approved questions.' }),
+  ranked: Type.Boolean({ description: 'Ranked runs draw from it.' }),
+});
+
+export const RankedCategoryList = Type.Array(RankedCategory, { description: 'Every category, by name (a plain array, API-8).' });
+
+export const RankedCategoriesBody = object({
+  categories: Type.Array(object({ id: Type.String({ maxLength: 64 }), ranked: Type.Boolean() }), {
+    maxItems: 1000, description: 'Only the categories to change; the others stay as they are.',
+  }),
+});
+
+export const RankedCategoriesResult = object({ categories: RankedCategoryList, notices: Type.Array(FieldErrorSchema) }, 'API-2: every category after the change.');

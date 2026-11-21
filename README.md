@@ -229,6 +229,12 @@ Settings come from three places:
 | `quiz.longLength` | `30` | Questions in a long quiz (2–500, more than `quiz.shortLength`) |
 | `leaderboards.enabled` | `false` | Whether each category has a public [leaderboard](#leaderboards) of the members who chose to appear on it |
 | `leaderboards.size` | `10` | How many members a leaderboard shows (3–50) |
+| `ranked.enabled` | `false` | Whether members can play [ranked runs](#ranked-mode) and the ranked board is public |
+| `ranked.questionsPerRun` | `10` | Questions in a ranked run (3–50) |
+| `ranked.secondsPerQuestion` | `20` | Seconds to answer each ranked question (5–120) |
+| `ranked.ratingRuns` | `10` | How many of a member's latest ranked runs their rating averages (1–50) |
+| `ranked.cooldownDays` | `14` | Days before a member can be shown a ranked question again (0–365) |
+| `ranked.boardSize` | `20` | How many members the ranked board shows (3–100) |
 | `iam.enabled` | `false` | Whether members can sign in with their AGT account ([AGT sign-in](#agt-sign-in)); needs `iam.baseUrl`, `iam.appId` and `AGT_TRIVIA_IAM_API_KEY`. Turning it off signs every AGT member out |
 | `backup.maxZipBytes` | `209715200` (200 MiB) | Largest backup upload, in bytes (1024 to 2 GiB) |
 | `backup.maxUncompressedBytes` | `1073741824` (1 GiB) | Largest total size of a backup's files once unpacked, in bytes (1024 to 8 GiB) |
@@ -375,6 +381,34 @@ at least `quiz.shortLength` questions (every question of a smaller category), wh
 from the quiz the server drew (a signed attempt), so hand-made results or very small draws never place anyone. Members
 are ranked by their best percentage, then by more results, then by who reached it first; `leaderboards.size` sets how
 many are shown. To take an unwanted name off the boards, the Admin renames or deactivates the member.
+
+### Ranked mode
+
+Ranked mode is off by default (`ranked.enabled`). While it is on, signed-in members play **ranked runs**, and one
+public **ranked board** lists the members who turned on **Show me on leaderboards** in their account. Practice, the
+quizzes described above, stays as it is and never counts on the ranked board.
+
+The server runs every ranked run:
+
+- A run is `ranked.questionsPerRun` questions (10 by default), drawn from every category the Admin includes (all of
+  them, until the Admin leaves some out) and spread across them, so one large category cannot fill a run. A member
+  is not shown a ranked question again within `ranked.cooldownDays` (14 by default); when too few unseen questions
+  remain, Ranked mode says to come back later.
+- Questions come one at a time, with `ranked.secondsPerQuestion` (20 by default) to answer each, timed by the server.
+  The first answer is final. A late or missing answer scores 0, and leaving a run partway, or starting another,
+  forfeits it: it still counts.
+- **Nothing says whether an answer was right**, during the run or after it, and the correct answers are never shown.
+  At the end, the member sees only the totals: the score, how many were right, the average answer time and how
+  their rating changed.
+- A correct answer scores 100 points plus up to 50 for speed, falling to 0 at the time limit; each correct answer in
+  a row after the first adds 10, up to 50. A question unapproved or deleted during a run doesn't count.
+- A member's **rating** is the average score of their latest `ranked.ratingRuns` runs (10 by default). The board
+  ranks members by rating, then accuracy, then who got there first, and lists members with fewer than 3 runs as
+  provisional. It shows display names only.
+
+The questions are the same ones Practice plays, and Practice shows their answers, so studying them stays possible;
+the time limit and the cooldown make that worth little. Ranked runs are in backups like the rest of the data, and
+deleting a member deletes their runs.
 
 ## Writing and reviewing questions
 

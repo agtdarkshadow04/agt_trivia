@@ -2,7 +2,7 @@ import { readFileSync, statSync } from 'node:fs';
 import { Type, type Static, type TSchema } from '@sinclair/typebox';
 import { Value } from '@sinclair/typebox/value';
 import { parse as parseYaml } from 'yaml';
-import { backupLimits, leaderboardSizeLimits, quizLengthLimits, quizLengthsError } from '../src/lib/validation.js';
+import { backupLimits, leaderboardSizeLimits, quizLengthLimits, quizLengthsError, rankedLimits } from '../src/lib/validation.js';
 
 /**
  * `config.yaml`: its TypeBox schema (CFG-3), the standard keys (CFG-5) and the
@@ -63,6 +63,22 @@ export const EDITABLE_SETTINGS = {
     integer(leaderboardSizeLimits.min, leaderboardSizeLimits.max),
     10,
     'How many members a leaderboard shows (3-50).',
+  ),
+  'ranked.enabled': editable(Type.Boolean(), false, 'Whether members can play ranked runs, and the ranked board is public (#66).'),
+  'ranked.questionsPerRun': editable(
+    integer(rankedLimits.questionsPerRun.min, rankedLimits.questionsPerRun.max), 10, 'Questions in a ranked run (3-50).',
+  ),
+  'ranked.secondsPerQuestion': editable(
+    integer(rankedLimits.secondsPerQuestion.min, rankedLimits.secondsPerQuestion.max), 20, 'Seconds to answer each ranked question (5-120).',
+  ),
+  'ranked.ratingRuns': editable(
+    integer(rankedLimits.ratingRuns.min, rankedLimits.ratingRuns.max), 10, "How many of a member's latest ranked runs their rating averages (1-50).",
+  ),
+  'ranked.cooldownDays': editable(
+    integer(rankedLimits.cooldownDays.min, rankedLimits.cooldownDays.max), 14, 'Days before a member can be shown a ranked question again (0-365).',
+  ),
+  'ranked.boardSize': editable(
+    integer(rankedLimits.boardSize.min, rankedLimits.boardSize.max), 20, 'How many members the ranked board shows (3-100).',
   ),
   'backup.maxZipBytes': editable(
     integer(backupLimits.maxZipBytes.min, backupLimits.maxZipBytes.max),
@@ -166,6 +182,14 @@ export const ConfigSchema = Type.Object({
   leaderboards: group({
     enabled: fileSetting('leaderboards.enabled'),
     size: fileSetting('leaderboards.size'),
+  }),
+  ranked: group({
+    enabled: fileSetting('ranked.enabled'),
+    questionsPerRun: fileSetting('ranked.questionsPerRun'),
+    secondsPerQuestion: fileSetting('ranked.secondsPerQuestion'),
+    ratingRuns: fileSetting('ranked.ratingRuns'),
+    cooldownDays: fileSetting('ranked.cooldownDays'),
+    boardSize: fileSetting('ranked.boardSize'),
   }),
   backup: group({
     maxZipBytes: fileSetting('backup.maxZipBytes'),

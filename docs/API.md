@@ -66,6 +66,27 @@ or every approved question of a smaller category; #60). Members rank by their be
 by more plays, then by who reached it first. Members choose with `PUT /api/member/preferences`
 (`{ leaderboardOptIn }`, off by default); turning it off takes them off every board at once.
 
+## Ranked mode (#66)
+
+While `ranked.enabled` is on (`403 ranked_closed` otherwise), any member plays **ranked runs**. The server owns a
+run: `POST /api/member/ranked/runs` draws `ranked.questionsPerRun` approved questions from the categories the Admin
+includes (`categories.ranked`, on for every category until the Admin leaves it out), one at a time from each in a
+random order, leaving out those the member was shown within `ranked.cooldownDays` (`409 ranked_unavailable` with
+`reason` `too_few_questions` or `cooldown`). A member has one active run; starting another forfeits it.
+
+`POST …/next` shows the current question with its `deadline` (`ranked.secondsPerQuestion` from when the server first
+showed it; asking again shows it again with the same deadline). `POST …/answers` takes the first answer to the
+question being shown (`409 question_not_current` for any other). An answer more than 2 seconds after the deadline is
+`late` and scores nothing; unanswered questions expire. **No response says whether an answer was right or what the
+correct one is**, and `totals` appear only once the run has ended. A question unapproved or deleted during the run is
+left out of its score.
+
+A correct answer scores 100 points plus a speed bonus of up to 50, falling to 0 at the deadline; each correct answer
+in a row after the first adds 10, up to 50. A member's **rating** is the mean score of their latest
+`ranked.ratingRuns` ended runs, forfeited ones included. `GET /api/ranked/leaderboard` ranks the active members who
+turned on **Show me on leaderboards** by rating, then accuracy, then who reached it first; members with fewer than 3
+ended runs are listed as `provisional`. Display names only (API-3).
+
 ## Question reports (#46)
 
 Any signed-in member can report a problem with an **approved** question (any other status, or an unknown ID, answers
@@ -177,6 +198,13 @@ twice adds nothing. The audit log records the action, the files and the counts, 
 | `GET /api/member/results` | The member's own results, newest first: `{ items, nextCursor }` (API-8; `limit`, `cursor`, `categoryId`) |
 | `DELETE /api/member/results` | Clears the member's own history; `204` |
 | `GET /api/member/stats` | Per category that still exists: `[{ categoryId, categoryName, plays, bestPercent, averagePercent, lastPlayedAt, recentPercents }]`, the most recently played first; percentages are rounded like `percent`; `recentPercents` holds the latest 10 results' percentages, oldest first (#72) |
+| `POST /api/member/ranked/runs` | Starts a ranked run, forfeiting the member's open one (#66); `201 { run, notices }` |
+| `POST /api/member/ranked/runs/{id}/next` | Shows the current question and records when; `200 { run, question }` with `question` `{ position, prompt, choices: [{ id, text }], multi, servedAt, deadline, remainingMs }`, or null once the run has finished |
+| `POST /api/member/ranked/runs/{id}/answers` | `{ position, choiceIds }`: answers the question being shown; `200 { run, late }`, never whether it was right |
+| `GET /api/member/ranked/runs/{id}` | One of the member's runs: `{ id, status, questionCount, secondsPerQuestion, closedCount, startedAt, finishedAt, totals }`; `totals` (`{ score, correctCount, countedCount, averageAnswerMs, rating, ratingChange }`) only once ended |
+| `GET /api/member/ranked/me` | `{ enabled, rating, runs, provisional, accuracy, rank, activeRunId, history }`: the member's own rating and latest 20 ended runs (totals only) |
+| `GET /api/ranked/leaderboard` | Public while `ranked.enabled` is on: `{ ratingRuns, provisionalRuns, entries: [{ rank, displayName, rating, runs, accuracy }], provisional: [...] }` |
+| `GET /api/admin/ranked/categories`, `PUT /api/admin/ranked/categories` | Every category `{ id, shortName, name, questionCount, ranked }`; `PUT { categories: [{ id, ranked }] }` changes only those listed; `200 { categories, notices }` |
 | `GET /api/admin/members` | Member accounts, newest first: `{ items, nextCursor }` (API-8; `limit`, `cursor`, `q` to search usernames and display names, and `idleDays` for the members who never signed in or not for that many days, #48). Each has `lastSignInAt`, null until the first sign-in |
 | `POST /api/admin/members` | `{ username, displayName, role, password }`: creates a local member; `201 { member, notices }` |
 | `PUT /api/admin/members/{id}` | `{ displayName, role, isActive }`; a role change or deactivation signs the member out; for an AGT member only `isActive` may change (`409 managed_by_iam`); `200 { member, notices }` |
@@ -227,6 +255,10 @@ and `fields` lists field-level problems, each with a `field` (the request proper
 | `forbidden` | 403 | The member's role does not allow this (a Player on a question route, an Editor changing an approved question), or an AGT member asks to change a password here | — |
 | `not_found` | 404 | Unknown route, or an unknown or invisible resource | — |
 | `leaderboards_closed` | 403 | A leaderboard while `leaderboards.enabled` is off (#49) | — |
+| `ranked_closed` | 403 | A ranked run or the ranked board while `ranked.enabled` is off (#66) | — |
+| `ranked_unavailable` | 409 | A ranked run cannot start: the included categories have too few approved questions, or too few the member has not seen within `ranked.cooldownDays` (#66) | `{ reason: 'too_few_questions' \| 'cooldown', count }` |
+| `run_not_active` | 409 | The ranked run has ended (#66) | `{ status }` |
+| `question_not_current` | 409 | An answer to a question of the run that is not the one being shown (#66) | — |
 | `report_exists` | 409 | The member already has an open report on this question; nothing was saved | — |
 | `category_not_empty` | 409 | The category still has questions (`params.count`, of any status); move or delete them first | `count` |
 | `conflict` | 409 | The question or category changed since it was read (another `version`, or a question's status), a backup or restore is already running, or the server stayed busy for 30 seconds; nothing was changed | — |

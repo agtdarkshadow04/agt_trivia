@@ -23,6 +23,12 @@ All notable changes to AGT Galactic Trivia are documented in this file. The form
   category card and the length choice, updated after each saved result (#69).
 - **Trends on My scores:** each category's card draws a small line of the member's latest 10 results, with the
   latest in words. `GET /api/member/stats` returns them as `recentPercents`, oldest first (#72).
+- **Ranked mode** on the server, off by default (`ranked.enabled`, `ranked.questionsPerRun`,
+  `ranked.secondsPerQuestion`, `ranked.ratingRuns`, `ranked.cooldownDays`, `ranked.boardSize`): timed runs drawn from
+  the categories the Admin includes, shown one question at a time and graded on the server, which never says whether
+  an answer was right; a rating from each member's latest runs and one public board. New routes under
+  `/api/member/ranked/`, `GET /api/ranked/leaderboard`, `GET`/`PUT /api/admin/ranked/categories`, `ranked` in the
+  public settings, and an additive migration (#66).
 - **Search and category filters** on My questions and the Review queue: part of the question text and a category,
   kept by **Load more**, with **Clear filters** when nothing matches (#73).
 

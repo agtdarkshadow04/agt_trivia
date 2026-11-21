@@ -110,6 +110,8 @@ export interface PublicSettings {
   agtSignIn: boolean;
   /** `leaderboards.enabled` (#49). */
   leaderboards: boolean;
+  /** `ranked.enabled` (#66). */
+  ranked: boolean;
 }
 
 // --- Question authoring and review (#19) -----------------------------------------
