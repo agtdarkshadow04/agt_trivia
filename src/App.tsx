@@ -14,6 +14,7 @@ import { Layout } from './components/Layout';
 import { SignIn } from './components/MemberAccount';
 import { BackToCategories, LengthChoice, QuestionView, Results } from './components/QuizPlay';
 import { QuestionWorkshop } from './components/QuestionWorkshop';
+import { RankedPage } from './components/RankedPlay';
 import { CategoryManager } from './components/CategoryManager';
 import { SaveResult, ScoresPage } from './components/ScoreHistory';
 
@@ -62,8 +63,10 @@ export function App() {
   // #67: where the player wanted to go while a quiz was in progress, until they confirm or keep playing.
   const [leaving, setLeaving] = useState<(() => void) | null>(null);
 
+  // #66: a ranked run being played; leaving it asks first too.
+  const [rankedActive, setRankedActive] = useState(false);
   // #67: a quiz with at least one locked answer and no results yet is lost by leaving it.
-  const inProgress = play?.status === 'playing' && isInProgress(play.session);
+  const inProgress = (play?.status === 'playing' && isInProgress(play.session)) || rankedActive;
   const inProgressRef = useRef(inProgress);
   const searchRef = useRef(search);
   const leavingByBack = useRef(false);
@@ -178,7 +181,8 @@ export function App() {
     || (page === 'login' ? member === null
       : page === 'scores' ? member !== null
         : page === 'questions' ? member !== null && canAuthor(member.role)
-          : member?.role === 'Moderator');
+          : page === 'ranked' ? member !== null && (data.status !== 'ready' || data.settings.ranked)
+            : member?.role === 'Moderator');
   useEffect(() => {
     if (!allowedPage) {
       window.history.replaceState(window.history.state, '', window.location.pathname);
@@ -207,6 +211,8 @@ export function App() {
     content = data.status === 'ready'
       ? <QuestionWorkshop mode={page} member={member} categories={data.categories} onChanged={() => { refreshCounts(); void reloadCategories(); }} />
       : data.status === 'error' ? <LoadState message="" cause={data.cause} onRetry={() => void load()} /> : <LoadState message={t.common.loading} />;
+  } else if (page === 'ranked' && member) {
+    content = <RankedPage onActive={setRankedActive} />;
   } else if (page === 'scores' && member) {
     content = <ScoresPage onCleared={refreshStats} />;
   } else if (page === 'categories' && member) {
@@ -293,6 +299,7 @@ export function App() {
       status={status}
       reviewCount={reviewCount}
       leaderboards={data.status === 'ready' && data.settings.leaderboards}
+      ranked={data.status === 'ready' && data.settings.ranked}
       currentPage={page}
       onHome={() => navigate(null)}
       onOpenPage={openPage}
@@ -302,8 +309,8 @@ export function App() {
       <div className="player">{content}</div>
       {leaving && (
         <ConfirmDialog
-          title={t.quiz.leaveTitle}
-          description={t.quiz.leaveText}
+          title={rankedActive ? t.ranked.leaveTitle : t.quiz.leaveTitle}
+          description={rankedActive ? t.ranked.leaveText : t.quiz.leaveText}
           confirmLabel={t.quiz.leaveQuiz}
           cancelLabel={t.quiz.keepPlaying}
           danger

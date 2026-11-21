@@ -29,6 +29,10 @@ All notable changes to AGT Galactic Trivia are documented in this file. The form
   an answer was right; a rating from each member's latest runs and one public board. New routes under
   `/api/member/ranked/`, `GET /api/ranked/leaderboard`, `GET`/`PUT /api/admin/ranked/categories`, `ranked` in the
   public settings, and an additive migration (#66).
+- **Ranked** in a member's header while Ranked mode is on (`/?page=ranked`): the rules and their rating, then a run
+  one question at a time with a countdown, answer shortcuts and no feedback, and only the totals at the end
+  (score, correct answers, average time, rating and its change). Leaving a run asks first; it can be continued
+  later. `GET /api/member/ranked/me` also returns `questionsPerRun` and `secondsPerQuestion` (#66).
 - **Search and category filters** on My questions and the Review queue: part of the question text and a category,
   kept by **Load more**, with **Clear filters** when nothing matches (#73).
 

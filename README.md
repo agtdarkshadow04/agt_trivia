@@ -388,6 +388,11 @@ Ranked mode is off by default (`ranked.enabled`). While it is on, signed-in memb
 public **ranked board** lists the members who turned on **Show me on leaderboards** in their account. Practice, the
 quizzes described above, stays as it is and never counts on the ranked board.
 
+Members open it with **Ranked** in the header (`/?page=ranked`), which shows the rules and their rating. **Start
+ranked run** brings the questions one by one, each with a countdown; **Submit answer** (or the answer's letter and
+Enter) sends it, and the next question follows at once. A member who leaves a run partway is asked first, and can
+**Continue your run** later while its time keeps running; **Start a new run** forfeits it.
+
 The server runs every ranked run:
 
 - A run is `ranked.questionsPerRun` questions (10 by default), drawn from every category the Admin includes (all of

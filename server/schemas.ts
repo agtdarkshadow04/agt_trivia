@@ -712,6 +712,8 @@ export const RankedAnswerResult = object({
 
 export const MyRanked = object({
   enabled: Type.Boolean({ description: '`ranked.enabled`.' }),
+  questionsPerRun: Type.Integer({ description: '`ranked.questionsPerRun`: the questions of a new run.' }),
+  secondsPerQuestion: Type.Integer({ description: '`ranked.secondsPerQuestion`: the time for each question of a new run.' }),
   rating: Type.Union([Type.Integer(), Type.Null()], { description: 'Null before the first ended run.' }),
   runs: Type.Integer({ minimum: 0, description: 'Every ended run.' }),
   provisional: Type.Boolean({ description: 'Fewer than 3 ended runs: listed below the ranked members.' }),

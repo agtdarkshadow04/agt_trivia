@@ -124,6 +124,8 @@ describe('ranked runs over HTTP (#66)', () => {
 
     const mine = (await as(player, 'GET', '/api/member/ranked/me')).json();
     assert.equal(mine.enabled, true);
+    assert.equal(mine.questionsPerRun, 3);
+    assert.equal(mine.secondsPerQuestion, 20);
     assert.equal(mine.rating, finished.totals.score);
     assert.equal(mine.runs, 1);
     assert.equal(mine.provisional, true);

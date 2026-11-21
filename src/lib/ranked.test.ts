@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { answerPoints, drawSpread, isLate, RANKED_SCORING, streakBonuses } from './ranked.js';
+import { answerPoints, drawSpread, isLate, RANKED_SCORING, secondsLeft, streakBonuses } from './ranked.js';
 
 /** A seeded random number generator, so draws are repeatable. */
 function seeded(seed: number) {
@@ -61,5 +61,18 @@ describe('the ranked draw (#66)', () => {
   it('draws fewer than asked from a smaller pool, and nothing from an empty one', () => {
     assert.equal(drawSpread(pool.slice(0, 4), 10).length, 4);
     assert.deepEqual(drawSpread([], 10), []);
+  });
+});
+
+describe('the ranked timer (#66)', () => {
+  it('counts whole seconds down from when the question arrived, never below 0', () => {
+    assert.equal(secondsLeft(20_000, 1000, 1000), 20);
+    assert.equal(secondsLeft(20_000, 1000, 1001), 20);
+    assert.equal(secondsLeft(20_000, 1000, 2000), 19);
+    assert.equal(secondsLeft(20_000, 1000, 20_999), 1);
+    assert.equal(secondsLeft(20_000, 1000, 21_000), 0);
+    assert.equal(secondsLeft(20_000, 1000, 99_000), 0);
+    // A question shown again after 12.5 seconds has 8 left.
+    assert.equal(secondsLeft(7_500, 0, 0), 8);
   });
 });
