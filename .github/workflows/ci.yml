@@ -81,3 +81,54 @@ jobs:
         run: docker compose logs --no-color
       - run: docker compose down -v
         if: always()
+
+  local-install:
+    name: Local installation smoke test (TEST-8)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # The README's own commands, so the test cannot drift from the docs: the fenced bash block under
+      # "### Local installation (Ubuntu/Debian)", with this checkout instead of a clone of a release tag and the two
+      # "Edit" comments done for the test. Each change must apply, or the README changed and this job needs a look.
+      - name: Install script from the README
+        run: |
+          awk '/^### Local installation/ { section = 1 } section && /^```bash$/ { block = 1; next } block && /^```$/ { exit } block' README.md > install.sh
+          grep -qx 'sudo git clone https://github.com/agtdarkshadow04/agt_trivia.git /opt/agt-trivia' install.sh
+          grep -qx 'sudo git -C /opt/agt-trivia checkout vX.Y.Z' install.sh
+          grep -q '^# Edit /etc/agt-trivia/config.yaml: ' install.sh
+          grep -q '^# Edit /etc/agt-trivia/.env: ' install.sh
+          sed -i \
+            -e 's|^sudo git clone https://github.com/agtdarkshadow04/agt_trivia.git /opt/agt-trivia$|sudo cp -a "$GITHUB_WORKSPACE" /opt/agt-trivia|' \
+            -e '/^sudo git -C \/opt\/agt-trivia checkout vX.Y.Z$/d' \
+            -e 's|^# Edit /etc/agt-trivia/config.yaml: .*|printf "storage:\\n  dataDir: /var/lib/agt-trivia\\n" \| sudo tee -a /etc/agt-trivia/config.yaml > /dev/null|' \
+            -e 's|^# Edit /etc/agt-trivia/.env: .*|sudo sed -i "s/^AGT_TRIVIA_SETUP_PASSWORD=$/AGT_TRIVIA_SETUP_PASSWORD=ci-smoke-test-setup-password/" /etc/agt-trivia/.env|' \
+            install.sh
+          cat install.sh
+      # The runner's own Node.js in /usr/local/bin comes first in sudo's PATH and would shadow the README's NodeSource
+      # install in /usr/bin, which the unit runs.
+      - name: Remove the runner's preinstalled Node.js
+        run: sudo rm -f /usr/local/bin/node /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/corepack
+      - name: Install as the README says
+        run: bash -euxo pipefail install.sh
+      - name: The service runs, answers on loopback only, keeps its data in /var/lib/agt-trivia, and is ready for first-run setup
+        run: |
+          set -x
+          for attempt in $(seq 30); do curl -fsS http://127.0.0.1:8082/api/health && break; sleep 1; done
+          systemctl is-active agt-trivia
+          test "$(node --version | cut -d. -f1)" = v26
+          curl -fsS http://127.0.0.1:8082/api/health | grep -q '"status":"ok"'
+          status="$(curl -fsS http://127.0.0.1:8082/api/setup/status)"
+          echo "$status" | grep -q '"adminExists":false'
+          echo "$status" | grep -q '"setupPasswordConfigured":true'
+          ss -Hltn 'sport = :8082'
+          test "$(ss -Hltn 'sport = :8082' | awk '{ print $4 }')" = '127.0.0.1:8082'
+          sudo test -f /var/lib/agt-trivia/agt-trivia.sqlite
+          sudo test -f /var/lib/agt-trivia/logs.sqlite
+          test -z "$(sudo find /var/lib/agt-trivia ! -user agt-trivia)"
+          ! sudo journalctl -u agt-trivia -o cat | grep -E '"level":(50|60)'
+      - name: Service status, hardening and logs
+        if: always()
+        run: |
+          systemctl status agt-trivia --no-pager || true
+          systemd-analyze security agt-trivia --no-pager || true
+          sudo journalctl -u agt-trivia --no-pager -o cat || true

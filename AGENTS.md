@@ -57,8 +57,10 @@ npx playwright test tests/e2e/shell.spec.ts -g "name"   # one browser test file,
 (`tests/e2e/environment.ts`); it needs Chromium
 (`npx playwright install --with-deps chromium`, or `PLAYWRIGHT_CHROMIUM_EXECUTABLE` pointing at an installed one).
 CI (`.github/workflows/ci.yml`) runs `npm ci`, the install-script check (STACK-7) and `npm run check`, then
-`npm run test:e2e`, and builds the image and starts the Compose stack until it is healthy (TEST-8), on pull requests
-and pushes to `main`. A change to the image, the Compose file or `deploy/` follows the spec's §18 templates; check
+`npm run test:e2e`, builds the image and starts the Compose stack until it is healthy, and runs the README's *Local
+installation (Ubuntu/Debian)* commands, taken from its fenced block, on a systemd runner (both TEST-8), on pull
+requests and pushes to `main`. The release PR links those two jobs' run on the release commit for TEST-8; a README
+change to the local installation block must keep the `local-install` job's substitutions applying. A change to the image, the Compose file or `deploy/` follows the spec's §18 templates; check
 it with the TEST-8 smoke tests the README's Installation steps describe.
 
 ## Where things live
