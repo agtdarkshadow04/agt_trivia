@@ -72,6 +72,21 @@
 #   # How many members a leaderboard shows (3-50).
 #   size: 10
 
+# ranked:
+#   # Ranked mode (README, Ranked mode): timed runs scored on the server, and one
+#   # public board of the members who chose to appear on leaderboards.
+#   enabled: false
+#   # Questions in a ranked run (3-50).
+#   questionsPerRun: 10
+#   # Seconds to answer each ranked question (5-120).
+#   secondsPerQuestion: 20
+#   # How many of a member's latest ranked runs their rating averages (1-50).
+#   ratingRuns: 10
+#   # Days before a member can be shown a ranked question again (0-365).
+#   cooldownDays: 14
+#   # How many members the ranked board shows (3-100).
+#   boardSize: 20
+
 # iam:
 #   # AGT sign-in: members sign in with their AGT account through AGT IAM
 #   # (README, AGT sign-in). Off by default; also editable in the dashboard.

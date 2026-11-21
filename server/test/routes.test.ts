@@ -3,12 +3,14 @@ import { after, before, describe, it } from 'node:test';
 import type { FastifyInstance } from 'fastify';
 import { buildApp, maxBodyBytes } from '../app.js';
 import { errorReply, HttpError, RateLimitedError } from '../http.js';
+import { withDataWrite } from '../dataWrite.js';
+import { insertRun } from '../repository/ranked.js';
 import { apiRoutes } from '../routes.js';
 import { adminCookie, createMember, memberCookie, seedQuiz, testContext, totalChanges } from './helpers.js';
 
 describe('the route table', () => {
-  // Leaderboards on, so their GET route answers 200 like every other (#49).
-  const context = testContext('leaderboards:\n  enabled: true\n');
+  // Leaderboards and Ranked mode on, so their GET routes answer 200 like every other (#49, #66).
+  const context = testContext('leaderboards:\n  enabled: true\nranked:\n  enabled: true\n');
   let app: FastifyInstance;
   before(async () => { app = buildApp(context); await app.ready(); });
   after(async () => { await app.close(); context.close(); });
@@ -32,13 +34,19 @@ describe('the route table', () => {
     const { category, questions } = await seedQuiz(context);
     await createMember(context, 'route.tester', 'Moderator');
     const member = await memberCookie(context, 'route.tester');
+    // #66: a ranked run of the member's, to read.
+    const tester = context.db.connection.prepare("SELECT id FROM members WHERE username = 'route.tester'").get() as { id: string };
+    const run = await withDataWrite(context.operations, () => insertRun(context.db, {
+      memberId: tester.id, secondsPerQuestion: 20, questions: questions.map((question) => ({ id: question.id, categoryId: category.id })),
+    }));
     const credentials = { admin: { cookie }, member: { cookie: member }, none: {}, csrf: {} };
     const queries: Record<string, string> = { '/export': '?format=jsonl', '/quiz': '?length=all' };
     for (const route of apiRoutes.filter((entry) => entry.method === 'GET')) {
       assert.equal(route.writesData, false, route.url);
       const before = totalChanges(context);
       const query = Object.entries(queries).find(([suffix]) => route.url.endsWith(suffix))?.[1] ?? '';
-      const url = route.url.replace(':id', route.url.startsWith('/api/member/questions/') ? questions[0].id : category.id);
+      const id = route.url.startsWith('/api/member/questions/') ? questions[0].id : route.url.startsWith('/api/member/ranked/runs/') ? run.id : category.id;
+      const url = route.url.replace(':id', id);
       const response = await app.inject({ url: `${url}${query}`, headers: credentials[route.auth] });
       assert.equal(response.statusCode, 200, route.url);
       assert.equal(totalChanges(context), before, `${route.url} writes nothing (BAK-8)`);

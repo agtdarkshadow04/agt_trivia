@@ -16,6 +16,15 @@ export const quizLengthLimits = {
 /** CFG-6: how many members a leaderboard shows (`leaderboards.size`, #49). */
 export const leaderboardSizeLimits = { min: 3, max: 50 } as const;
 
+/** CFG-6: the allowed `ranked.*` values (#66). */
+export const rankedLimits = {
+  questionsPerRun: { min: 3, max: 50 },
+  secondsPerQuestion: { min: 5, max: 120 },
+  ratingRuns: { min: 1, max: 50 },
+  cooldownDays: { min: 0, max: 365 },
+  boardSize: { min: 3, max: 100 },
+} as const;
+
 /** CFG-6: the allowed backup upload limits (`backup.*`). */
 export const backupLimits = {
   maxZipBytes: { min: 1024, max: 2 * 1024 * 1024 * 1024 },

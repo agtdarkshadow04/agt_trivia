@@ -65,6 +65,7 @@ export function registerOpenApi(app: FastifyInstance, version: string) {
         { name: 'reports', description: "Members' reports of problems with questions, handled by Moderators (#46)." },
         { name: 'categories', description: "The Moderators' category management (#20)." },
         { name: 'results', description: "Each member's own score history (#21)." },
+        { name: 'ranked', description: 'Ranked mode: server-run, timed runs, and the categories they draw from (#66).' },
       ],
     },
     // A multipart route validates no parsed body; the document shows its form fields (BAK-1).
