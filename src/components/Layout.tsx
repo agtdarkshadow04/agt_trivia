@@ -6,7 +6,7 @@ import { COMMON_TRANSLATIONS, formatTranslation } from '../translations';
 import { Dialog } from './Dialog';
 import { DisplaySettings } from './DisplaySettings';
 import { useI18n } from './I18n';
-import { ClipboardCheckIcon, FolderIcon, LogInIcon, MenuIcon, PencilIcon, SettingsIcon, TrophyIcon, UserRoundIcon } from './Icons';
+import { ClipboardCheckIcon, FolderIcon, LogInIcon, MenuIcon, PencilIcon, SettingsIcon, TimerIcon, TrophyIcon, UserRoundIcon } from './Icons';
 import { AccountDialog } from './MemberAccount';
 import { MaintenanceNotice } from './MaintenanceNotice';
 
@@ -82,7 +82,7 @@ function PageMenu({ links, currentPage, returnFocusRef, onClose, onOpenPage }: {
  * sign-out (A11Y-4), `<main id="main-content">`, and the `site-footer` with the
  * Alliance links and the support link. The brand returns to the category list.
  */
-export function Layout({ siteTitle, supportUrl, member, status, reviewCount, leaderboards = false, currentPage = null, onHome, onOpenPage, onMemberChanged, onSignedOut, children }: {
+export function Layout({ siteTitle, supportUrl, member, status, reviewCount, leaderboards = false, ranked = false, currentPage = null, onHome, onOpenPage, onMemberChanged, onSignedOut, children }: {
   siteTitle: string;
   /** `site.supportUrl`, once the public settings have loaded. */
   supportUrl: string | null;
@@ -93,6 +93,8 @@ export function Layout({ siteTitle, supportUrl, member, status, reviewCount, lea
   reviewCount: number | null;
   /** `leaderboards.enabled` (#49): the account menu offers the opt-in. */
   leaderboards?: boolean;
+  /** `ranked.enabled` (#66): members get the Ranked page. */
+  ranked?: boolean;
   /** The member page being shown (`?page=`), marked `aria-current="page"` (#70). */
   currentPage?: Page | null;
   onHome(): void;
@@ -117,6 +119,7 @@ export function Layout({ siteTitle, supportUrl, member, status, reviewCount, lea
   const reviewName = reviewCount ? formatTranslation(t.layout.reviewQueueCount, { count: number(reviewCount) }) : t.layout.reviewQueue;
   const badge = (count: number) => (count > 99 ? `${number(99)}+` : number(count));
   const links: PageLink[] = !member ? [] : [
+    ...(ranked ? [{ page: 'ranked' as const, label: t.layout.ranked, name: t.layout.ranked, icon: <TimerIcon />, count: null }] : []),
     { page: 'scores', label: t.layout.myScores, name: t.layout.myScores, icon: <TrophyIcon />, count: null },
     ...(canAuthor(member.role) ? [{ page: 'questions' as const, label: t.layout.myQuestions, name: t.layout.myQuestions, icon: <PencilIcon />, count: null }] : []),
     ...(member.role === 'Moderator' ? [

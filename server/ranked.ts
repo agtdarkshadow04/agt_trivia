@@ -312,6 +312,8 @@ export class RankedService {
     const position = board.findIndex((row) => row.memberId === this.member.id);
     return {
       enabled: settings['ranked.enabled'],
+      questionsPerRun: settings['ranked.questionsPerRun'],
+      secondsPerQuestion: settings['ranked.secondsPerQuestion'],
       rating: rating === null ? null : roundRating(rating),
       runs,
       provisional: runs < RANKED_SCORING.provisionalRuns,

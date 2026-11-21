@@ -1,4 +1,4 @@
-import type { CategoryBody, CategoryStats, ManagedCategory, QuizResultRecord, MemberQuestion, MemberQuestionStatus, MemberSession, PublicCategory, PublicLeaderboard, PublicQuiz, PublicSettings, QuestionBody, QuestionCounts, QuestionPage, QuestionReport, QuizLength } from './api.js';
+import type { CategoryBody, CategoryStats, MyRanked, RankedLeaderboard, RankedQuestion, RankedRun, ManagedCategory, QuizResultRecord, MemberQuestion, MemberQuestionStatus, MemberSession, PublicCategory, PublicLeaderboard, PublicQuiz, PublicSettings, QuestionBody, QuestionCounts, QuestionPage, QuestionReport, QuizLength } from './api.js';
 import type { FieldError } from './errors.js';
 import { ApiError, apiRequest } from './client.js';
 
@@ -164,3 +164,19 @@ export const getMemberPreferences = () => apiRequest<{ leaderboardOptIn: boolean
 export const setMemberPreferences = (leaderboardOptIn: boolean) => (
   apiRequest<{ leaderboardOptIn: boolean }>('/api/member/preferences', { method: 'PUT', body: { leaderboardOptIn } })
 );
+
+// --- Ranked mode (#66) ---
+
+export const startRankedRun = () => apiRequest<{ run: RankedRun; notices: FieldError[] }>('/api/member/ranked/runs', { method: 'POST' });
+
+export const nextRankedQuestion = (runId: string) => (
+  apiRequest<{ run: RankedRun; question: RankedQuestion | null }>(`/api/member/ranked/runs/${encodeURIComponent(runId)}/next`, { method: 'POST' })
+);
+
+export const answerRankedQuestion = (runId: string, position: number, choiceIds: readonly string[]) => (
+  apiRequest<{ run: RankedRun; late: boolean }>(`/api/member/ranked/runs/${encodeURIComponent(runId)}/answers`, { method: 'POST', body: { position, choiceIds } })
+);
+
+export const getMyRanked = () => apiRequest<MyRanked>('/api/member/ranked/me');
+
+export const getRankedLeaderboard = () => apiRequest<RankedLeaderboard>('/api/ranked/leaderboard');

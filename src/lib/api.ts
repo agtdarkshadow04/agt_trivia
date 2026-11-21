@@ -230,3 +230,56 @@ export interface CategoryStats {
   /** The latest 10 results' percentages, oldest first (#72). */
   recentPercents: number[];
 }
+
+/** A ranked run (#66); `totals` only once it has ended, and never which answers were right. */
+export interface RankedRun {
+  id: string;
+  status: 'active' | 'finished' | 'forfeited';
+  questionCount: number;
+  secondsPerQuestion: number;
+  closedCount: number;
+  startedAt: string;
+  finishedAt: string | null;
+  totals: {
+    score: number;
+    correctCount: number;
+    countedCount: number;
+    averageAnswerMs: number | null;
+    rating: number;
+    ratingChange: number | null;
+  } | null;
+}
+
+/** The question a ranked run is showing (#66): never its correct answers. */
+export interface RankedQuestion {
+  position: number;
+  prompt: string;
+  choices: { id: string; text: string }[];
+  multi: boolean;
+  servedAt: string;
+  deadline: string;
+  /** Milliseconds left when the server answered. */
+  remainingMs: number;
+}
+
+/** A member's own ranked standing (#66). */
+export interface MyRanked {
+  enabled: boolean;
+  questionsPerRun: number;
+  secondsPerQuestion: number;
+  rating: number | null;
+  runs: number;
+  provisional: boolean;
+  accuracy: number | null;
+  rank: number | null;
+  activeRunId: string | null;
+  history: { id: string; status: 'finished' | 'forfeited'; score: number; correctCount: number; countedCount: number; finishedAt: string }[];
+}
+
+/** The public ranked board (#66): display names only. */
+export interface RankedLeaderboard {
+  ratingRuns: number;
+  provisionalRuns: number;
+  entries: { rank: number; displayName: string; rating: number; runs: number; accuracy: number }[];
+  provisional: { displayName: string; rating: number; runs: number; accuracy: number }[];
+}

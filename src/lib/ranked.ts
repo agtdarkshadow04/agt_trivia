@@ -47,6 +47,15 @@ export function streakBonuses(correct: readonly (boolean | null)[]) {
 }
 
 /**
+ * The whole seconds left to answer (#66): the server's `remainingMs`, counted
+ * down from when the browser received it rather than by the server's
+ * timestamps, so a clock that is off does not cut the time short; never below 0.
+ */
+export function secondsLeft(remainingMs: number, receivedAt: number, now: number) {
+  return Math.max(0, Math.ceil((remainingMs - (now - receivedAt)) / 1000));
+}
+
+/**
  * Draws `count` questions spread across their categories: the categories in a
  * random order, then one random question from each in turn, so a large
  * category cannot fill a run while others have questions left. Fewer when the

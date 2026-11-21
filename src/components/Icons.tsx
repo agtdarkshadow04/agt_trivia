@@ -140,3 +140,7 @@ export function Share2Icon(props: IconProps) {
 export function MenuIcon(props: IconProps) {
   return <Icon name="menu" {...props}><line x1="4" x2="20" y1="12" y2="12" /><line x1="4" x2="20" y1="6" y2="6" /><line x1="4" x2="20" y1="18" y2="18" /></Icon>;
 }
+
+export function TimerIcon(props: IconProps) {
+  return <Icon name="timer" {...props}><line x1="10" x2="14" y1="2" y2="2" /><line x1="12" x2="15" y1="14" y2="11" /><circle cx="12" cy="14" r="8" /></Icon>;
+}
