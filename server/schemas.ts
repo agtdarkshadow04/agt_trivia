@@ -516,7 +516,7 @@ export const ReportCloseBody = object({
 export const ReportPage = object({
   items: Type.Array(QuestionReport),
   nextCursor: Type.Union([Type.String(), Type.Null()]),
-}, 'Oldest first (API-8).');
+}, 'Oldest first, as a work queue (API-8 deviation, #63).');
 
 export const ReportListQuery = object({
   status: Type.Optional(ReportStatusSchema),

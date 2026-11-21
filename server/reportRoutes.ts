@@ -55,7 +55,7 @@ export const reportRoutes: readonly RouteDefinition[] = [
     operationId: 'reportQuestion',
     tag: 'reports',
     summary: 'Report a problem with an approved question.',
-    description: 'Any signed-in member. At most one open report per member and question (`409 report_exists`); a question that is not approved answers 404.',
+    description: 'Any signed-in member. At most one open report per member and question (`409 report_exists`); a question that is not approved answers 404. Deprecated response shape: the bare report becomes `{ report, notices }` (API-2) in 3.0.0 (#63).',
     schema: { params: S.QuestionIdParams, body: S.ReportCreateBody, response: { 201: S.QuestionReport } },
     handler: (context, request, reply) => {
       const report = service(context, request).create(idOf(request), request.body as ReportInput);
@@ -72,7 +72,7 @@ export const reportRoutes: readonly RouteDefinition[] = [
     operationId: 'listReports',
     tag: 'reports',
     summary: 'List question reports, oldest first, one page at a time.',
-    description: 'Moderators only. `status` is `open` by default.',
+    description: 'Moderators only. `status` is `open` by default. Oldest first, unlike other pages, because it is a work queue (API-8 deviation, #63).',
     schema: { querystring: S.ReportListQuery, response: { 200: S.ReportPage } },
     handler: (context, request) => {
       const query = request.query as { status?: ReportStatus; limit?: string; cursor?: string };
