@@ -292,3 +292,11 @@ img { max-width: 100%; }
 
 /* #69: a member's best on a category card and the length choice. */
 .personal-best { color: var(--agt-orange); }
+
+/* #72: a category's latest results on My scores. */
+.score-trend { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 1rem; }
+.score-trend-line { width: 100%; max-width: 12rem; height: auto; }
+.score-trend-axis { stroke: var(--surface-soft); stroke-width: 1; }
+.score-trend-path { fill: none; stroke: var(--agt-red-orange); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.score-trend-end { fill: var(--agt-orange); }
+.score-trend-latest { color: var(--muted); font-size: 0.8rem; }

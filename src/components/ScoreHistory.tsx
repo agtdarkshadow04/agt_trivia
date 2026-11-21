@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { CategoryStats, MemberSession, QuizLength, QuizResultRecord } from '../lib/api';
 import { clearResults, getMemberStats, listResults, saveResult } from '../lib/playerApi';
+import { pointsAttribute, trendPoints } from '../lib/trend';
 import { formatTranslation } from '../translations';
 import { ConfirmDialog } from './Dialog';
 import { SelectField } from './Field';
@@ -79,6 +80,28 @@ export function SaveResult({ member, categoryId, length, attemptToken, answers, 
           <button className="button button-secondary button-with-icon" type="button" onClick={() => void save()}><RefreshIcon />{t.common.retry}</button>
         </div>
       )}
+    </div>
+  );
+}
+
+/**
+ * A category's latest results as a small line (#72): inline SVG like the score
+ * ring, no inline styles (CSP), with the values in words for screen readers.
+ */
+function Trend({ percents }: { percents: readonly number[] }) {
+  const { t, number, percent } = useI18n();
+  const points = trendPoints(percents);
+  if (!points.length) return null;
+  const label = formatTranslation(t.scores.trendLabel, { count: number(percents.length), first: percent(percents[0]), last: percent(percents.at(-1)!) });
+  const end = points.at(-1)!;
+  return (
+    <div className="score-trend">
+      <svg className="score-trend-line" viewBox="0 0 120 36" role="img" aria-label={label} focusable="false">
+        <line className="score-trend-axis" x1="3" x2="117" y1="33" y2="33" />
+        <polyline className="score-trend-path" points={pointsAttribute(points)} />
+        <circle className="score-trend-end" cx={end.x} cy={end.y} r="2.5" />
+      </svg>
+      <span className="score-trend-latest">{formatTranslation(t.scores.latest, { percent: percent(percents.at(-1)!) })}</span>
     </div>
   );
 }
@@ -185,6 +208,7 @@ export function ScoresPage({ onCleared }: { /** After the history is cleared (#6
                       <div><dt>{t.scores.average}</dt><dd>{percent(entry.averagePercent)}</dd></div>
                       <div><dt>{t.scores.lastPlayed}</dt><dd>{date(entry.lastPlayedAt)}</dd></div>
                     </dl>
+                    <Trend percents={entry.recentPercents} />
                   </article>
                 </li>
               ))}

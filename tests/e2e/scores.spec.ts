@@ -64,6 +64,10 @@ test('a member\'s finished quiz is saved to their history, shown in My scores an
   await expect(page.getByRole('heading', { name: 'Atlas Archivist' })).toBeVisible();
   await expect(page.getByRole('status').filter({ hasText: 'Saved to your history.' })).toBeVisible();
   await expectAccessible(page, 'saved results');
+  // #72: one result draws no line yet.
+  await page.getByRole('link', { name: 'My scores' }).click();
+  await expect(page.getByRole('article').filter({ hasText: 'Biology' })).toBeVisible();
+  await expect(page.locator('.score-trend')).toHaveCount(0);
   await playBiology(page, 1);
   await expect(page.getByRole('status').filter({ hasText: 'Saved to your history.' })).toBeVisible();
 
@@ -73,6 +77,9 @@ test('a member\'s finished quiz is saved to their history, shown in My scores an
   await expect(stats.getByRole('definition').nth(0)).toHaveText('2');
   await expect(stats.getByRole('definition').nth(1)).toHaveText('100%');
   await expect(stats.getByRole('definition').nth(2)).toHaveText('67%');
+  // #72: the trend of the latest results, oldest first, in words too.
+  await expect(stats.getByRole('img', { name: 'Last 2 results: from 100% to 33%' })).toBeVisible();
+  await expect(stats.getByText('Latest: 33%')).toBeVisible();
   const entries = page.locator('.score-entry');
   await expect(entries).toHaveCount(2);
   // Newest first, graded by the server, the time in the reader's time zone (I18N-5).

@@ -620,6 +620,7 @@ export const MemberStats = Type.Array(object({
   bestPercent: Type.Integer({ description: '0 to 100, rounded; 100 only for a perfect score and 0 only for none right.' }),
   averagePercent: Type.Integer({ description: 'The mean of the exact percentages, 0 to 100, rounded; 100 only when every play was perfect and 0 only when none had a right answer.' }),
   lastPlayedAt: Type.String({ format: 'date-time' }),
+  recentPercents: Type.Array(Type.Integer({ minimum: 0, maximum: 100 }), { maxItems: 10, description: "The percentages of the category's latest 10 results, oldest first, rounded like `percent` (#72)." }),
 }), { description: 'Per category that still exists, the most recently played first (a plain array, bounded by the number of categories, API-8).' });
 
 // --- The sheet import (#22) -------------------------------------------------------

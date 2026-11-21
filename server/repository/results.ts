@@ -113,6 +113,19 @@ export function memberStats(db: Database, memberId: string): CategoryStatsRow[] 
     WHERE member_id = ? GROUP BY quiz_results.category_id ORDER BY lastPlayedAt DESC`).all(memberId) as CategoryStatsRow[]);
 }
 
+/**
+ * The scores of a member's latest `limit` results in each category that still
+ * exists (#72), oldest first within a category.
+ */
+export function memberRecentScores(db: Database, memberId: string, limit: number): { categoryId: string; score: number; total: number }[] {
+  return db.connection.prepare(`SELECT categoryId, score, total FROM (
+      SELECT quiz_results.category_id AS categoryId, score, total, finished_at, quiz_results.id AS id,
+        row_number() OVER (PARTITION BY quiz_results.category_id ORDER BY finished_at DESC, quiz_results.id DESC) AS position
+      FROM quiz_results JOIN categories ON categories.id = quiz_results.category_id
+      WHERE member_id = ?)
+    WHERE position <= ? ORDER BY categoryId, finished_at, id`).all(memberId, limit) as { categoryId: string; score: number; total: number }[];
+}
+
 /** Deletes every result of a member, with their answers; returns how many. */
 export function deleteMemberResults(db: Database, memberId: string) {
   assertDataWrite();

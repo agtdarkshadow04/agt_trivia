@@ -21,6 +21,8 @@ All notable changes to AGT Galactic Trivia are documented in this file. The form
   case and accents, and says how many categories are shown (#74).
 - **Your best** on each category a signed-in member has played: their best percentage and number of plays, on the
   category card and the length choice, updated after each saved result (#69).
+- **Trends on My scores:** each category's card draws a small line of the member's latest 10 results, with the
+  latest in words. `GET /api/member/stats` returns them as `recentPercents`, oldest first (#72).
 
 ### Deprecated
 
