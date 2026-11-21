@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import type { PublicQuestion } from './api.js';
-import { choiceState, choose, currentQuestion, isFinished, isInProgress, isMultiAnswer, lockAnswer, nextQuestion, quizResult, reviewAnswers, startSession } from './quizSession.js';
+import { choiceState, choose, currentQuestion, isFinished, isInProgress, isMultiAnswer, lockAnswer, nextQuestion, quizResult, reviewAnswers, shortcutIndex, shortcutKeys, startSession } from './quizSession.js';
 
 const single: PublicQuestion = {
   id: 'q1', prompt: 'Largest planet?', authorCredit: null,
@@ -11,6 +11,28 @@ const multi: PublicQuestion = {
   id: 'q2', prompt: 'Gas giants?', authorCredit: 'Traveller',
   choices: [{ id: 'c', text: 'Jupiter' }, { id: 'd', text: 'Mars' }, { id: 'e', text: 'Saturn' }], correctChoiceIds: ['c', 'e'],
 };
+
+describe('answer shortcuts (#68)', () => {
+  it('maps A–F, in either case, and 1–6 to the answers in marker order', () => {
+    assert.equal(shortcutIndex('a', 4), 0);
+    assert.equal(shortcutIndex('B', 4), 1);
+    assert.equal(shortcutIndex('1', 4), 0);
+    assert.equal(shortcutIndex('4', 4), 3);
+    assert.equal(shortcutIndex('f', 6), 5);
+    assert.equal(shortcutIndex('6', 6), 5);
+  });
+
+  it('ignores other keys and answers the question does not have', () => {
+    for (const key of ['e', '5', 'g', '7', '0', 'Enter', ' ', 'ArrowDown', 'Tab', 'é']) assert.equal(shortcutIndex(key, 4), null, key);
+    assert.equal(shortcutIndex('c', 2), null);
+    assert.equal(shortcutIndex('3', 2), null);
+  });
+
+  it('names each answer\'s letter and digit for aria-keyshortcuts', () => {
+    assert.equal(shortcutKeys(0), 'A 1');
+    assert.equal(shortcutKeys(3), 'D 4');
+  });
+});
 
 describe('a quiz session (#16)', () => {
   it('is in progress from the first locked answer until the results (#67)', () => {

@@ -39,6 +39,27 @@ export function isFinished(session: QuizSession) {
   return session.index >= session.questions.length;
 }
 
+/** How many answers have a keyboard shortcut: A–F and 1–6 (#68). */
+export const SHORTCUT_COUNT = 6;
+
+/**
+ * The answer a key picks (#68): A–F (either case) or 1–6, in the order of the
+ * answers' letter markers, whatever the UI language; null for any other key or
+ * an answer the question does not have.
+ */
+export function shortcutIndex(key: string, choiceCount: number): number | null {
+  if (key.length !== 1) return null;
+  const letter = key.toUpperCase().charCodeAt(0) - 65;
+  const digit = key.charCodeAt(0) - 49;
+  const index = letter >= 0 && letter < SHORTCUT_COUNT ? letter : digit >= 0 && digit < SHORTCUT_COUNT ? digit : -1;
+  return index >= 0 && index < choiceCount ? index : null;
+}
+
+/** The `aria-keyshortcuts` value of the answer at `index`: its letter and its digit. */
+export function shortcutKeys(index: number) {
+  return `${String.fromCharCode(65 + index)} ${index + 1}`;
+}
+
 /** At least one answer is locked and the results are not shown yet: leaving now loses the quiz (#67). */
 export function isInProgress(session: QuizSession) {
   return session.answers.length > 0 && !isFinished(session);
