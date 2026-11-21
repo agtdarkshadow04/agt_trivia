@@ -33,6 +33,10 @@ All notable changes to AGT Galactic Trivia are documented in this file. The form
   one question at a time with a countdown, answer shortcuts and no feedback, and only the totals at the end
   (score, correct answers, average time, rating and its change). Leaving a run asks first; it can be continued
   later. `GET /api/member/ranked/me` also returns `questionsPerRun` and `secondsPerQuestion` (#66).
+- The **Ranked board** (`/?page=board`), public while Ranked mode is on: members who chose to appear on leaderboards
+  by rating, with newcomers listed as provisional, by display name only. **My scores** shows a member's own rating,
+  rank, runs, accuracy and latest runs. The dashboard's **Settings** tab gets a **Ranked mode** group and **Ranked
+  categories**, where the Admin leaves categories out of ranked runs (#66).
 - **Search and category filters** on My questions and the Review queue: part of the question text and a category,
   kept by **Load more**, with **Clear filters** when nothing matches (#73).
 

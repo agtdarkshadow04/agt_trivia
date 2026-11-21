@@ -6,7 +6,7 @@ import { RANKED_SCORING, secondsLeft } from '../lib/ranked';
 import { SHORTCUT_COUNT, shortcutIndex, shortcutKeys } from '../lib/quizSession';
 import { formatTranslation } from '../translations';
 import { useI18n } from './I18n';
-import { ArrowRightIcon, RefreshIcon, TimerIcon } from './Icons';
+import { ArrowRightIcon, RefreshIcon, TimerIcon, TrophyIcon } from './Icons';
 import { useViewHeading } from './useViewHeading';
 
 /**
@@ -23,7 +23,7 @@ type Phase =
   | { status: 'done'; run: RankedRun }
   | { status: 'error'; cause: unknown; retry(): void };
 
-function RankedIntro({ mine, onStart, onResume }: { mine: MyRanked | null; onStart(): void; onResume(runId: string): void }) {
+function RankedIntro({ mine, onStart, onResume, onBoard }: { mine: MyRanked | null; onStart(): void; onResume(runId: string): void; onBoard(): void }) {
   const { t, number } = useI18n();
   const heading = useViewHeading('ranked:intro');
   return (
@@ -60,6 +60,7 @@ function RankedIntro({ mine, onStart, onResume }: { mine: MyRanked | null; onSta
       ) : (
         <div className="form-actions">
           <button className="button button-primary button-with-icon" type="button" disabled={!mine} onClick={onStart}><TimerIcon />{t.ranked.start}</button>
+          <button className="button button-secondary button-with-icon" type="button" onClick={onBoard}><TrophyIcon />{t.ranked.boardLink}</button>
         </div>
       )}
     </section>
@@ -189,7 +190,7 @@ function RankedQuestionView({ run, question, receivedAt, onAnswer, onTimeout }: 
   );
 }
 
-function RankedResults({ run, onAgain }: { run: RankedRun; onAgain(): void }) {
+function RankedResults({ run, onAgain, onBoard }: { run: RankedRun; onAgain(): void; onBoard(): void }) {
   const { t, number } = useI18n();
   const heading = useViewHeading(`ranked:done:${run.id}`);
   const totals = run.totals!;
@@ -210,6 +211,7 @@ function RankedResults({ run, onAgain }: { run: RankedRun; onAgain(): void }) {
       </dl>
       <div className="form-actions">
         <button className="button button-primary button-with-icon" type="button" onClick={onAgain}><TimerIcon />{t.ranked.playAgain}</button>
+        <button className="button button-secondary button-with-icon" type="button" onClick={onBoard}><TrophyIcon />{t.ranked.boardLink}</button>
       </div>
     </section>
   );
@@ -220,7 +222,7 @@ function RankedResults({ run, onAgain }: { run: RankedRun; onAgain(): void }) {
  * `onActive` tells the app whether a run is being played, so leaving asks
  * first (#67).
  */
-export function RankedPage({ onActive }: { onActive(active: boolean): void }) {
+export function RankedPage({ onActive, onBoard }: { onActive(active: boolean): void; onBoard(): void }) {
   const { t, error } = useI18n();
   const [phase, setPhase] = useState<Phase>({ status: 'intro' });
   const [mine, setMine] = useState<MyRanked | null>(null);
@@ -277,7 +279,7 @@ export function RankedPage({ onActive }: { onActive(active: boolean): void }) {
   }, [fetchNext, t]);
 
   let content;
-  if (phase.status === 'intro') content = <RankedIntro mine={mine} onStart={() => void start()} onResume={(runId) => void fetchNext(runId)} />;
+  if (phase.status === 'intro') content = <RankedIntro mine={mine} onStart={() => void start()} onResume={(runId) => void fetchNext(runId)} onBoard={onBoard} />;
   else if (phase.status === 'loading') content = <section className="status-panel" role="status"><span className="loader" aria-hidden="true" /><p>{t.ranked.loading}</p></section>;
   else if (phase.status === 'question') {
     content = (
@@ -290,7 +292,7 @@ export function RankedPage({ onActive }: { onActive(active: boolean): void }) {
         onTimeout={() => timeout(phase.run.id)}
       />
     );
-  } else if (phase.status === 'done') content = <RankedResults run={phase.run} onAgain={() => void start()} />;
+  } else if (phase.status === 'done') content = <RankedResults run={phase.run} onAgain={() => void start()} onBoard={onBoard} />;
   else {
     const reason = phase.cause instanceof ApiError && phase.cause.code === 'ranked_unavailable' ? phase.cause.params?.reason : undefined;
     content = (

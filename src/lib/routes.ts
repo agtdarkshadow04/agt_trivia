@@ -6,11 +6,11 @@
  * workshop and the review queue (#19); `?page=categories` is the Moderators'
  * category management (#20); `?page=scores` is a member's score history (#21).
  * `?category=<shortName>&view=leaderboard` is a category's leaderboard (#49).
- * `?page=ranked` is Ranked mode (#66).
+ * `?page=ranked` is Ranked mode and `?page=board` its public board (#66).
  */
 
 /** The pages besides the game itself. */
-export const pages = ['login', 'questions', 'review', 'categories', 'scores', 'ranked'] as const;
+export const pages = ['login', 'questions', 'review', 'categories', 'scores', 'ranked', 'board'] as const;
 export type Page = typeof pages[number];
 
 /** The `page` parameter, or null for the game (an unknown page is the game too). */

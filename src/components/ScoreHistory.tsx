@@ -7,6 +7,7 @@ import { ConfirmDialog } from './Dialog';
 import { SelectField } from './Field';
 import { useI18n } from './I18n';
 import { LogInIcon, RefreshIcon, TrashIcon } from './Icons';
+import { MyRankedSummary } from './RankedBoard';
 import { useViewHeading } from './useViewHeading';
 
 /**
@@ -189,6 +190,8 @@ export function ScoresPage({ onCleared }: { /** After the history is cleared (#6
       <p className="workshop-intro">{t.scores.text}</p>
       <div role="status" className="workshop-status">{message && <p className="success-note">{message}</p>}</div>
       {actionError && <p className="error-note" role="alert">{actionError}</p>}
+      {/* #66: Ranked mode's standing, whether or not the member has practice results. */}
+      <MyRankedSummary />
       {empty && <p className="empty-note">{t.scores.empty}</p>}
 
       {!empty && (

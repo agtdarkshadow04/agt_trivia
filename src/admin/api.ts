@@ -134,6 +134,22 @@ export const updateSettings = (values: Record<string, SettingValue | null>) => (
   adminRequest<{ settings: SettingState[]; iam: IamStatus }>('/api/admin/settings', { method: 'PUT', body: { values } })
 );
 
+// --- Ranked mode (#66) ----------------------------------------------------------
+
+export interface RankedCategory {
+  id: string;
+  shortName: string;
+  name: string;
+  questionCount: number;
+  ranked: boolean;
+}
+
+export const listRankedCategories = () => adminRequest<RankedCategory[]>('/api/admin/ranked/categories');
+
+export const saveRankedCategories = (categories: readonly { id: string; ranked: boolean }[]) => (
+  adminRequest<{ categories: RankedCategory[] }>('/api/admin/ranked/categories', { method: 'PUT', body: { categories } })
+);
+
 // --- Logs (LOG-18) -------------------------------------------------------------
 
 export type LogKind = 'server' | 'audit';

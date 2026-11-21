@@ -14,6 +14,7 @@ import { Layout } from './components/Layout';
 import { SignIn } from './components/MemberAccount';
 import { BackToCategories, LengthChoice, QuestionView, Results } from './components/QuizPlay';
 import { QuestionWorkshop } from './components/QuestionWorkshop';
+import { RankedBoard } from './components/RankedBoard';
 import { RankedPage } from './components/RankedPlay';
 import { CategoryManager } from './components/CategoryManager';
 import { SaveResult, ScoresPage } from './components/ScoreHistory';
@@ -182,6 +183,7 @@ export function App() {
       : page === 'scores' ? member !== null
         : page === 'questions' ? member !== null && canAuthor(member.role)
           : page === 'ranked' ? member !== null && (data.status !== 'ready' || data.settings.ranked)
+            : page === 'board' ? data.status !== 'ready' || data.settings.ranked
             : member?.role === 'Moderator');
   useEffect(() => {
     if (!allowedPage) {
@@ -205,14 +207,16 @@ export function App() {
   ));
 
   let content;
-  if (!allowedPage || (page !== null && page !== 'login' && member === undefined)) {
+  if (!allowedPage || (page !== null && page !== 'login' && page !== 'board' && member === undefined)) {
     content = <LoadState message={t.common.loading} />;
   } else if ((page === 'questions' || page === 'review') && member) {
     content = data.status === 'ready'
       ? <QuestionWorkshop mode={page} member={member} categories={data.categories} onChanged={() => { refreshCounts(); void reloadCategories(); }} />
       : data.status === 'error' ? <LoadState message="" cause={data.cause} onRetry={() => void load()} /> : <LoadState message={t.common.loading} />;
   } else if (page === 'ranked' && member) {
-    content = <RankedPage onActive={setRankedActive} />;
+    content = <RankedPage onActive={setRankedActive} onBoard={() => openPage('board')} />;
+  } else if (page === 'board') {
+    content = <RankedBoard signedIn={Boolean(member)} onPlay={() => openPage('ranked')} />;
   } else if (page === 'scores' && member) {
     content = <ScoresPage onCleared={refreshStats} />;
   } else if (page === 'categories' && member) {
@@ -224,7 +228,7 @@ export function App() {
   } else if (data.status === 'loading') content = <LoadState message={t.quiz.loadingCategories} />;
   else if (data.status === 'error') content = <LoadState message="" cause={data.cause} onRetry={() => void load()} />;
   else if (!playable) {
-    content = <CategoryList categories={data.categories} stats={stats} notice={notice} onChoose={(chosen) => navigate(chosen.shortName)} />;
+    content = <CategoryList categories={data.categories} stats={stats} notice={notice} onChoose={(chosen) => navigate(chosen.shortName)} onRankedBoard={data.settings.ranked ? () => openPage('board') : undefined} />;
   } else if (play === null && view === 'leaderboard') {
     content = (
       <>
