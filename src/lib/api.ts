@@ -225,4 +225,6 @@ export interface CategoryStats {
   bestPercent: number;
   averagePercent: number;
   lastPlayedAt: string;
+  /** The latest 10 results' percentages, oldest first (#72). */
+  recentPercents: number[];
 }

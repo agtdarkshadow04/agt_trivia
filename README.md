@@ -350,7 +350,8 @@ many. Every quiz the server draws carries a signed attempt: the result must answ
 within a day, and each quiz is saved once, so **Try again** after a lost answer never saves it twice. Anonymous players see an invitation to sign in instead, and nothing is stored for them.
 
 **My scores** (the trophy button in the header, `/?page=scores`) shows, per category, how often the member played,
-their best and average percentage and when they last played, and their history, newest first, with dates in the
+their best and average percentage, when they last played and, from two results on, a line of their latest 10
+results with the latest in words; and their history, newest first, with dates in the
 language and time zone of their settings. The category list and the length choice also show a member's best and
 number of plays ("Your best: 90% · Plays: 4") on each category they have played.
 

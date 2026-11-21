@@ -49,7 +49,12 @@ export interface CategoryStats {
   bestPercent: number;
   averagePercent: number;
   lastPlayedAt: string;
+  /** The percentages of the latest `RECENT_RESULTS` results, oldest first (#72). */
+  recentPercents: number[];
 }
+
+/** How many of a category's latest results `recentPercents` holds (#72). */
+export const RECENT_RESULTS = 10;
 
 function toMemberResult(result: repo.StoredResult): MemberResult {
   const { id, categoryId, categoryName, length, score, total, finishedAt } = result;
@@ -166,6 +171,10 @@ export class ResultService {
   }
 
   stats(): CategoryStats[] {
+    const recent = new Map<string, number[]>();
+    for (const row of repo.memberRecentScores(this.db, this.member.id, RECENT_RESULTS)) {
+      recent.set(row.categoryId, [...(recent.get(row.categoryId) ?? []), scorePercent(row.score, row.total)]);
+    }
     return repo.memberStats(this.db, this.member.id).map((row) => ({
       categoryId: row.categoryId,
       categoryName: row.categoryName,
@@ -173,6 +182,7 @@ export class ResultService {
       bestPercent: displayPercent(row.bestPercent),
       averagePercent: displayPercent(row.averagePercent),
       lastPlayedAt: row.lastPlayedAt,
+      recentPercents: recent.get(row.categoryId) ?? [],
     }));
   }
 

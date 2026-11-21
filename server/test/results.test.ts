@@ -133,7 +133,7 @@ describe('member score history', () => {
     assert.equal((await as('bob', 'GET', '/api/member/results?cursor=nope')).statusCode, 400);
     assert.deepEqual((await as('bob', 'GET', `/api/member/results?categoryId=${otherCategory.categoryId}`)).json().items, []);
     const [stats] = (await as('bob', 'GET', '/api/member/stats')).json();
-    assert.deepEqual({ ...stats, lastPlayedAt: undefined }, { categoryId: space.category.id, categoryName: 'Space', plays: 2, bestPercent: 100, averagePercent: 75, lastPlayedAt: undefined });
+    assert.deepEqual({ ...stats, lastPlayedAt: undefined }, { categoryId: space.category.id, categoryName: 'Space', plays: 2, bestPercent: 100, averagePercent: 75, lastPlayedAt: undefined, recentPercents: [100, 50] });
     // Ada's results are hers alone.
     assert.ok((await as('ada', 'GET', '/api/member/results')).json().items.every((item: { id: string }) => !page.items.some((other: { id: string }) => other.id === item.id)));
   });
@@ -153,6 +153,29 @@ describe('member score history', () => {
     const stats = (await as('bob', 'GET', '/api/member/stats')).json().find((entry: { categoryId: string }) => entry.categoryId === biology);
     assert.equal(stats.bestPercent, 100);
     assert.equal(stats.averagePercent, 99);
+  });
+
+  it("keeps each category's latest 10 results, oldest first, for the member alone (#72)", async () => {
+    await createMember(context, 'r.dana', 'Player');
+    const dana = context.db.connection.prepare("SELECT id FROM members WHERE username = 'r.dana'").get() as { id: string };
+    const [first, second] = space.questions;
+    // Twelve results a minute apart: 0 %, 50 %, 100 %, 0 %, ... The two oldest fall out.
+    const percents: number[] = [];
+    for (let minute = 0; minute < 12; minute += 1) {
+      const right = minute % 3;
+      percents.push(right * 50);
+      await withDataWrite(context.operations, () => insertResult(context.db, {
+        memberId: dana.id, categoryId: space.category.id, categoryName: 'Space', length: 'short',
+        answers: [{ questionId: first.id, correct: right >= 1 }, { questionId: second.id, correct: right >= 2 }],
+      }, new Date(Date.UTC(2031, 0, 1, 0, minute))));
+    }
+    const cookie = await memberCookie(context, 'r.dana');
+    const [stats] = (await app.inject({ url: '/api/member/stats', headers: { cookie } })).json();
+    assert.equal(stats.plays, 12);
+    assert.deepEqual(stats.recentPercents, percents.slice(2));
+    // Another member's results never show up in them.
+    const bobSpace = (await as('bob', 'GET', '/api/member/stats')).json().find((entry: { categoryId: string }) => entry.categoryId === space.category.id);
+    assert.deepEqual(bobSpace.recentPercents, [100, 50]);
   });
 
   it('keeps results of a deleted category with its name, out of the stats', async () => {
