@@ -57,7 +57,7 @@ export const EDITABLE_SETTINGS = {
   'leaderboards.enabled': editable(
     Type.Boolean(),
     false,
-    'Whether each category has a public leaderboard of the members who chose to appear on it (#49).',
+    'Whether each category has a public leaderboard of the members who chose to appear on it (#49). Deprecated: Ranked mode replaces it (#66).',
   ),
   'leaderboards.size': editable(
     integer(leaderboardSizeLimits.min, leaderboardSizeLimits.max),

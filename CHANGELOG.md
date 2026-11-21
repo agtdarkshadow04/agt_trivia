@@ -49,6 +49,10 @@ All notable changes to AGT Galactic Trivia are documented in this file. The form
 
 ### Deprecated
 
+- The per-category **leaderboards** (#49): `GET /api/categories/{id}/leaderboard`, the `leaderboards.enabled` and
+  `leaderboards.size` settings, the `leaderboards` public setting and the `leaderboards_closed` error still work, and
+  3.0.0 removes them. The one ranked board replaces them (#66); **Show me on leaderboards** stays and decides who
+  appears on it.
 - `POST /api/member/questions/{id}/reports` answers `201` with the bare report, and `PUT /api/member/preferences`
   answers `200` with the bare preferences. Both still work as before, but 3.0.0 will answer
   `{ report, notices }` and `{ preferences, notices }`, like every other create and replace route (API-2, #63).

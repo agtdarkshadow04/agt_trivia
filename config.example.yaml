@@ -67,6 +67,8 @@
 #   longLength: 30
 
 # leaderboards:
+#   # Deprecated since 2.2.0, removed in 3.0.0: the ranked board replaces the
+#   # per-category leaderboards (README, Leaderboards).
 #   # Whether each category has a public leaderboard of the members who chose to appear on it.
 #   enabled: false
 #   # How many members a leaderboard shows (3-50).

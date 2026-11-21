@@ -204,6 +204,7 @@ function registerRoute(app: FastifyInstance, context: AppContext, route: RouteDe
       tags: [route.tag],
       summary: route.summary,
       ...(route.description ? { description: route.description } : {}),
+      ...(route.deprecated ? { deprecated: true } : {}),
       security: [...routeSecurity(route)],
       ...(route.schema.params ? { params: route.schema.params } : {}),
       // API-10: a route without query parameters rejects any, like an undeclared body property.

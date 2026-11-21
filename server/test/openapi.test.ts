@@ -80,6 +80,13 @@ describe('the OpenAPI document (API-10..API-13)', () => {
     }
   });
 
+  it('marks the deprecated routes, and only those (VER-10)', () => {
+    const deprecated = Object.values(document.paths).flatMap((operations) => Object.values(operations))
+      .filter((operation) => (operation as { deprecated?: boolean }).deprecated).map((operation) => operation.operationId);
+    // #66: the per-category leaderboards give way to the ranked board in 3.0.0.
+    assert.deepEqual(deprecated, ['getLeaderboard']);
+  });
+
   it('lists every error code in the ErrorBody schema and in docs/API.md (API-6)', () => {
     const description = document.components.schemas.ErrorBody.properties.error.description ?? '';
     const guide = readFileSync('docs/API.md', 'utf8');
