@@ -14,6 +14,9 @@ All notable changes to AGT Galactic Trivia are documented in this file. The form
 - **Answer shortcuts:** while a question is open, **A**–**F** or **1**–**6** picks the answer with that letter, or
   toggles it on a multi-answer question, and **Enter** locks it in as before. A hint under the question says so,
   except on touch screens (#68).
+- **Share result** on the results screen: a summary such as "AGT Galactic Trivia – Biology: 3/3 (100%) – Atlas
+  Archivist" with the category's link, in the reader's language, through the device's share sheet, the clipboard,
+  or a field to copy by hand. Nothing is sent to the server (#71).
 
 ### Deprecated
 

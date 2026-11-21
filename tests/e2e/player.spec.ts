@@ -256,6 +256,62 @@ test('asks before leaving a quiz in progress, and only then (#67)', async ({ pag
   expect(await watched.violations()).toEqual([]);
 });
 
+/** Plays Biology's full quiz with every answer right, up to the results. */
+async function playBiologyRight(page: Page) {
+  await page.goto('/?category=bio');
+  await page.getByRole('button', { name: /Full quiz/ }).click();
+  for (let number = 1; number <= 3; number += 1) {
+    await answer(page, true);
+    await page.getByRole('button', { name: number === 3 ? 'View results' : 'Next question' }).click();
+  }
+  await expect(page.getByRole('img', { name: /^3 of 3 correct/ })).toBeVisible();
+}
+
+test('shares a result through the share sheet where there is one (#71)', async ({ page, baseURL }) => {
+  const watched = await watchPage(page);
+
+  // Where the browser has a share sheet, it gets the text and the link.
+  await page.addInitScript(() => {
+    (window as unknown as { shared: unknown[] }).shared = [];
+    Object.defineProperty(navigator, 'share', { configurable: true, value: async (data: unknown) => { (window as unknown as { shared: unknown[] }).shared.push(data); } });
+  });
+  await playBiologyRight(page);
+  await page.getByRole('button', { name: 'Share result' }).click();
+  await expect.poll(() => page.evaluate(() => (window as unknown as { shared: unknown[] }).shared)).toEqual([
+    { text: 'AGT Galactic Trivia – Biology: 3/3 (100%) – Atlas Archivist', url: `${baseURL}/?category=bio` },
+  ]);
+  await expectAccessible(page, 'results with sharing');
+  expect(watched.consoleErrors).toEqual([]);
+  expect(await watched.violations()).toEqual([]);
+});
+
+test('copies a result to the clipboard, or shows it to copy by hand (#71)', async ({ page, context, baseURL }) => {
+  const expected = `AGT Galactic Trivia – Biology: 3/3 (100%) – Atlas Archivist ${baseURL}/?category=bio`;
+  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+  await page.addInitScript(() => { Object.defineProperty(navigator, 'share', { configurable: true, value: undefined }); });
+  await playBiologyRight(page);
+  await page.getByRole('button', { name: 'Share result' }).click();
+  await expect(page.getByRole('status').filter({ hasText: 'Copied to the clipboard.' })).toBeVisible();
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(expected);
+
+  // Without a clipboard (an insecure context, a refused permission): a read-only field, selected, to copy by hand.
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: () => Promise.reject(new DOMException('Denied', 'NotAllowedError')) } });
+  });
+  await playBiologyRight(page);
+  await page.getByRole('button', { name: 'Share result' }).click();
+  await expect(page.getByRole('status').filter({ hasText: 'Sharing is not available here; copy the text below.' })).toBeVisible();
+  const field = page.getByLabel('Copy this text to share your result');
+  await expect(field).toHaveValue(expected);
+  await expect(field).toBeFocused();
+  await expect(field).toHaveJSProperty('readOnly', true);
+  await expectAccessible(page, 'results with the text to copy');
+  for (const width of widths) {
+    await page.setViewportSize({ width, height: 800 });
+    await expectNoHorizontalScroll(page, `text to copy at ${width}px`);
+  }
+});
+
 test('follows deep links, ignoring case, and falls back to the list (FE-4)', async ({ page }) => {
   await page.goto('/?category=BIO');
   await expect(page.getByRole('heading', { name: 'Choose quiz length' })).toBeVisible();
