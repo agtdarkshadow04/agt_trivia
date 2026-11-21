@@ -309,7 +309,9 @@ players, and review notes never are.
 Visitors play at `/`:
 
 1. **Choose a category.** Categories are listed by priority, then by name, with their short name, number of
-   questions and description. A category without approved questions is shown but cannot be chosen.
+   questions and description. A category without approved questions is shown but cannot be chosen. **Find a
+   category** narrows the list as you type, matching the name, short name or description, ignoring case and
+   accents; each card keeps its number in the full list.
 2. **Choose a length**: a short quiz (`quiz.shortLength` questions), a long one (`quiz.longLength`) or the full
    quiz (all of them). Only the lengths that differ are offered: a category with no more questions than a short
    quiz offers only the full quiz. Questions, and the order of their answers, are drawn at random each time.

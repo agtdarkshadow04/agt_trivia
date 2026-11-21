@@ -41,6 +41,56 @@ test('lists the categories in order, with the empty one disabled', async ({ page
   expect(await watched.violations()).toEqual([]);
 });
 
+test('filters the category list as the player types (#74)', async ({ page }) => {
+  const watched = await watchPage(page);
+  await page.goto('/');
+  const filter = page.getByRole('searchbox', { name: 'Find a category' });
+  const cards = page.getByRole('listitem').getByRole('button');
+  await expect(cards).toHaveCount(3);
+  await expect(page.getByText(/^Showing /)).toHaveCount(0);
+
+  // The short name, ignoring case; the card keeps its number in the full list.
+  await filter.fill('BIO');
+  await expect(cards).toHaveCount(1);
+  await expect(cards.first()).toContainText('Biology');
+  await expect(cards.first().locator('.choice-card-index')).toHaveText('02');
+  await expect(page.getByRole('status').filter({ hasText: 'Showing 1 of 3 categories' })).toBeVisible();
+  // The description; from the field, Tab reaches the first card.
+  await filter.fill('the void');
+  await expect(cards).toHaveCount(1);
+  await expect(cards.first()).toContainText('Space');
+  await filter.focus();
+  await page.keyboard.press('Tab');
+  await expect(cards.first()).toBeFocused();
+  await expectAccessible(page, 'filtered categories');
+
+  // No match: a message and Clear, which empties the field and gives it the focus.
+  await filter.fill('unicorn');
+  await expect(cards).toHaveCount(0);
+  await expect(page.getByText('No category matches “unicorn”.')).toBeVisible();
+  await expect(page.getByRole('status').filter({ hasText: 'Showing 0 of 3 categories' })).toBeVisible();
+  for (const width of widths) {
+    await page.setViewportSize({ width, height: 800 });
+    await expectNoHorizontalScroll(page, `no matching category at ${width}px`);
+  }
+  await page.setViewportSize({ width: 1180, height: 800 });
+  await expectAccessible(page, 'no matching category');
+  await page.getByRole('button', { name: 'Clear' }).click();
+  await expect(filter).toHaveValue('');
+  await expect(filter).toBeFocused();
+  await expect(cards).toHaveCount(3);
+
+  // The filter is not in the address, and returning from a category starts again without it.
+  await filter.fill('bio');
+  await cards.first().click();
+  await expect(page).toHaveURL(/\?category=bio$/);
+  await page.getByRole('button', { name: 'Categories' }).click();
+  await expect(filter).toHaveValue('');
+  await expect(cards).toHaveCount(3);
+  expect(watched.consoleErrors).toEqual([]);
+  expect(await watched.violations()).toEqual([]);
+});
+
 test('plays a quiz with single- and multi-answer questions, then replays and chooses another', async ({ page }) => {
   const watched = await watchPage(page);
   await page.goto('/');
