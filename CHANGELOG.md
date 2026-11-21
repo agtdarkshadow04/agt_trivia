@@ -17,6 +17,8 @@ All notable changes to AGT Galactic Trivia are documented in this file. The form
 - **Share result** on the results screen: a summary such as "AGT Galactic Trivia – Biology: 3/3 (100%) – Atlas
   Archivist" with the category's link, in the reader's language, through the device's share sheet, the clipboard,
   or a field to copy by hand. Nothing is sent to the server (#71).
+- **Find a category** above the category list narrows it as you type, by name, short name or description, ignoring
+  case and accents, and says how many categories are shown (#74).
 
 ### Deprecated
 
