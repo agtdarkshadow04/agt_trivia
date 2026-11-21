@@ -11,7 +11,7 @@ const password = 'Member-Password-1!';
 
 test.beforeAll(async ({ playwright }) => {
   const admin = await playwright.request.newContext({ baseURL: test.info().project.use.baseURL, storageState: adminState });
-  for (const username of ['e2e.scorer', 'e2e.other']) {
+  for (const username of ['e2e.scorer', 'e2e.other', 'e2e.best']) {
     const response = await admin.post('/api/admin/members', {
       headers: { 'x-agt-request': '1' },
       data: { username, displayName: `Traveller ${username}`, role: 'Player', password },
@@ -97,6 +97,38 @@ test('a member\'s finished quiz is saved to their history, shown in My scores an
   await confirm.getByRole('button', { name: 'Clear history' }).click();
   await expect(page.getByRole('status').filter({ hasText: 'Your score history was cleared.' })).toBeVisible();
   await expect(page.getByText('You have no saved scores yet.')).toBeVisible();
+  expect(watched.consoleErrors.filter((message) => !/status of 401/.test(message))).toEqual([]);
+  expect(await watched.violations()).toEqual([]);
+});
+
+test("a member's best shows on the category card and the length choice, and visitors see none (#69)", async ({ page, browser }) => {
+  const watched = await watchPage(page);
+  await signIn(page, 'e2e.best');
+  const biology = page.getByRole('listitem').getByRole('button', { name: /Biology/ });
+  await expect(biology).toBeVisible();
+  await expect(page.getByText(/Your best/)).toHaveCount(0);
+
+  await playBiology(page, 3);
+  await expect(page.getByRole('status').filter({ hasText: 'Saved to your history.' })).toBeVisible();
+  await page.getByRole('button', { name: 'Choose another' }).click();
+  await expect(biology).toContainText('Your best: 100% · Plays: 1');
+  // The name comes first in the card's accessible name.
+  await expect(biology).toHaveAccessibleName(/Biology.*Your best: 100% · Plays: 1/);
+  await expect(page.getByRole('listitem').getByRole('button', { name: /Space/ })).not.toContainText('Your best');
+  await expectAccessible(page, 'categories with a personal best');
+  for (const width of [300, 520, 760, 1180]) {
+    await page.setViewportSize({ width, height: 800 });
+    await expectNoHorizontalScroll(page, `categories with a personal best at ${width}px`);
+  }
+  await biology.click();
+  await expect(page.getByText('Your best: 100% · Plays: 1')).toBeVisible();
+
+  // Visitors see the cards as before.
+  const visitor = await browser.newPage();
+  await visitor.goto('/');
+  await expect(visitor.getByRole('listitem').getByRole('button', { name: /Biology/ })).toBeVisible();
+  await expect(visitor.getByText(/Your best/)).toHaveCount(0);
+  await visitor.close();
   expect(watched.consoleErrors.filter((message) => !/status of 401/.test(message))).toEqual([]);
   expect(await watched.violations()).toEqual([]);
 });
