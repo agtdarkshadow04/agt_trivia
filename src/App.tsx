@@ -293,6 +293,7 @@ export function App() {
       status={status}
       reviewCount={reviewCount}
       leaderboards={data.status === 'ready' && data.settings.leaderboards}
+      currentPage={page}
       onHome={() => navigate(null)}
       onOpenPage={openPage}
       onMemberChanged={setMember}

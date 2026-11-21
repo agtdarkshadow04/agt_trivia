@@ -26,6 +26,13 @@ All notable changes to AGT Galactic Trivia are documented in this file. The form
 - **Search and category filters** on My questions and the Review queue: part of the question text and a category,
   kept by **Load more**, with **Clear filters** when nothing matches (#73).
 
+### Changed
+
+- On narrow screens (760 px and below) a member's page buttons (My scores, My questions, Review queue, Categories)
+  move into one **Menu** button, which lists them with their names and carries the review count; the name and role
+  get a line of their own, so the header's buttons stay on one row. The current page is marked in the header and
+  the menu (#70).
+
 ### Deprecated
 
 - `POST /api/member/questions/{id}/reports` answers `201` with the bare report, and `PUT /api/member/preferences`

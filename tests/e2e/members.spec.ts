@@ -171,6 +171,79 @@ test.describe('members', () => {
     await expect(page).toHaveURL(/\/$/);
   });
 
+  test("narrow screens group a member's pages in the Menu, with their names (#70)", async ({ browser, playwright }) => {
+    const baseURL = test.info().project.use.baseURL!;
+    const admin = await playwright.request.newContext({ baseURL, storageState: adminState });
+    for (const role of ['Player', 'Editor', 'Moderator']) await createMember(admin, `e2e.menu.${role.toLowerCase()}`, role);
+    await admin.dispose();
+    // One question waiting for review, so the Moderator's menu carries the count.
+    const editor = await playwright.request.newContext({ baseURL, extraHTTPHeaders: { 'x-agt-request': '1' } });
+    expect((await editor.post('/api/member/login', { data: { username: 'e2e.menu.editor', password } })).status()).toBe(200);
+    const biology = (await (await editor.get('/api/categories')).json()).find((category: { shortName: string }) => category.shortName === 'bio');
+    const created = (await (await editor.post('/api/member/questions', { data: {
+      categoryId: biology.id, prompt: 'Menu test: which one glows?', choices: [{ text: 'Right firefly', isCorrect: true }, { text: 'Wrong stone', isCorrect: false }],
+    } })).json()).question;
+    const submitted = await (await editor.post(`/api/member/questions/${created.id}/submit`, { data: { version: created.version } })).json();
+
+    const pages: Record<string, string[]> = {
+      Player: ['My scores'],
+      Editor: ['My scores', 'My questions'],
+      Moderator: ['My scores', 'My questions', 'Review queue', 'Categories'],
+    };
+    try {
+      for (const role of ['Player', 'Editor', 'Moderator']) {
+        for (const width of [320, 375]) {
+          const context = await browser.newContext({ viewport: { width, height: 800 } });
+          const page = await context.newPage();
+          const watched = await watchPage(page);
+          await page.goto('/?page=login');
+          await page.getByLabel('Username').fill(`e2e.menu.${role.toLowerCase()}`);
+          await page.getByLabel('Password').fill(password);
+          await page.getByRole('button', { name: 'Sign in' }).click();
+          await expect(page.getByRole('heading', { name: 'Choose a category' })).toBeVisible();
+
+          // The icon links give way to one Menu button, on one line with Account and Settings.
+          await expect(page.getByRole('link', { name: 'My scores' })).toHaveCount(0);
+          const menu = page.getByRole('button', { name: role === 'Moderator' ? /^Menu: \d+ waiting for review$/ : 'Menu' });
+          await expect(menu).toBeVisible();
+          const tops = await Promise.all([menu, page.getByRole('button', { name: 'Account' }), page.getByRole('button', { name: 'Settings' })]
+            .map(async (button) => (await button.boundingBox())!.y));
+          expect(new Set(tops).size, `${role} at ${width}px: one row`).toBe(1);
+          await expectNoHorizontalScroll(page, `${role}'s header at ${width}px`);
+
+          if (width === 320) await expectDialogBehaviour(page, menu, 'Menu');
+          await menu.click();
+          const dialog = page.getByRole('dialog', { name: 'Menu' });
+          const links = dialog.getByRole('link');
+          await expect(links).toHaveCount(pages[role].length);
+          for (const [index, name] of pages[role].entries()) await expect(links.nth(index)).toContainText(name);
+          if (role === 'Moderator') {
+            await expect(dialog.getByRole('link', { name: 'Review queue' })).toHaveAccessibleDescription(/^Review queue: \d+ waiting$/);
+            if (width === 320) await expectAccessible(page, 'the Moderator menu');
+          }
+          await links.first().click();
+          await expect(dialog).toBeHidden();
+          await expect(page).toHaveURL(/\?page=scores$/);
+          await menu.click();
+          await expect(dialog.getByRole('link', { name: 'My scores' })).toHaveAttribute('aria-current', 'page');
+          await page.keyboard.press('Escape');
+          await expect(menu).toBeFocused();
+
+          // Wide screens keep the icon links, the current page marked.
+          await page.setViewportSize({ width: 1180, height: 800 });
+          await expect(menu).toBeHidden();
+          await expect(page.getByRole('link', { name: 'My scores' })).toHaveAttribute('aria-current', 'page');
+          expect(watched.consoleErrors.filter((message) => !/status of 401/.test(message))).toEqual([]);
+          expect(await watched.violations()).toEqual([]);
+          await context.close();
+        }
+      }
+    } finally {
+      await editor.delete(`/api/member/questions/${created.id}?version=${submitted.version}`);
+      await editor.dispose();
+    }
+  });
+
   test('the header and sign-in page fit 300 px at 2× text (UI-12, A11Y-6)', async ({ page }) => {
     await page.addInitScript(() => localStorage.setItem('agt_trivia_settings', JSON.stringify({ fontScale: '2' })));
     await page.setViewportSize({ width: 300, height: 800 });
