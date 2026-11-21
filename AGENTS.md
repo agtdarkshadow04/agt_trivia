@@ -124,7 +124,8 @@ it with the TEST-8 smoke tests the README's Installation steps describe.
   need no bump (VER-6). Removing or renaming an API field or route, a `config.yaml` key or an environment variable, or
   making a request field required, is a major change after at least one minor release that lists it under
   **Deprecated** (VER-10). Saving a result without `attemptToken` is deprecated since 2.1.0 (#45) and becomes
-  required in 3.0.0. The release PR only dates the CHANGELOG heading and records the acceptance tests (TEST-6 to
+  required in 3.0.0; the per-category leaderboards (#49) and the bare report and preferences bodies (#63) are
+  deprecated since 2.2.0 and go in 3.0.0. The release PR only dates the CHANGELOG heading and records the acceptance tests (TEST-6 to
   TEST-9, VER-12). New tags use the `v` prefix (`v2.1.0`, VER-11); create tags and GitHub Releases only when the
   maintainer asks (VER-12).
 - **Spec work:** cite rule IDs in commits and PRs (WF-2). When a PR makes a deviation below go away, narrow or delete

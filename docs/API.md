@@ -58,6 +58,11 @@ Editors write questions and submit them for review; Moderators approve or reject
 
 ## Leaderboards (#49)
 
+**Deprecated since 2.2.0** (#66): the per-category leaderboards below, `leaderboards.enabled`, `leaderboards.size`, the
+`leaderboards` public setting and `403 leaderboards_closed` still work, and 3.0.0 removes them; the ranked board
+(`GET /api/ranked/leaderboard`, see Ranked mode) replaces them. `leaderboardOptIn` stays: it also decides who appears
+on the ranked board.
+
 `GET /api/categories/{id}/leaderboard` is public while `leaderboards.enabled` is on (`403 leaderboards_closed`
 otherwise; `404` for an unknown category). It lists at most `leaderboards.size` active members who chose to appear,
 `{ rank, displayName, bestPercent, plays }` each: nothing else about them, no ID or username (API-3). Only results

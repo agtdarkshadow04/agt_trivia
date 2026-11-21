@@ -66,6 +66,8 @@ export interface RouteDefinition {
   /** One English sentence. */
   summary: string;
   description?: string;
+  /** OpenAPI `deprecated`: still served, removed in the next major version (VER-10). */
+  deprecated?: boolean;
   schema: RouteSchemas;
   /**
    * Slow work a writing route does before its data write, such as asking AGT

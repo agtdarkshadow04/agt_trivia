@@ -227,8 +227,8 @@ Settings come from three places:
 | `site.supportUrl` | `https://www.nms-agt.com/support` | Support link: an absolute `http:` or `https:` URL |
 | `quiz.shortLength` | `10` | Questions in a short quiz (1–100, fewer than `quiz.longLength`) |
 | `quiz.longLength` | `30` | Questions in a long quiz (2–500, more than `quiz.shortLength`) |
-| `leaderboards.enabled` | `false` | Whether each category has a public [leaderboard](#leaderboards) of the members who chose to appear on it |
-| `leaderboards.size` | `10` | How many members a leaderboard shows (3–50) |
+| `leaderboards.enabled` | `false` | Whether each category has a public [leaderboard](#leaderboards) of the members who chose to appear on it. Deprecated: 3.0.0 removes it |
+| `leaderboards.size` | `10` | How many members a leaderboard shows (3–50). Deprecated: 3.0.0 removes it |
 | `ranked.enabled` | `false` | Whether members can play [ranked runs](#ranked-mode) and the ranked board is public |
 | `ranked.questionsPerRun` | `10` | Questions in a ranked run (3–50) |
 | `ranked.secondsPerQuestion` | `20` | Seconds to answer each ranked question (5–120) |
@@ -369,6 +369,10 @@ history** on My scores deletes all of a member's results, and deleting a member 
 results stay in the history under its old name.
 
 ### Leaderboards
+
+> **Deprecated since 2.2.0.** The per-category leaderboards and their settings (`leaderboards.enabled`,
+> `leaderboards.size`) still work, and 3.0.0 removes them: the one [ranked board](#ranked-mode) replaces them. **Show me
+> on leaderboards** stays, and also decides who appears on the ranked board.
 
 Leaderboards are off until the Admin turns on `leaderboards.enabled` (Settings tab, or `config.yaml`). Then each
 category's length choice has a **Leaderboard** button (`/?category=<short name>&view=leaderboard`), public like the

@@ -87,7 +87,7 @@ export const PublicSettings = object({
   quizShortLength: Type.Integer({ description: '`quiz.shortLength`: questions in a short quiz.' }),
   quizLongLength: Type.Integer({ description: '`quiz.longLength`: questions in a long quiz.' }),
   agtSignIn: Type.Boolean({ description: 'Members can sign in with their AGT account: `iam.enabled` is on and AGT IAM is configured (#18).' }),
-  leaderboards: Type.Boolean({ description: '`leaderboards.enabled`: categories have public leaderboards (#49).' }),
+  leaderboards: Type.Boolean({ description: '`leaderboards.enabled`: categories have public leaderboards (#49). Deprecated since 2.2.0; removed in 3.0.0 with the per-category boards (#66).' }),
   ranked: Type.Boolean({ description: '`ranked.enabled`: members can play ranked runs, and the ranked board is public (#66).' }),
 }, 'The settings the player UI needs (CFG-10); nothing sensitive.');
 
