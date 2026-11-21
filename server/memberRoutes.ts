@@ -146,7 +146,7 @@ export const memberRoutes: readonly RouteDefinition[] = [
     operationId: 'replaceMemberPreferences',
     tag: 'results',
     summary: "Change the member's own preferences, such as appearing on leaderboards.",
-    description: 'Any member, for themselves only. Turning `leaderboardOptIn` off takes them off every leaderboard at once (#49).',
+    description: 'Any member, for themselves only. Turning `leaderboardOptIn` off takes them off every leaderboard at once (#49). Deprecated response shape: the bare preferences become `{ preferences, notices }` (API-2) in 3.0.0 (#63).',
     schema: { body: S.MemberPreferences, response: { 200: S.MemberPreferences } },
     handler: (context, request) => {
       const preferences = updateMemberPreferences(context, request.member!.id, request.body as { leaderboardOptIn: boolean });

@@ -155,7 +155,7 @@ twice adds nothing. The audit log records the action, the files and the counts, 
 | `GET /api/member/session` | The signed-in member |
 | `POST /api/member/password` | `{ currentPassword, password }`: changes a local member's password, ends their other sessions; `200` the member |
 | `GET /api/member/questions` | Questions, newest first: `{ items, nextCursor }` (API-8; `limit`, `cursor`, `status`, `categoryId`, `q` to search the text, `mine=true`). Editors see only their own; Moderators every question. Each is `{ id, categoryId, prompt, status, choices: [{ id, text, isCorrect }], authorCredit, reviewNote, createdBy, createdByName, approvedAt, version, createdAt, updatedAt }` (#19) |
-| `GET /api/member/preferences`, `PUT /api/member/preferences` | The member's own `{ leaderboardOptIn }` (#49); any member, for themselves |
+| `GET /api/member/preferences`, `PUT /api/member/preferences` | The member's own `{ leaderboardOptIn }` (#49); any member, for themselves. **Deprecated:** `PUT` answers the bare preferences; from 3.0.0 it answers `{ preferences, notices }` (API-2, #63) |
 | `GET /api/member/question-counts` | `{ mine: { draft, pending, approved, rejected }, reviewQueue, openReports }`: the member's own questions by status, and for Moderators the number of pending questions and of open question reports (#46; both `null` for Editors) |
 | `GET /api/member/questions/{id}` | One question. A question an Editor did not write answers `404` |
 | `POST /api/member/questions` | `{ categoryId, prompt, choices: [{ text, isCorrect }], authorCredit? }`: a new draft; `201 { question, notices }` |
@@ -164,8 +164,8 @@ twice adds nothing. The audit log records the action, the files and the counts, 
 | `POST /api/member/questions/{id}/submit` | `{ version }`: draft or rejected → pending; `200` the question |
 | `POST /api/member/questions/{id}/approve` | `{ version }`: pending → approved, in the public quiz (Moderators); `200` the question |
 | `POST /api/member/questions/{id}/reject` | `{ version, reviewNote }`: pending → rejected, with a required note for the author (Moderators); `200` the question |
-| `POST /api/member/questions/{id}/reports` | `{ reason, note }`: reports a problem with an approved question (any member, #46); `201` the report |
-| `GET /api/member/reports` | Question reports, oldest first: `{ items, nextCursor }` (API-8; `status`, `limit`, `cursor`), Moderators only. Each is `{ id, questionId, questionPrompt, questionStatus, categoryId, categoryName, reason, note, status, reportedBy, reportedByName, resolvedByName, resolvedAt, resolutionNote, version, createdAt, updatedAt }` |
+| `POST /api/member/questions/{id}/reports` | `{ reason, note }`: reports a problem with an approved question (any member, #46); `201` the report. **Deprecated:** from 3.0.0 it answers `{ report, notices }` (API-2, #63) |
+| `GET /api/member/reports` | Question reports, oldest first, as a work queue (an API-8 deviation, #63): `{ items, nextCursor }` ( `status`, `limit`, `cursor`), Moderators only. Each is `{ id, questionId, questionPrompt, questionStatus, categoryId, categoryName, reason, note, status, reportedBy, reportedByName, resolvedByName, resolvedAt, resolutionNote, version, createdAt, updatedAt }` |
 | `POST /api/member/reports/{id}/resolve`, `POST /api/member/reports/{id}/dismiss` | `{ version, resolutionNote }`: closes an open report as `resolved` or `dismissed` (Moderators); `200` the report |
 | `POST /api/member/questions/{id}/unpublish` | `{ version }`: approved → draft (Moderators); `200` the question |
 | `GET /api/member/categories` | Every category in display order, `[{ id, shortName, name, description, priority, questionCounts: { draft, pending, approved, rejected }, version, createdAt, updatedAt }]` (Moderators, #20). A plain array (API-8) |

@@ -4,6 +4,14 @@ All notable changes to AGT Galactic Trivia are documented in this file. The form
 [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/), and the project uses
 [Semantic Versioning](https://semver.org/) as the AGT Web Application Specification requires (§21).
 
+## [2.2.0] - Unreleased
+
+### Deprecated
+
+- `POST /api/member/questions/{id}/reports` answers `201` with the bare report, and `PUT /api/member/preferences`
+  answers `200` with the bare preferences. Both still work as before, but 3.0.0 will answer
+  `{ report, notices }` and `{ preferences, notices }`, like every other create and replace route (API-2, #63).
+
 ## [2.1.0] - 2026-11-20
 
 ### Added
