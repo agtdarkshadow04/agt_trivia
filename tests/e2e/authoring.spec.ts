@@ -166,6 +166,50 @@ test('an Editor writes and submits, a Moderator rejects, the Editor fixes it, th
   await moderatorContext.close();
 });
 
+test('a Moderator searches the questions by text and filters them by category, on both pages (#73)', async ({ page }) => {
+  const watched = await watchPage(page);
+  await signIn(page, 'e2e.reviewer');
+  await page.goto('/?page=questions');
+  await page.getByLabel('Show').selectOption({ label: "Every member's questions" });
+  const cards = page.getByRole('article');
+  const search = page.getByRole('searchbox', { name: 'Search the question text' });
+
+  // Text, ignoring case; Enter applies it at once.
+  await search.fill('LEAVES');
+  await search.press('Enter');
+  await expect(cards).toHaveCount(1);
+  await expect(card(page, 'Which one has leaves?')).toBeVisible();
+  await expect(page.getByRole('status').filter({ hasText: 'Questions shown: 1' })).toBeAttached();
+
+  // Both together; typing applies after a moment.
+  await search.fill('question 1');
+  await page.getByLabel('Category').selectOption({ label: 'Space' });
+  await expect(cards).toHaveCount(4);
+  for (const prompt of ['Space question 1?', 'Space question 10?', 'Space question 11?', 'Space question 12?']) await expect(card(page, prompt)).toBeVisible();
+  await expectAccessible(page, 'filtered questions');
+
+  // Nothing matches: Clear filters starts again from every question.
+  await page.getByLabel('Category').selectOption({ label: 'Biology' });
+  await expect(page.getByText('No questions match these filters.')).toBeVisible();
+  await expect(cards).toHaveCount(0);
+  await page.getByRole('button', { name: 'Clear filters' }).click();
+  await expect(search).toHaveValue('');
+  await expect(page.getByLabel('Category')).toHaveValue('');
+  await expect(card(page, 'Which one has leaves?')).toBeVisible();
+
+  // The review queue has the same filters.
+  await page.goto('/?page=review');
+  await expect(page.getByRole('heading', { level: 1, name: 'Review queue' })).toBeVisible();
+  await expect(page.getByLabel('Status')).toHaveCount(0);
+  await page.getByRole('searchbox', { name: 'Search the question text' }).fill('nothing like this');
+  await page.getByRole('searchbox', { name: 'Search the question text' }).press('Enter');
+  await expect(page.getByText('No questions match these filters.')).toBeVisible();
+  await page.getByRole('button', { name: 'Clear filters' }).click();
+  await expect(page.getByText('No questions are waiting for review.')).toBeVisible();
+  expect(watched.consoleErrors).toEqual([]);
+  expect(await watched.violations()).toEqual([]);
+});
+
 test('Players have no question pages, and the pages send them back to the game', async ({ page }) => {
   await signIn(page, 'e2e.reader');
   await expect(page.getByRole('link', { name: 'My questions' })).toHaveCount(0);

@@ -23,6 +23,8 @@ All notable changes to AGT Galactic Trivia are documented in this file. The form
   category card and the length choice, updated after each saved result (#69).
 - **Trends on My scores:** each category's card draws a small line of the member's latest 10 results, with the
   latest in words. `GET /api/member/stats` returns them as `recentPercents`, oldest first (#72).
+- **Search and category filters** on My questions and the Review queue: part of the question text and a category,
+  kept by **Load more**, with **Clear filters** when nothing matches (#73).
 
 ### Deprecated
 
