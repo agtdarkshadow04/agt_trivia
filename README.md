@@ -351,7 +351,8 @@ within a day, and each quiz is saved once, so **Try again** after a lost answer 
 
 **My scores** (the trophy button in the header, `/?page=scores`) shows, per category, how often the member played,
 their best and average percentage and when they last played, and their history, newest first, with dates in the
-language and time zone of their settings.
+language and time zone of their settings. The category list and the length choice also show a member's best and
+number of plays ("Your best: 90% · Plays: 4") on each category they have played.
 
 What is stored, per finished quiz: the member, the category (and its name at the time), the quiz length, the score
 and the number of questions, the time it was finished, and for each question whether the answer was right, never the

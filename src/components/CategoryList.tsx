@@ -1,11 +1,17 @@
 import { useRef, useState } from 'react';
-import type { PublicCategory } from '../lib/api';
+import type { CategoryStats, PublicCategory } from '../lib/api';
 import { filterCategories } from '../lib/categoryFilter';
 import { formatTranslation } from '../translations';
 import { TextField } from './Field';
 import { useI18n } from './I18n';
 import { ArrowRightIcon } from './Icons';
 import { useViewHeading } from './useViewHeading';
+
+/** A member's best result and number of plays in a category (#69). */
+export function PersonalBest({ stats }: { stats: CategoryStats }) {
+  const { t, number, percent } = useI18n();
+  return <span className="choice-card-meta personal-best">{formatTranslation(t.quiz.personalBest, { percent: percent(stats.bestPercent), plays: number(stats.plays) })}</span>;
+}
 
 /**
  * The categories (#16), lower priority first, then by name, as the API sorts
@@ -14,8 +20,10 @@ import { useViewHeading } from './useViewHeading';
  * address (FE-4), and starts empty whenever the list is shown again. Each card
  * keeps its number in the full list.
  */
-export function CategoryList({ categories, notice, onChoose }: {
+export function CategoryList({ categories, stats = null, notice, onChoose }: {
   categories: readonly PublicCategory[];
+  /** A signed-in member's stats by category ID (#69); null for visitors, the Admin, or while unknown. */
+  stats?: ReadonlyMap<string, CategoryStats> | null;
   /** Why the list is shown instead of a deep-linked category (FE-4). */
   notice: string | null;
   onChoose(category: PublicCategory): void;
@@ -77,6 +85,7 @@ export function CategoryList({ categories, notice, onChoose }: {
                   <span className="choice-card-name" lang="en">{category.name}</span>
                   <span className="choice-card-text" lang="en">{category.description}</span>
                   {category.questionCount === 0 && <span className="choice-card-meta">{t.quiz.noQuestionsYet}</span>}
+                  {stats?.has(category.id) && <PersonalBest stats={stats.get(category.id)!} />}
                 </span>
                 <ArrowRightIcon className="choice-card-arrow" />
               </button>

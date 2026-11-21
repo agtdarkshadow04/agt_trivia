@@ -21,7 +21,7 @@ type SaveState =
   | { status: 'saved'; skipped: number }
   | { status: 'error'; cause: unknown };
 
-export function SaveResult({ member, categoryId, length, attemptToken, answers, onSignIn }: {
+export function SaveResult({ member, categoryId, length, attemptToken, answers, onSignIn, onSaved }: {
   member: MemberSession | null | undefined;
   categoryId: string;
   length: QuizLength;
@@ -29,8 +29,12 @@ export function SaveResult({ member, categoryId, length, attemptToken, answers, 
   attemptToken: string;
   answers: readonly { questionId: string; choiceIds: readonly string[] }[];
   onSignIn(): void;
+  /** After the result is stored, so the player's personal bests can be read again (#69). */
+  onSaved?(): void;
 }) {
   const { t, error, number } = useI18n();
+  const saved = useRef(onSaved);
+  useEffect(() => { saved.current = onSaved; });
   const [state, setState] = useState<SaveState>({ status: 'saving' });
   // One save per finished quiz, even when React runs the effect twice.
   const sent = useRef<typeof answers | null>(null);
@@ -38,8 +42,9 @@ export function SaveResult({ member, categoryId, length, attemptToken, answers, 
   const save = useCallback(async () => {
     setState({ status: 'saving' });
     try {
-      const saved = await saveResult(categoryId, length, attemptToken, answers);
-      setState({ status: 'saved', skipped: saved.skippedQuestionIds.length });
+      const result = await saveResult(categoryId, length, attemptToken, answers);
+      setState({ status: 'saved', skipped: result.skippedQuestionIds.length });
+      saved.current?.();
     } catch (cause) {
       setState({ status: 'error', cause });
     }
@@ -80,7 +85,7 @@ export function SaveResult({ member, categoryId, length, attemptToken, answers, 
 
 type Loaded<T> = { status: 'loading' } | { status: 'error'; cause: unknown } | { status: 'ready'; value: T };
 
-export function ScoresPage() {
+export function ScoresPage({ onCleared }: { /** After the history is cleared (#69). */ onCleared?(): void } = {}) {
   const { t, error, number, percent, dateTime, date } = useI18n();
   const heading = useViewHeading('scores');
   const [stats, setStats] = useState<Loaded<CategoryStats[]>>({ status: 'loading' });
@@ -133,6 +138,7 @@ export function ScoresPage() {
       setMessage(t.scores.cleared);
       setActionError('');
       void loadStats();
+      onCleared?.();
       void loadHistory();
     } catch (cause) {
       setClearing(false);

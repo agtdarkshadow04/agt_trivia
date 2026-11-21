@@ -19,6 +19,8 @@ All notable changes to AGT Galactic Trivia are documented in this file. The form
   or a field to copy by hand. Nothing is sent to the server (#71).
 - **Find a category** above the category list narrows it as you type, by name, short name or description, ignoring
   case and accents, and says how many categories are shown (#74).
+- **Your best** on each category a signed-in member has played: their best percentage and number of plays, on the
+  category card and the length choice, updated after each saved result (#69).
 
 ### Deprecated
 

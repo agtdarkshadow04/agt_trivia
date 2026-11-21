@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { MemberSession, PublicCategory, PublicQuiz, PublicSettings, QuizLength } from './lib/api';
-import { getMemberSession, getPublicSettings, getQuestionCounts, getQuiz, listCategories } from './lib/playerApi';
+import type { CategoryStats, MemberSession, PublicCategory, PublicQuiz, PublicSettings, QuizLength } from './lib/api';
+import { getMemberSession, getMemberStats, getPublicSettings, getQuestionCounts, getQuiz, listCategories } from './lib/playerApi';
 import { canAuthor } from './lib/questionRules';
 import { choose, isFinished, isInProgress, lockAnswer, nextQuestion, startSession, type QuizSession } from './lib/quizSession';
 import { categoryParam, findCategory, pageParam, searchForLeaderboard, searchForPage, searchWithCategory, viewParam, type Page } from './lib/routes';
@@ -116,6 +116,15 @@ export function App() {
   }, [memberRole]);
   useEffect(() => { refreshCounts(); }, [refreshCounts, memberId]);
 
+  // #69: a signed-in member's best per category, on the category cards and the length choice. A failed read only
+  // leaves them out: it is extra information.
+  const [stats, setStats] = useState<ReadonlyMap<string, CategoryStats> | null>(null);
+  const refreshStats = useCallback(() => {
+    if (!memberId) { setStats(null); return; }
+    getMemberStats().then((list) => setStats(new Map(list.map((entry) => [entry.categoryId, entry]))), () => setStats(null));
+  }, [memberId]);
+  useEffect(() => { refreshStats(); }, [refreshStats]);
+
   // Back and Forward move between the list and the categories (FE-4). During a quiz in progress the quiz's entry is
   // put back and the player asked first; leaving goes back for real (#67).
   useEffect(() => {
@@ -199,7 +208,7 @@ export function App() {
       ? <QuestionWorkshop mode={page} member={member} categories={data.categories} onChanged={() => { refreshCounts(); void reloadCategories(); }} />
       : data.status === 'error' ? <LoadState message="" cause={data.cause} onRetry={() => void load()} /> : <LoadState message={t.common.loading} />;
   } else if (page === 'scores' && member) {
-    content = <ScoresPage />;
+    content = <ScoresPage onCleared={refreshStats} />;
   } else if (page === 'categories' && member) {
     content = <CategoryManager onChanged={() => void reloadCategories()} />;
   } else if (page === 'login') {
@@ -209,7 +218,7 @@ export function App() {
   } else if (data.status === 'loading') content = <LoadState message={t.quiz.loadingCategories} />;
   else if (data.status === 'error') content = <LoadState message="" cause={data.cause} onRetry={() => void load()} />;
   else if (!playable) {
-    content = <CategoryList categories={data.categories} notice={notice} onChoose={(chosen) => navigate(chosen.shortName)} />;
+    content = <CategoryList categories={data.categories} stats={stats} notice={notice} onChoose={(chosen) => navigate(chosen.shortName)} />;
   } else if (play === null && view === 'leaderboard') {
     content = (
       <>
@@ -229,6 +238,7 @@ export function App() {
         </BackToCategories>
         <LengthChoice
           category={category}
+          best={stats?.get(category.id) ?? null}
           shortLength={data.settings.quizShortLength}
           longLength={data.settings.quizLongLength}
           onChoose={(length) => void startQuiz(category, length)}
@@ -254,7 +264,7 @@ export function App() {
   } else if (isFinished(play.session)) {
     content = (
       <Results category={category} session={play.session} reportable={Boolean(member)} onReplay={() => void startQuiz(category, play.length)} onAnother={() => navigate(null)}>
-        <SaveResult member={member} categoryId={category.id} length={play.length} attemptToken={play.quiz.attempt.token} answers={play.session.answers} onSignIn={() => openPage('login')} />
+        <SaveResult member={member} categoryId={category.id} length={play.length} attemptToken={play.quiz.attempt.token} answers={play.session.answers} onSignIn={() => openPage('login')} onSaved={refreshStats} />
       </Results>
     );
   } else {

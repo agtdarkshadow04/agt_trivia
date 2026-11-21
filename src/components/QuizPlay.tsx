@@ -1,9 +1,10 @@
 import { type FormEvent, useEffect, useId, useRef, useState } from 'react';
-import type { PublicCategory, QuizLength } from '../lib/api';
+import type { CategoryStats, PublicCategory, QuizLength } from '../lib/api';
 import { availableLengths } from '../lib/quiz';
 import { choiceState, currentQuestion, isMultiAnswer, quizResult, reviewAnswers, SHORTCUT_COUNT, shortcutIndex, shortcutKeys, type ChoiceState, type QuizSession } from '../lib/quizSession';
 import { shareSummary } from '../lib/share';
 import { formatTranslation } from '../translations';
+import { PersonalBest } from './CategoryList';
 import { TextAreaField } from './Field';
 import { useI18n } from './I18n';
 import { ArrowLeftIcon, ArrowRightIcon, CheckCircleIcon, RotateCcwIcon, Share2Icon, XCircleIcon } from './Icons';
@@ -22,8 +23,10 @@ export function BackToCategories({ onBack, children }: { onBack(): void; childre
 }
 
 /** Short, long or full (#16): the lengths come from `quiz.shortLength` and `quiz.longLength`; only those that differ are offered (#43). */
-export function LengthChoice({ category, shortLength, longLength, onChoose }: {
+export function LengthChoice({ category, best = null, shortLength, longLength, onChoose }: {
   category: PublicCategory;
+  /** A signed-in member's stats in this category, if they played it (#69). */
+  best?: CategoryStats | null;
   shortLength: number;
   longLength: number;
   onChoose(length: QuizLength): void;
@@ -44,7 +47,10 @@ export function LengthChoice({ category, shortLength, longLength, onChoose }: {
           <p className="eyebrow" lang="en">{category.name}</p>
           <h1 id="length-heading" ref={heading} tabIndex={-1}>{t.quiz.chooseLength}</h1>
         </div>
-        <p className="section-heading-meta">{formatTranslation(t.quiz.available, { count: number(category.questionCount) })}</p>
+        <p className="section-heading-meta">
+          {formatTranslation(t.quiz.available, { count: number(category.questionCount) })}
+          {best && <><br /><PersonalBest stats={best} /></>}
+        </p>
       </div>
       <ol className="choice-grid">
         {choices.map((choice, index) => (
