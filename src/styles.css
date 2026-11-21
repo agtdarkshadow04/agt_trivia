@@ -279,3 +279,8 @@ img { max-width: 100%; }
 @media (max-width: 760px) {
   .score-entry { grid-template-columns: minmax(0, 1fr); }
 }
+
+/* #71: Share result under the results' actions. */
+.share-result { display: grid; gap: 0.5rem; margin-top: 1rem; }
+.share-result > :first-child { justify-self: start; }
+.share-status { margin: 0; }

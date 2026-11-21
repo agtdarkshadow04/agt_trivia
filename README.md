@@ -322,7 +322,9 @@ Visitors play at `/`:
    (75 % or more), Seasoned Traveller (50 % or more) or Pathfinder. The rank comes from the exact score, and the
    percentage shows 100 % only for a perfect score (199 of 200 is 99 %). **Review your answers** lists every
    question with your answer and the correct one. **Replay category** draws a new quiz from the same category;
-   **Choose another** returns to the list.
+   **Choose another** returns to the list. **Share result** opens the device's share sheet with a short summary
+   (the category, the score, the percentage and the rank) and the category's link, or copies it to the clipboard;
+   where neither works, it shows the text to copy by hand. Nothing is sent to the server.
 
 A link to a category opens it directly: `/?category=<short name>`, ignoring case (for example `/?category=space`).
 An unknown or empty category falls back to the list with a notice. Back and Forward move between the list and the

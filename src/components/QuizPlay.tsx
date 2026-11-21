@@ -1,10 +1,12 @@
-import { type FormEvent, useEffect, useId, useRef } from 'react';
+import { type FormEvent, useEffect, useId, useRef, useState } from 'react';
 import type { PublicCategory, QuizLength } from '../lib/api';
 import { availableLengths } from '../lib/quiz';
 import { choiceState, currentQuestion, isMultiAnswer, quizResult, reviewAnswers, SHORTCUT_COUNT, shortcutIndex, shortcutKeys, type ChoiceState, type QuizSession } from '../lib/quizSession';
+import { shareSummary } from '../lib/share';
 import { formatTranslation } from '../translations';
+import { TextAreaField } from './Field';
 import { useI18n } from './I18n';
-import { ArrowLeftIcon, ArrowRightIcon, CheckCircleIcon, RotateCcwIcon, XCircleIcon } from './Icons';
+import { ArrowLeftIcon, ArrowRightIcon, CheckCircleIcon, RotateCcwIcon, Share2Icon, XCircleIcon } from './Icons';
 import { ReportButton } from './QuestionReports';
 import { useViewHeading } from './useViewHeading';
 
@@ -275,6 +277,47 @@ function AnswerReview({ session, reportable }: { session: QuizSession; reportabl
 }
 
 /** The results (#16): score, percentage and rank, then replay or choose another category, and the review (#44). */
+/**
+ * Share result (#71): the phone's share sheet where there is one, otherwise the
+ * clipboard, otherwise a read-only text to copy by hand. Nothing reaches the
+ * server, and no third-party widget is involved (SEC-14).
+ */
+function ShareResult({ category, score, total, percent, rank }: { category: PublicCategory; score: number; total: number; percent: number; rank: string }) {
+  const { t, tag } = useI18n();
+  const [status, setStatus] = useState('');
+  const [manual, setManual] = useState<string | null>(null);
+
+  async function share() {
+    const summary = shareSummary({ template: t.quiz.shareText, category, score, total, percent, rank, origin: window.location.origin }, { tag });
+    setStatus('');
+    if (typeof navigator.share === 'function') {
+      try {
+        await navigator.share({ text: summary.text, url: summary.url });
+        return;
+      } catch (cause) {
+        // The player closed the share sheet: nothing more to do.
+        if (cause instanceof DOMException && cause.name === 'AbortError') return;
+      }
+    }
+    try {
+      await navigator.clipboard.writeText(summary.combined);
+      setManual(null);
+      setStatus(t.quiz.shareCopied);
+    } catch {
+      setManual(summary.combined);
+      setStatus(t.quiz.shareManual);
+    }
+  }
+
+  return (
+    <div className="share-result">
+      <button className="button button-secondary button-with-icon" type="button" onClick={() => void share()}><Share2Icon />{t.quiz.shareResult}</button>
+      <p className="share-status" role="status">{status}</p>
+      {manual !== null && <TextAreaField label={t.quiz.shareManualLabel} value={manual} readOnly rows={3} autoFocus onFocus={(event) => event.currentTarget.select()} />}
+    </div>
+  );
+}
+
 export function Results({ category, session, reportable = false, onReplay, onAnother, children }: {
   category: PublicCategory;
   session: QuizSession;
@@ -300,6 +343,7 @@ export function Results({ category, session, reportable = false, onReplay, onAno
           <button className="button button-primary button-with-icon" type="button" onClick={onReplay}><RotateCcwIcon />{t.quiz.replay}</button>
           <button className="button button-secondary" type="button" onClick={onAnother}>{t.quiz.chooseAnother}</button>
         </div>
+        <ShareResult category={category} score={result.score} total={result.total} percent={result.percent} rank={t.ranks[result.rank]} />
       </div>
       <AnswerReview session={session} reportable={reportable} />
     </section>
