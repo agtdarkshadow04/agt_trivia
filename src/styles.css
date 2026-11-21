@@ -118,6 +118,9 @@ img { max-width: 100%; }
 .quiz-progress::-webkit-progress-value { border-radius: 999px; background: var(--agt-red-orange); }
 .quiz-progress::-moz-progress-bar { border-radius: 999px; background: var(--agt-red-orange); }
 .selection-hint { margin: 0.5rem 0 0; color: var(--agt-orange); font-size: 0.75rem; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; }
+.shortcut-hint { margin: 0.25rem 0 0; color: var(--muted); font-size: 0.75rem; }
+/* #68: touch screens have no keyboard to press. */
+@media (hover: none) and (pointer: coarse) { .shortcut-hint { display: none; } }
 .player h1.question-prompt { font-size: clamp(1.15rem, 2.4vw, 1.6rem); letter-spacing: 0.04em; text-transform: none; }
 .answer-fieldset { min-width: 0; margin: 0; padding: 0; border: 0; }
 .answer-list { display: grid; gap: 0.75rem; margin: 0; padding: 0; list-style: none; }

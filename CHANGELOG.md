@@ -11,6 +11,9 @@ All notable changes to AGT Galactic Trivia are documented in this file. The form
 - **Leave this quiz?** Once an answer is locked in, leaving a quiz before its results, through the Categories
   button, the logo, a header link or the browser's Back, asks first: **Keep playing** or **Leave quiz**. Reloading
   or closing the tab gets the browser's own prompt (#67).
+- **Answer shortcuts:** while a question is open, **A**–**F** or **1**–**6** picks the answer with that letter, or
+  toggles it on a multi-answer question, and **Enter** locks it in as before. A hint under the question says so,
+  except on touch screens (#68).
 
 ### Deprecated
 

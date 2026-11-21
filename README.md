@@ -315,7 +315,9 @@ Visitors play at `/`:
    quiz offers only the full quiz. Questions, and the order of their answers, are drawn at random each time.
 3. **Answer.** A single-answer question has radio buttons ("Select one answer"); a multi-answer one has checkboxes
    ("Select every correct answer") and counts only when exactly the correct answers are chosen. **Lock answer**
-   shows whether it was right, the correct answers, and who submitted the question; then **Next question**.
+   shows whether it was right, the correct answers, and who submitted the question; then **Next question**. With a
+   keyboard, **A**–**F** or **1**–**6** picks the answer with that letter (toggles it on a multi-answer question),
+   and **Enter** locks it in and moves on.
 4. **Results**: the score, the percentage and a rank: Atlas Archivist (every answer right), Galactic Cartographer
    (75 % or more), Seasoned Traveller (50 % or more) or Pathfinder. The rank comes from the exact score, and the
    percentage shows 100 % only for a perfect score (199 of 200 is 99 %). **Review your answers** lists every

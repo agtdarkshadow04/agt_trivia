@@ -131,6 +131,48 @@ test('plays with the keyboard alone (A11Y-5)', async ({ page }) => {
   await expect(page.getByRole('img', { name: /of 3 correct/ })).toBeVisible();
 });
 
+test('chooses answers with the letter and number keys (#68)', async ({ page }) => {
+  await page.goto('/?category=bio');
+  await page.getByRole('button', { name: /Full quiz/ }).click();
+  for (let number = 1; number <= 3; number += 1) {
+    await expect(page.getByText(`Question ${number} of 3`)).toBeVisible();
+    const inputs = page.locator('.answer input');
+    const count = await inputs.count();
+    await expect(page.getByText(`Press A–${String.fromCharCode(64 + count)} or 1–${count} to choose`)).toBeVisible();
+    await expect(inputs.first()).toHaveAttribute('aria-keyshortcuts', 'A 1');
+    const texts = await page.locator('.answer .answer-text').allTextContents();
+    const right = texts.flatMap((text, index) => (/^(Also right|Right)/.test(text) ? [index] : []));
+    const multi = right.length > 1;
+    if (multi) {
+      // Toggling: a wrong answer on and off again, then every right one, by letter and by number.
+      const wrong = texts.findIndex((text) => text.startsWith('Wrong'));
+      await page.keyboard.press(String.fromCharCode(97 + wrong));
+      await expect(inputs.nth(wrong)).toBeChecked();
+      await expect(inputs.nth(wrong)).toBeFocused();
+      await page.keyboard.press(String(wrong + 1));
+      await expect(inputs.nth(wrong)).not.toBeChecked();
+      await page.keyboard.press(String.fromCharCode(65 + right[0]));
+      await page.keyboard.press(String(right[1] + 1));
+    } else {
+      // A key past the last answer, or with Ctrl, picks nothing.
+      await page.keyboard.press('F');
+      await page.keyboard.press(`Control+${String.fromCharCode(97 + right[0])}`);
+      await expect(page.locator('.answer input:checked')).toHaveCount(0);
+      await page.keyboard.press(number === 1 ? String.fromCharCode(97 + right[0]) : String(right[0] + 1));
+    }
+    for (const index of right) await expect(inputs.nth(index)).toBeChecked();
+    await expect(inputs.nth(right.at(-1)!)).toBeFocused();
+    // Enter still locks the answer, then moves on; the keys do nothing once it is locked.
+    await page.keyboard.press('Enter');
+    await expect(page.getByRole('status').filter({ hasText: 'Correct!' })).toBeVisible();
+    await expect(page.locator('.shortcut-hint')).toHaveCount(0);
+    await page.keyboard.press('A');
+    await expect(page.locator('.answer input:checked')).toHaveCount(right.length);
+    await page.keyboard.press('Enter');
+  }
+  await expect(page.getByRole('img', { name: /^3 of 3 correct/ })).toBeVisible();
+});
+
 test('asks before leaving a quiz in progress, and only then (#67)', async ({ page }) => {
   const watched = await watchPage(page);
   const leave = page.getByRole('alertdialog', { name: 'Leave this quiz?' });

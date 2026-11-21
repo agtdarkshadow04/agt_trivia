@@ -1,7 +1,7 @@
 import { type FormEvent, useEffect, useId, useRef } from 'react';
 import type { PublicCategory, QuizLength } from '../lib/api';
 import { availableLengths } from '../lib/quiz';
-import { choiceState, currentQuestion, isMultiAnswer, quizResult, reviewAnswers, type ChoiceState, type QuizSession } from '../lib/quizSession';
+import { choiceState, currentQuestion, isMultiAnswer, quizResult, reviewAnswers, SHORTCUT_COUNT, shortcutIndex, shortcutKeys, type ChoiceState, type QuizSession } from '../lib/quizSession';
 import { formatTranslation } from '../translations';
 import { useI18n } from './I18n';
 import { ArrowLeftIcon, ArrowRightIcon, CheckCircleIcon, RotateCcwIcon, XCircleIcon } from './Icons';
@@ -117,6 +117,34 @@ export function QuestionView({ category, session, reportable = false, onChoose, 
     else onLock();
   }
 
+  // #68: A–F or 1–6 picks an answer (toggles it for a multi-answer question) and focuses it, so screen readers
+  // announce it; Enter still locks the answer through the form.
+  const inputs = useRef<(HTMLInputElement | null)[]>([]);
+  const latest = useRef({ session, onChoose });
+  useEffect(() => { latest.current = { session, onChoose }; });
+  useEffect(() => {
+    if (session.locked) return undefined;
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.defaultPrevented || event.ctrlKey || event.metaKey || event.altKey) return;
+      const target = event.target instanceof HTMLElement ? event.target : null;
+      if (target?.closest('textarea, select, [contenteditable="true"], input:not([type="radio"]):not([type="checkbox"])')) return;
+      // The report dialog, the settings or a leave confirmation is open.
+      if (document.querySelector('[aria-modal="true"]')) return;
+      const { session: current, onChoose: choose } = latest.current;
+      const question = currentQuestion(current);
+      if (!question || current.locked) return;
+      const index = shortcutIndex(event.key, question.choices.length);
+      if (index === null) return;
+      event.preventDefault();
+      const choiceId = question.choices[index].id;
+      choose(choiceId, isMultiAnswer(question) ? !current.selected.includes(choiceId) : true);
+      inputs.current[index]?.focus();
+    }
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [session.locked, session.index]);
+  const shownChoices = Math.min(question.choices.length, SHORTCUT_COUNT);
+
   return (
     <section className="quiz-panel" aria-labelledby={`${id}-prompt`}>
       <div className="quiz-meta">
@@ -125,6 +153,11 @@ export function QuestionView({ category, session, reportable = false, onChoose, 
       </div>
       <progress className="quiz-progress" max={total} value={session.index + 1} aria-label={t.quiz.progressLabel} />
       <p className="selection-hint" id={`${id}-hint`}>{multi ? t.quiz.selectAll : t.quiz.selectOne}</p>
+      {!session.locked && (
+        <p className="shortcut-hint">
+          {formatTranslation(t.quiz.shortcutHint, { letters: `A–${String.fromCharCode(64 + shownChoices)}`, numbers: `1–${shownChoices}` })}
+        </p>
+      )}
       <h1 className="question-prompt" id={`${id}-prompt`} ref={heading} tabIndex={-1} lang="en">{question.prompt}</h1>
       <form onSubmit={submit} noValidate>
         <fieldset className="answer-fieldset" aria-describedby={`${id}-hint`}>
@@ -136,6 +169,8 @@ export function QuestionView({ category, session, reportable = false, onChoose, 
                 <li key={choice.id}>
                   <label className={`answer ${state ? answerClass[state] : ''}`.trim()}>
                     <input
+                      ref={(element) => { inputs.current[index] = element; }}
+                      aria-keyshortcuts={index < SHORTCUT_COUNT ? shortcutKeys(index) : undefined}
                       type={multi ? 'checkbox' : 'radio'}
                       name={`answer-${question.id}`}
                       value={choice.id}
