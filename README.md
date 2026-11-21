@@ -456,7 +456,9 @@ can also sign in with their AGT account, which creates their member account at t
 
 Members sign in with the **Sign in** button in the game's header (`/?page=login`). Signed in, the header shows their
 display name and role, and an **Account** button that shows their account, changes their password and signs them
-out. Member sessions use their own cookie, which the admin dashboard never accepts, and last `session.ttlHours`.
+out. On wide screens their pages (My scores, and for their role My questions, the Review queue and Categories) are
+icon buttons in the header; on narrow screens they are in the **Menu**, each with its name, and the Review queue's
+count shows on the Menu button. Member sessions use their own cookie, which the admin dashboard never accepts, and last `session.ttlHours`.
 
 The **Members** tab shows when each member last signed in (local or with their AGT account), or "Never", and its
 **Signed in** filter lists the members who have not signed in for 30, 90 or 365 days, so stale accounts are easy to

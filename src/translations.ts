@@ -83,6 +83,8 @@ const en = {
   layout: {
     homeLabel: "{{alliance}} {{product}}: home",
     mainNavigation: "Main",
+    menu: "Menu",
+    menuCount: "Menu: {{count}} waiting for review",
     settings: "Settings",
     allianceLinks: "Alliance links",
     footerHome: "Home",
@@ -500,6 +502,8 @@ const fr: Translations = {
   layout: {
     homeLabel: "{{alliance}} {{product}} : accueil",
     mainNavigation: "Principale",
+    menu: "Menu",
+    menuCount: "Menu : {{count}} en attente de relecture",
     settings: "Paramètres",
     allianceLinks: "Liens de l'Alliance",
     footerHome: "Accueil",
@@ -915,6 +919,8 @@ const de: Translations = {
   layout: {
     homeLabel: "{{alliance}} {{product}}: Startseite",
     mainNavigation: "Hauptnavigation",
+    menu: "Menü",
+    menuCount: "Menü: {{count}} warten auf Prüfung",
     settings: "Einstellungen",
     allianceLinks: "Links der Allianz",
     footerHome: "Startseite",
@@ -1330,6 +1336,8 @@ const es: Translations = {
   layout: {
     homeLabel: "{{alliance}} {{product}}: inicio",
     mainNavigation: "Principal",
+    menu: "Menú",
+    menuCount: "Menú: {{count}} pendientes de revisión",
     settings: "Ajustes",
     allianceLinks: "Enlaces de la Alianza",
     footerHome: "Inicio",
@@ -1745,6 +1753,8 @@ const pt: Translations = {
   layout: {
     homeLabel: "{{alliance}} {{product}}: início",
     mainNavigation: "Principal",
+    menu: "Menu",
+    menuCount: "Menu: {{count}} aguardando revisão",
     settings: "Configurações",
     allianceLinks: "Links da Aliança",
     footerHome: "Início",
@@ -2160,6 +2170,8 @@ const it: Translations = {
   layout: {
     homeLabel: "{{alliance}} {{product}}: home",
     mainNavigation: "Principale",
+    menu: "Menu",
+    menuCount: "Menu: {{count}} in attesa di revisione",
     settings: "Impostazioni",
     allianceLinks: "Link dell'Alleanza",
     footerHome: "Home",
@@ -2575,6 +2587,8 @@ const th: Translations = {
   layout: {
     homeLabel: "{{alliance}} {{product}}: หน้าแรก",
     mainNavigation: "เมนูหลัก",
+    menu: "เมนู",
+    menuCount: "เมนู: {{count}} รายการรอการตรวจทาน",
     settings: "การตั้งค่า",
     allianceLinks: "ลิงก์ของพันธมิตร",
     footerHome: "หน้าแรก",
@@ -2990,6 +3004,8 @@ const zh: Translations = {
   layout: {
     homeLabel: "{{alliance}} {{product}}：首页",
     mainNavigation: "主导航",
+    menu: "菜单",
+    menuCount: "菜单：{{count}} 个待审核",
     settings: "设置",
     allianceLinks: "联盟链接",
     footerHome: "首页",
@@ -3405,6 +3421,8 @@ const hi: Translations = {
   layout: {
     homeLabel: "{{alliance}} {{product}}: होम",
     mainNavigation: "मुख्य",
+    menu: "मेनू",
+    menuCount: "मेनू: {{count}} समीक्षा की प्रतीक्षा में",
     settings: "सेटिंग्स",
     allianceLinks: "गठबंधन के लिंक",
     footerHome: "होम",
@@ -3820,6 +3838,8 @@ const ja: Translations = {
   layout: {
     homeLabel: "{{alliance}} {{product}}：ホーム",
     mainNavigation: "メイン",
+    menu: "メニュー",
+    menuCount: "メニュー：{{count}} 件がレビュー待ち",
     settings: "設定",
     allianceLinks: "同盟のリンク",
     footerHome: "ホーム",
